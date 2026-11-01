@@ -92,6 +92,8 @@ class StudyViewModel(
 
             val firstCardId = queueCardIds.firstOrNull()
             val firstCard = firstCardId?.let { cardsMap[it] }
+            val nextCardId = queueCardIds.drop(1).firstOrNull() ?: retryCardIds.firstOrNull()
+            val nextCard = nextCardId?.let { cardsMap[it] }
 
             _uiState.update {
                 it.copy(
@@ -99,6 +101,7 @@ class StudyViewModel(
                     deck = deck,
                     partIndex = partIndex,
                     currentCard = firstCard,
+                    nextCard = nextCard,
                     isFlipped = false,
                     queueSize = queueCardIds.size,
                     totalInPart = totalInPart,
@@ -175,10 +178,12 @@ class StudyViewModel(
         completedCount = 0
 
         val firstCard = queueCardIds.firstOrNull()?.let { cardsMap[it] }
+        val nextCard = (queueCardIds.drop(1).firstOrNull() ?: retryCardIds.firstOrNull())?.let { cardsMap[it] }
 
         _uiState.update {
             it.copy(
                 currentCard = firstCard,
+                nextCard = nextCard,
                 isFlipped = false,
                 queueSize = queueCardIds.size,
                 totalInPart = totalInPart,
@@ -220,10 +225,13 @@ class StudyViewModel(
         val isFinished = queueCardIds.isEmpty()
         val nextCardId = queueCardIds.firstOrNull()
         val nextCard = nextCardId?.let { cardsMap[it] }
+        val subsequentCardId = queueCardIds.drop(1).firstOrNull() ?: retryCardIds.firstOrNull()
+        val subsequentCard = subsequentCardId?.let { cardsMap[it] }
 
         _uiState.update {
             it.copy(
                 currentCard = nextCard,
+                nextCard = subsequentCard,
                 isFlipped = false,
                 queueSize = queueCardIds.size,
                 completedCount = completedCount,

@@ -318,8 +318,12 @@ DisposableEffect(viewModel) {
 
 ## 6. 3Dフリップ＆スワイプUI詳細設計
 
-### 6.1 3D Y軸回転アニメーション (`FlippableCard`)
+### 6.1 3D Y軸回転アニメーションとカード独立化 (`FlippableCard`)
 Jetpack Compose の `Modifier.graphicsLayer` を活用し、物理的な厚みと奥行きを表現：
+- **カード単位のキーイング (`key(card.id)`)**:
+  カードごとに Composable ノードを完全分離。次カード遷移時に前カードの裏面回転角（180°）が引き継がれて表面へ逆回転（180° ➔ 0°）する現象を完全に防止し、新カードは常に初期姿勢（表面 0°）で描画されます。
+- **カードスタック構造（次カードの背面プレビュー）**:
+  前面カードの背面に `nextCard` を `scale = 0.94f`, `alpha = 0.85f`, `elevation = 2.dp` で待機描画。前面カードがスワイプまたはボタン/音量キーで遷移した際、次カードが `scale = 0.94f ➔ 1.0f`（160ms）へスムーズにスケールアップして昇格するため、画面の点滅や不連続な切り替えが起きません。
 - **カメラ距離**: `cameraDistance = 16f * density`（パースペクティブ歪みを防止し、自然な立体感を演出）。
 - **回転角度アニメーション**:
   $$\theta = \text{animateFloatAsState}(\text{target} = \text{if } (isFlipped) \ 180^\circ \text{ else } 0^\circ, \text{tween}(320\text{ms}))$$
@@ -331,9 +335,11 @@ Jetpack Compose の `Modifier.graphicsLayer` を活用し、物理的な厚み�
 - **カードの傾き**: $Z\text{軸回転角} = \left(\frac{\Delta x}{25}\right) \in [-15^\circ, +15^\circ]$
 - **判定閾値**: $\text{DRAG\_THRESHOLD} = 220\text{px}$
 - **アクション境界**:
-  - $\Delta x > +220\text{px}$: 画面右外へ高速アニメーション（`animateTo(1000f)`）➔ `onDone()`
-  - $\Delta x < -220\text{px}$: 画面左外へ高速アニメーション（`animateTo(-1000f)`）➔ `onRetry()`
-  - 不足時: バネのように中央へ復帰（`animateTo(0f)`）
+  - $\Delta x > +220\text{px}$: 画面右外へ高速アニメーション（画面幅連動 `offscreenTarget`）➔ `onDone()`
+  - $\Delta x < -220\text{px}$: 画面左外へ高速アニメーション（画面幅連動 `-offscreenTarget`）➔ `onRetry()`
+  - 不足時: バネのように中央へ復帰（`spring(dampingRatio = MediumBouncy)`）
+- **退場時ジェスチャー無効化 (`isDismissing`)**:
+  閾値を超えて画面外への退場アニメーション開始後はジェスチャーを遮断し、退場中の再ドラッグや操作の競合を防止。
 - **ビジュアルフィードバック**:
   ドラッグ距離に比例したアルファ値（透明度）で、右ドラッグ時は「覚えた（緑）」、左ドラッグ時は「もう一度（赤）」のバッジが浮き上がるインタラクションを実装。
 

@@ -2,7 +2,9 @@ package com.aidomari.app.ui.study.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -21,14 +23,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -52,7 +58,21 @@ fun FlippableCard(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current.density
+    val configuration = LocalConfiguration.current
+    val screenWidthPx = configuration.screenWidthDp * density
+    val offscreenTarget = (screenWidthPx * 1.2f).coerceAtLeast(1200f)
+
+    var isDismissing by remember { mutableStateOf(false) }
     val dragOffsetX = remember { Animatable(0f) }
+
+    // Subtle scale entrance from stack (0.94 -> 1.0)
+    val entranceScale = remember { Animatable(0.94f) }
+    LaunchedEffect(Unit) {
+        entranceScale.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
+        )
+    }
 
     // 3D Flip rotation
     val rotation by animateFloatAsState(
@@ -63,7 +83,9 @@ fun FlippableCard(
 
     val isBackFace = rotation > 90f
 
-    val gestureModifier = if (!isFlipped) {
+    val gestureModifier = if (isDismissing) {
+        Modifier
+    } else if (!isFlipped) {
         // Front face: tap or swipe flips card
         Modifier.pointerInput(Unit) {
             detectTapGestures {
@@ -79,26 +101,36 @@ fun FlippableCard(
                         val currentOffset = dragOffsetX.value
                         when {
                             currentOffset > DRAG_THRESHOLD -> {
-                                // Animate right and complete as Done
+                                isDismissing = true
                                 dragOffsetX.animateTo(
-                                    targetValue = 1000f,
-                                    animationSpec = tween(durationMillis = 180),
+                                    targetValue = offscreenTarget,
+                                    animationSpec = tween(
+                                        durationMillis = 180,
+                                        easing = FastOutSlowInEasing,
+                                    ),
                                 )
-                                dragOffsetX.snapTo(0f)
                                 onDone()
                             }
                             currentOffset < -DRAG_THRESHOLD -> {
-                                // Animate left and complete as Retry
+                                isDismissing = true
                                 dragOffsetX.animateTo(
-                                    targetValue = -1000f,
-                                    animationSpec = tween(durationMillis = 180),
+                                    targetValue = -offscreenTarget,
+                                    animationSpec = tween(
+                                        durationMillis = 180,
+                                        easing = FastOutSlowInEasing,
+                                    ),
                                 )
-                                dragOffsetX.snapTo(0f)
                                 onRetry()
                             }
                             else -> {
                                 // Spring back to center
-                                dragOffsetX.animateTo(0f)
+                                dragOffsetX.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMedium,
+                                    ),
+                                )
                             }
                         }
                     }
@@ -120,6 +152,8 @@ fun FlippableCard(
         modifier = modifier
             .offset { IntOffset(dragOffsetX.value.roundToInt(), 0) }
             .graphicsLayer {
+                scaleX = entranceScale.value
+                scaleY = entranceScale.value
                 // Drag rotation for Tinder card physics on back face
                 if (isFlipped) {
                     rotationZ = (dragOffsetX.value / 25f).coerceIn(-15f, 15f)

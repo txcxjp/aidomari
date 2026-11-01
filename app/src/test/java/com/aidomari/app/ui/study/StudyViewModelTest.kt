@@ -70,6 +70,7 @@ class StudyViewModelTest {
         assertEquals("deck-1", state.deck?.id)
         assertEquals(0, state.partIndex)
         assertEquals("c1", state.currentCard?.id)
+        assertEquals("c2", state.nextCard?.id)
         assertFalse(state.isFlipped)
         assertEquals(3, state.queueSize)
         assertEquals(3, state.totalInPart)
@@ -103,6 +104,7 @@ class StudyViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals("c2", state.currentCard?.id)
+        assertEquals("c3", state.nextCard?.id)
         assertFalse(state.isFlipped)
         assertEquals(1, state.completedCount)
         assertEquals(2, state.queueSize)
