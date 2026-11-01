@@ -80,3 +80,50 @@ composeBom = "2024.10.01"
 ```
 
 ライブラリの追加・更新は必ずこのファイルを経由して行います。
+
+---
+
+## 5. リポジトリ運用方針（Short-lived Feature Branch 戦略）
+
+GitFlow のような `develop` や `release` などの肥大化しやすい中間層を全廃し、**「複数機能の並行開発」** と **「リリースの取捨選択（この機能は後回しなど）」** を最小の負荷で両立するブランチ戦略を採用します。
+
+```mermaid
+gitGraph
+   commit id: "Initial setup"
+   branch feat/importer
+   checkout feat/importer
+   commit id: "feat: JSONパース処理"
+   checkout main
+   branch feat/3d-flip
+   checkout feat/3d-flip
+   commit id: "ui: 3D回転アニメーション"
+   commit id: "ui: スワイプ判定完成"
+   checkout main
+   merge feat/3d-flip id: "3Dフリップ完成！先にmainへ合流"
+   checkout feat/importer
+   commit id: "feat: インポートUI完成"
+   checkout main
+   commit id: "tag: v0.1.0 (3Dフリップ先行リリース)" tag: "v0.1.0"
+   merge feat/importer id: "インポーター完成で合流"
+   commit id: "tag: v0.2.0 (インポーター追加リリース)" tag: "v0.2.0"
+```
+
+### 運用ルール
+
+1. **`main` ブランチ**:
+   - 常に「ビルド可能で、テストがパスする」安定版。
+   - 完成した機能のみをマージします。
+2. **フィーチャーブランチ（`feat/*`, `fix/*`, `ui/*`）**:
+   - 機能ごとに `main` からブランチを作成（例: `feat/room-db`, `feat/volume-key`, `feat/importer`）。
+   - **並行開発**: ブランチを切り替えることで、複数の機能を互いに干渉せず並行して開発可能。
+   - **リリースの取捨選択**: 「この機能は後回しにしよう」と判断した場合、マージせずブランチのまま寝かせておく。`main` は一切汚れません。
+3. **PR（プルリクエスト）は「実機テスト用 APK を焼くスイッチ」**:
+   - ブランチを push して GitHub で PR を開くと、GitHub Actions が自動で検証＆実機用 APK を生成。
+   - スマホで APK をテストして問題なければ、GitHub 上で **[Squash and merge]** ボタンを押してマージ（ブランチは削除）。
+4. **リリースとタグ打法**:
+   - 節目となるバージョン（例: `v0.1.0`, `v0.2.0`）に達した際、`main` 上でタグを打って push：
+     ```bash
+     git tag v0.1.0
+     git push --tags
+     ```
+
