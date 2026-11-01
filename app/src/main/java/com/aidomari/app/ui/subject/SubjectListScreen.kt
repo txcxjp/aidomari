@@ -1,5 +1,8 @@
 package com.aidomari.app.ui.subject
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +47,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -58,6 +62,7 @@ fun SubjectListScreen(
     onSubjectClick: (subjectId: String, subjectName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val subjects by viewModel.subjects.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -65,6 +70,56 @@ fun SubjectListScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var subjectToDelete by remember { mutableStateOf<Subject?>(null) }
+
+    // File picker launcher for JSON import (Storage Access Framework)
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            coroutineScope.launch {
+                try {
+                    val jsonString = context.contentResolver.openInputStream(uri)?.use { stream ->
+                        stream.bufferedReader().readText()
+                    }
+                    if (!jsonString.isNullOrBlank()) {
+                        viewModel.importData(jsonString) { result ->
+                            coroutineScope.launch {
+                                result.onSuccess { summary ->
+                                    snackbarHostState.showSnackbar(
+                                        "インポート完了: ${summary.decksCount} デッキ / ${summary.cardsCount} 単語",
+                                    )
+                                    showImportDialog = false
+                                }.onFailure { err ->
+                                    snackbarHostState.showSnackbar("インポート失敗: ${err.message}")
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("ファイルの読み込みに失敗しました: ${e.message}")
+                }
+            }
+        }
+    }
+
+    // Export launcher to save JSON backup
+    val exportFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            coroutineScope.launch {
+                try {
+                    val exportJson = viewModel.exportData()
+                    context.contentResolver.openOutputStream(uri)?.use { stream ->
+                        stream.write(exportJson.toByteArray())
+                    }
+                    snackbarHostState.showSnackbar("エクスポート完了: バックアップを保存しました")
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("エクスポートに失敗しました: ${e.message}")
+                }
+            }
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -80,6 +135,11 @@ fun SubjectListScreen(
                 actions = {
                     TextButton(onClick = { showImportDialog = true }) {
                         Text(text = "インポート")
+                    }
+                    if (subjects.isNotEmpty()) {
+                        TextButton(onClick = { exportFileLauncher.launch("aidomari_backup.json") }) {
+                            Text(text = "エクスポート")
+                        }
                     }
                 },
             )
@@ -114,14 +174,20 @@ fun SubjectListScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "右下の ＋ ボタンから新規作成するか、\nインポートボタンから過去の単語帳データを読み込んでください。",
+                        text = "端末内の単語帳ファイル（.json / .txt）を選択するか、\n右下の ＋ ボタンから教科を作成してください。",
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.outline,
                     )
                     Spacer(modifier = Modifier.height(20.dp))
-                    Button(onClick = { showImportDialog = true }) {
-                        Text(text = "データをインポートする")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                filePickerLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                            },
+                        ) {
+                            Text(text = "ファイルを選択してインポート")
+                        }
                     }
                 }
             } else {
@@ -261,26 +327,50 @@ fun SubjectListScreen(
             onDismissRequest = { showImportDialog = false },
             title = { Text(text = "データインポート") },
             text = {
-                Column {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
                     Text(
-                        text = "Elm形式または新形式のJSONを貼り付けてください：",
+                        text = "現行アプリ（Elm）のエクスポートファイルや単語帳JSONを取り込みます。",
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Prominent File Selection Button
+                    Button(
+                        onClick = {
+                            filePickerLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Text(text = "📂 端末内のファイルを選択 (.json, .txt)")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "― または直接テキストを貼り付け ―",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+
                     OutlinedTextField(
                         value = jsonText,
                         onValueChange = { jsonText = it },
                         placeholder = { Text(text = "[ { \"title\": \"デッキ名\", \"content\": [...] } ]") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp),
+                            .height(140.dp),
                     )
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        if (jsonText.isNotBlank()) {
+                if (jsonText.isNotBlank()) {
+                    Button(
+                        onClick = {
                             viewModel.importData(jsonText) { result ->
                                 coroutineScope.launch {
                                     result.onSuccess { summary ->
@@ -293,15 +383,15 @@ fun SubjectListScreen(
                                     }
                                 }
                             }
-                        }
-                    },
-                ) {
-                    Text(text = "インポート実行")
+                        },
+                    ) {
+                        Text(text = "テキストからインポート")
+                    }
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showImportDialog = false }) {
-                    Text(text = "キャンセル")
+                    Text(text = "閉じる")
                 }
             },
         )

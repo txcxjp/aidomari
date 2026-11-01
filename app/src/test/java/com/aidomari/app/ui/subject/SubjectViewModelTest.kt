@@ -86,6 +86,15 @@ class SubjectViewModelTest {
         assertEquals("IT用語", fakeRepository.decksList[0].name)
     }
 
+    @Test
+    fun exportData_returnsValidExportJson() = runTest {
+        viewModel.createSubject("テスト教科", "ja-JP")
+        advanceUntilIdle()
+
+        val json = viewModel.exportData()
+        assertTrue(json.contains("テスト教科"))
+    }
+
     private class FakeSubjectRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()

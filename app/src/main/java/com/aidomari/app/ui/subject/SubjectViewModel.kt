@@ -3,6 +3,7 @@ package com.aidomari.app.ui.subject
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aidomari.app.core.importer.ImportSummary
+import com.aidomari.app.core.importer.WordsDataExporter
 import com.aidomari.app.core.importer.WordsDataImporter
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
@@ -15,6 +16,7 @@ import java.util.UUID
 class SubjectViewModel(
     private val repository: WordsRepository,
     private val importer: WordsDataImporter = WordsDataImporter(repository),
+    private val exporter: WordsDataExporter = WordsDataExporter(repository),
 ) : ViewModel() {
 
     val subjects: StateFlow<List<Subject>> = repository.getAllSubjects()
@@ -53,4 +55,6 @@ class SubjectViewModel(
             onComplete(result)
         }
     }
+
+    suspend fun exportData(): String = exporter.exportAll()
 }
