@@ -37,6 +37,7 @@ class StudyViewModel(
             currentDeck = deck
             currentPartIndex = partIndex
 
+            val subjectCards = repository.getAllCardsInSubject(deck.subjectId)
             val cards = repository.getCardsByDeckSync(deckId)
             allCards = cards
             cardsMap = cards.associateBy { it.id }
@@ -105,6 +106,7 @@ class StudyViewModel(
                     retryCount = retryCardIds.size,
                     isPartCompleted = firstCard == null,
                     hasNextPart = hasNextPart,
+                    subjectCards = subjectCards,
                 )
             }
         }

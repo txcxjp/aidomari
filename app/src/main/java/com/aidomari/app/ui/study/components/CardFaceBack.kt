@@ -40,6 +40,8 @@ fun CardFaceBack(
     onDone: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    candidateCards: List<DomainCard> = emptyList(),
+    onKeywordClick: (DomainCard) -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
 
@@ -67,14 +69,16 @@ fun CardFaceBack(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Text(
+            KeywordText(
                 text = card.back,
+                candidateCards = candidateCards,
+                currentCardId = card.id,
+                onKeywordClick = onKeywordClick,
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 26.sp,
+                    fontSize = 24.sp,
                 ),
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface,
             )
 
             if (card.userSupplement.isNotBlank()) {
