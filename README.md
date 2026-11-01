@@ -5,7 +5,14 @@
 
 ---
 
-## 主な特徴
+## 📚 ドキュメント
+
+- **[アーキテクチャ設計書 (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md)**: ドメインモデル、状態遷移、音量キー・スワイプ仕様、関連項目エンジン
+- **[開発・CI/CD ガイド (docs/DEVELOPMENT.md)](docs/DEVELOPMENT.md)**: 開発サイクル、コマンド集、Spotless、GitHub Actions パイプライン
+
+---
+
+## 🌟 主な特徴
 
 - **複数教科（Subject）対応**: 英語、資格試験、世界史など、複数科目を切り替えて学習管理。
 - **3Dフリップ ＆ Tinder風スワイプ**: 表面から裏面への立体的な裏返りと、裏面からの左右スワイプ（右＝学習済み、左＝あとでもう一度）による軽快な操作感。
@@ -20,9 +27,30 @@
 
 ---
 
-## 開発環境
+## 🚀 クイックスタート
 
-- **言語**: Kotlin
-- **UI フレームワーク**: Jetpack Compose (Material 3)
-- **データベース**: Room (SQLite)
-- **非同期処理**: Kotlin Coroutines & Flow
+```bash
+# クローン
+git clone https://github.com/txcxjp/aidomari.git
+cd aidomari
+
+# コードフォーマット
+./gradlew spotlessApply
+
+# 単体テスト実行
+./gradlew testDebugUnitTest
+
+# デバッグAPKビルド
+./gradlew assembleDebug
+```
+
+---
+
+## 🛠 技術スタック
+
+- **言語**: Kotlin 2.0.21
+- **UI フレームワーク**: Jetpack Compose (Material 3, Compose BOM 2024.10.01)
+- **データベース**: Room 2.6.1 (SQLite + KSP)
+- **非同期・状態管理**: Kotlin Coroutines & Flow, ViewModel
+- **コード品質**: Spotless + ktlint, Android Lint
+- **CI/CD**: GitHub Actions (Lint, Test, Debug APK 自動ビルド・配布)
