@@ -15,6 +15,7 @@ spotless {
             mapOf(
                 "indent_size" to "4",
                 "continuation_indent_size" to "4",
+                "ktlint_function_naming_ignore_when_annotated_with" to "Composable",
             ),
         )
     }
