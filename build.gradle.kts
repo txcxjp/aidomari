@@ -14,8 +14,8 @@ spotless {
         ktlint("1.3.1").editorConfigOverride(
             mapOf(
                 "indent_size" to "4",
-                "continuation_indent_size" to "4"
-            )
+                "continuation_indent_size" to "4",
+            ),
         )
     }
     kotlinGradle {
