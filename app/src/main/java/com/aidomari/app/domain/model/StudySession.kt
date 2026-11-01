@@ -16,12 +16,11 @@ data class StudySession(
     fun retryCardIdsJson(): String = Json.encodeToString(retryCardIds)
 
     companion object {
-        fun parseCardIds(json: String): List<String> {
-            return try {
+        fun parseCardIds(json: String): List<String> =
+            try {
                 Json.decodeFromString(json)
             } catch (_: Exception) {
                 emptyList()
             }
-        }
     }
 }
