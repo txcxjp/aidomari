@@ -211,6 +211,15 @@ erDiagram
 | `content[].user_supplement` | `Card.userSupplement` | ユーザー追加補足 |
 | `content[].bookmark_id` | `Card.isBookmarked` | `bookmark_id > 0` ➔ `true` |
 
+### 3.3 ファイル選択インポート ＆ JSONエクスポート設計
+- **ファイルピッカー連携 (Storage Access Framework)**:
+  - Compose の `rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument())` を使用。
+  - MIMEタイプ `application/json`, `text/plain`, `*/*` をサポートし、端末ローカル（ダウンロードフォルダ等）や Google Drive から直接ファイルを選択可能。
+  - 選択後、`contentResolver.openInputStream(uri)` からストリームを非同期読込し、`WordsDataImporter` へ直結。
+- **データエクスポート (`WordsDataExporter`)**:
+  - 全教科、デッキ、単語カード、ブックマーク状態を Aidomari Modern JSON 形式へシリアライズ。
+  - `ActivityResultContracts.CreateDocument("application/json")` により、`aidomari_backup.json` として端末ストレージへ直接保存可能。
+
 ---
 
 ## 4. コア学習エンジン・状態遷移詳細設計
@@ -429,6 +438,7 @@ flowchart LR
 | `AidomariDaoTest` | `core.database` | SQLite CRUD、カスケード削除、ブックマーク更新、セッション保存 |
 | `DeckTest` | `domain.model` | カード総数に応じた 50 枚分割（Part 1〜N）の境界値計算 |
 | `WordsDataImporterTest` | `core.importer` | CSV形式、Elm V1/V2 形式、新形式 JSON のパースおよび DB 登録整合性 |
+| `WordsDataExporterTest` | `core.importer` | 全データの JSON エクスポート生成およびラウンドトリップ再インポート検証 |
 | `StudyViewModelTest` | `ui.study` | フリップ、正解/リトライキュー遷移、音量キー操作、自動継続フラグ、セッション永続化 |
 | `KeywordEngineTest` | `core.keyword` | 最長一致マッチング、大文字小文字無視、自身ID除外、出現順抽出 |
 | `TtsManagerTest` | `core.tts` | 言語タグ（en-US, ja-JP 等）から Android Locale への解決 |
