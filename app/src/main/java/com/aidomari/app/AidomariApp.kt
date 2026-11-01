@@ -1,8 +1,8 @@
 package com.aidomari.app
 
 import android.app.Application
-import com.aidomari.app.data.local.AidomariDatabase
-import com.aidomari.app.data.repository.WordsRepositoryImpl
+import com.aidomari.app.core.database.AidomariDatabase
+import com.aidomari.app.core.database.WordsRepositoryImpl
 import com.aidomari.app.domain.repository.WordsRepository
 
 class AidomariApp : Application() {

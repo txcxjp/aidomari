@@ -1,8 +1,8 @@
 package com.aidomari.app.core.tts
 
-import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.util.Locale
 
 class TtsManagerTest {
 
