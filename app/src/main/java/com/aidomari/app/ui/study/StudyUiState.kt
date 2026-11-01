@@ -8,6 +8,7 @@ data class StudyUiState(
     val deck: Deck? = null,
     val partIndex: Int = 0,
     val currentCard: Card? = null,
+    val nextCard: Card? = null,
     val isFlipped: Boolean = false,
     val queueSize: Int = 0,
     val totalInPart: Int = 0,
