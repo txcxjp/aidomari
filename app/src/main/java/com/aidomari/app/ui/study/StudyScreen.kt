@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -13,17 +14,23 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.core.input.VolumeKeyHandler
+import com.aidomari.app.domain.model.Card
 import com.aidomari.app.ui.study.components.CardFaceBack
 import com.aidomari.app.ui.study.components.CardFaceFront
 import com.aidomari.app.ui.study.components.FlippableCard
+import com.aidomari.app.ui.study.components.KeywordBottomSheet
 import com.aidomari.app.ui.study.components.StudyCompletionDialog
 import com.aidomari.app.ui.study.components.StudyProgressBar
 import com.aidomari.app.ui.study.components.StudyTopBar
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudyScreen(
     deckId: String,
@@ -35,6 +42,7 @@ fun StudyScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var bottomSheetCard by remember { mutableStateOf<Card?>(null) }
 
     // Register volume key handler while this screen is active
     DisposableEffect(viewModel) {
@@ -123,6 +131,10 @@ fun StudyScreen(
                                 backContent = {
                                     CardFaceBack(
                                         card = card,
+                                        candidateCards = uiState.subjectCards,
+                                        onKeywordClick = { selected ->
+                                            bottomSheetCard = selected
+                                        },
                                         onDone = { viewModel.markDone() },
                                         onRetry = { viewModel.markRetry() },
                                     )
@@ -138,6 +150,15 @@ fun StudyScreen(
                         modifier = Modifier.align(Alignment.Center),
                     )
                 }
+            }
+
+            if (bottomSheetCard != null) {
+                KeywordBottomSheet(
+                    initialCard = bottomSheetCard,
+                    allSubjectCards = uiState.subjectCards,
+                    onDismissRequest = { bottomSheetCard = null },
+                    onSpeak = onSpeakText,
+                )
             }
         }
     }

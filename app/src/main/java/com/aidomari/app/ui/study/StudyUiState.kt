@@ -15,4 +15,5 @@ data class StudyUiState(
     val retryCount: Int = 0,
     val isPartCompleted: Boolean = false,
     val hasNextPart: Boolean = false,
+    val subjectCards: List<Card> = emptyList(),
 )
