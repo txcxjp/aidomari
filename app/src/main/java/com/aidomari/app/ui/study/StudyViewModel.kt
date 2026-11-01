@@ -59,7 +59,7 @@ class StudyViewModel(
                 return@launch
             }
 
-            totalInPart = currentPart.totalCount
+            totalInPart = currentPart.count
             val partCards = cards.subList(
                 currentPart.startIndex.coerceAtMost(cards.size),
                 currentPart.endIndex.coerceAtMost(cards.size),
