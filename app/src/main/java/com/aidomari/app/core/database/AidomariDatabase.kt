@@ -27,11 +27,11 @@ abstract class AidomariDatabase : RoomDatabase() {
         private const val DATABASE_NAME = "aidomari.db"
 
         @Volatile
-        private var INSTANCE: AidomariDatabase? = null
+        private var instance: AidomariDatabase? = null
 
         fun getInstance(context: Context): AidomariDatabase {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
+            return instance ?: synchronized(this) {
+                instance ?: buildDatabase(context).also { instance = it }
             }
         }
 
