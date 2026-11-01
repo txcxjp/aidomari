@@ -4,33 +4,41 @@ import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.aidomari.app.core.input.VolumeKeyHandler
+import com.aidomari.app.core.tts.TtsManager
+import com.aidomari.app.ui.navigation.AidomariNavHost
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var ttsManager: TtsManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val app = application as AidomariApp
+        ttsManager = TtsManager(this)
+
         setContent {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(text = "Aidomari（相泊）")
-                    }
+                    AidomariNavHost(
+                        repository = app.repository,
+                        ttsManager = ttsManager,
+                    )
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        ttsManager.shutdown()
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
