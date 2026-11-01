@@ -117,10 +117,15 @@ gitGraph
    - 機能ごとに `main` からブランチを作成（例: `feat/room-db`, `feat/volume-key`, `feat/importer`）。
    - **並行開発**: ブランチを切り替えることで、複数の機能を互いに干渉せず並行して開発可能。
    - **リリースの取捨選択**: 「この機能は後回しにしよう」と判断した場合、マージせずブランチのまま寝かせておく。`main` は一切汚れません。
-3. **PR（プルリクエスト）は「実機テスト用 APK を焼くスイッチ」**:
+3. **Issue 連携とブランチ命名**:
+   - 作業開始時はまず GitHub で Issue を起票（例: `#1: Room Database 実装`）。
+   - ブランチ名に Issue 番号を含める: `feat/1-room-database`
+   - コミットメッセージに Issue を記載: `feat: Subject, Deck Entity を追加 (refs #1)`
+   - PR の説明文に `Closes #1` と記載 ➔ **マージ時に GitHub が Issue を自動で Closed にします**。
+4. **PR（プルリクエスト）は「実機テスト用 APK を焼くスイッチ」**:
    - ブランチを push して GitHub で PR を開くと、GitHub Actions が自動で検証＆実機用 APK を生成。
    - スマホで APK をテストして問題なければ、GitHub 上で **[Squash and merge]** ボタンを押してマージ（ブランチは削除）。
-4. **リリースとタグ打法**:
+5. **リリースとタグ打法**:
    - 節目となるバージョン（例: `v0.1.0`, `v0.2.0`）に達した際、`main` 上でタグを打って push：
      ```bash
      git tag v0.1.0

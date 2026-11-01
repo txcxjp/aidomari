@@ -1,0 +1,35 @@
+name: 開発タスク (Task)
+description: 機能の実装やリファクタリングなどの開発タスクを起票します
+title: "[Task]: "
+labels: ["task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        実装タスクの詳細と受け入れ条件を記述してください。
+  - type: textarea
+    id: overview
+    attributes:
+      label: 概要 / 目的
+      description: 何を実装・改善するのか簡潔に記述してください
+      placeholder: 例: Room Database に Subject, Deck, Card, StudySession のエンティティとDAOを実装する
+    validations:
+      required: true
+  - type: textarea
+    id: todo
+    attributes:
+      label: 作業項目 (TODO)
+      description: チェックリスト形式で記述してください
+      value: |
+        - [ ] 
+        - [ ] 
+        - [ ] 単体テストの追加
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: 完了条件 (Acceptance Criteria)
+      placeholder: 例: 全単体テストがパスし、CIのビルドが通ること
+    validations:
+      required: false
