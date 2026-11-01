@@ -29,18 +29,16 @@ abstract class AidomariDatabase : RoomDatabase() {
         @Volatile
         private var instance: AidomariDatabase? = null
 
-        fun getInstance(context: Context): AidomariDatabase {
-            return instance ?: synchronized(this) {
+        fun getInstance(context: Context): AidomariDatabase =
+            instance ?: synchronized(this) {
                 instance ?: buildDatabase(context).also { instance = it }
             }
-        }
 
-        private fun buildDatabase(context: Context): AidomariDatabase {
-            return Room.databaseBuilder(
+        private fun buildDatabase(context: Context): AidomariDatabase =
+            Room.databaseBuilder(
                 context.applicationContext,
                 AidomariDatabase::class.java,
                 DATABASE_NAME,
             ).build()
-        }
     }
 }
