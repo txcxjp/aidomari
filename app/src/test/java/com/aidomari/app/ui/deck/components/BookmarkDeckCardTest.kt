@@ -2,6 +2,7 @@ package com.aidomari.app.ui.deck.components
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.aidomari.app.domain.model.Deck
@@ -48,7 +49,7 @@ class BookmarkDeckCardTest {
         }
 
         composeTestRule.onNodeWithText("苦手単語（ブックマーク）").assertIsDisplayed()
-        composeTestRule.onNodeWithText("5 枚").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("5 枚")[0].assertIsDisplayed()
         composeTestRule.onNodeWithText("集中学習をはじめる").assertIsDisplayed()
 
         composeTestRule.onNodeWithText("集中学習をはじめる").performClick()
