@@ -70,6 +70,42 @@ class DeckViewModelTest {
     }
 
     @Test
+    fun toggleShuffle_invertsShuffleModeAndSaves() = runTest {
+        val deck = Deck(id = "d1", subjectId = "sub-1", name = "英単語", shuffleMode = false)
+        fakeRepository.decksList.add(deck)
+        fakeRepository.triggerDecksUpdate()
+        advanceUntilIdle()
+
+        viewModel.toggleShuffle("d1")
+        advanceUntilIdle()
+
+        val updated = fakeRepository.decksList.find { it.id == "d1" }
+        assertTrue(updated?.shuffleMode == true)
+
+        viewModel.toggleShuffle("d1")
+        advanceUntilIdle()
+
+        val toggledBack = fakeRepository.decksList.find { it.id == "d1" }
+        assertTrue(toggledBack?.shuffleMode == false)
+    }
+
+    @Test
+    fun updateDeck_modifiesDeckSettingsAndSaves() = runTest {
+        val deck = Deck(id = "d1", subjectId = "sub-1", name = "Old Name", splitSize = 50)
+        fakeRepository.decksList.add(deck)
+        fakeRepository.triggerDecksUpdate()
+        advanceUntilIdle()
+
+        viewModel.updateDeck(deck.copy(name = "New Name", splitSize = 30, autoContinue = true))
+        advanceUntilIdle()
+
+        val updated = fakeRepository.decksList.find { it.id == "d1" }
+        assertEquals("New Name", updated?.name)
+        assertEquals(30, updated?.splitSize)
+        assertTrue(updated?.autoContinue == true)
+    }
+
+    @Test
     fun loadDecks_calculatesPartsAndProgress() = runTest {
         val deck = Deck(id = "d1", subjectId = "sub-1", name = "英単語", splitSize = 50)
         fakeRepository.decksList.add(deck)
@@ -124,6 +160,7 @@ class DeckViewModelTest {
         override fun getDecksBySubject(subjectId: String): Flow<List<Deck>> = decksFlow
         override suspend fun getDeckById(deckId: String): Deck? = decksList.find { it.id == deckId }
         override suspend fun saveDeck(deck: Deck) {
+            decksList.removeIf { it.id == deck.id }
             decksList.add(deck)
             triggerDecksUpdate()
         }
