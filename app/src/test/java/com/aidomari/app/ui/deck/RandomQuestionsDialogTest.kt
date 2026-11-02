@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.aidomari.app.ui.deck.components.RandomQuestionsDialog
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -37,8 +38,8 @@ class RandomQuestionsDialogTest {
         composeTestRule.onNodeWithText("10問").assertIsDisplayed()
         composeTestRule.onNodeWithText("20問").assertIsDisplayed()
         composeTestRule.onNodeWithText("30問").assertIsDisplayed()
-        composeTestRule.onNodeWithText("50問").assertIsDisplayed()
-        composeTestRule.onNodeWithText("全問 (100問)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("50問").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("全問 (100問)").performScrollTo().assertIsDisplayed()
 
         composeTestRule.onNodeWithText("学習開始").performClick()
         assertEquals(10, startedCount)
@@ -76,7 +77,7 @@ class RandomQuestionsDialogTest {
             )
         }
 
-        composeTestRule.onNodeWithText("全問 (42問)").performClick()
+        composeTestRule.onNodeWithText("全問 (42問)").performScrollTo().performClick()
         composeTestRule.onNodeWithText("学習開始").performClick()
 
         assertEquals(-1, startedCount)
