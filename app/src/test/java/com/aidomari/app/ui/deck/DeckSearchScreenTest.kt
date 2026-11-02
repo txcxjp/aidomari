@@ -3,6 +3,7 @@ package com.aidomari.app.ui.deck
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -14,6 +15,7 @@ import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -86,6 +88,35 @@ class DeckSearchScreenTest {
         composeTestRule.onNodeWithText("英単語").assertIsDisplayed()
     }
 
+    @Test
+    fun searchMode_toggleBookmark_updatesBookmark() {
+        val card = Card(
+            id = "c1",
+            deckId = "d1",
+            front = "Enthusiastic",
+            back = "熱心な",
+            isBookmarked = false,
+        )
+        fakeRepository.cardsList.add(card)
+
+        composeTestRule.setContent {
+            DeckListScreen(
+                subjectName = "英単語",
+                viewModel = viewModel,
+                onBack = {},
+                onPartClick = { _, _ -> },
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("単語検索").performClick()
+        composeTestRule.onNodeWithText("単語・意味・メモを検索...").performTextInput("Enthu")
+
+        // Toggle bookmark from search result
+        composeTestRule.onNodeWithTag("SearchBookmarkButton_c1").performClick()
+        val updated = fakeRepository.cardsList.find { it.id == "c1" }
+        assertTrue(updated!!.isBookmarked)
+    }
+
     private class FakeTestRepository : WordsRepository {
         val cardsList = mutableListOf<Card>()
         val decksList = mutableListOf<Deck>()
@@ -122,6 +153,10 @@ class DeckSearchScreenTest {
         }
 
         override suspend fun setBookmark(cardId: String, isBookmarked: Boolean) {
+            val idx = cardsList.indexOfFirst { it.id == cardId }
+            if (idx != -1) {
+                cardsList[idx] = cardsList[idx].copy(isBookmarked = isBookmarked)
+            }
         }
         override fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>> = MutableStateFlow(emptyList())
 

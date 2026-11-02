@@ -234,6 +234,7 @@ fun StudyScreen(
                     allSubjectCards = uiState.subjectCards,
                     onDismissRequest = { bottomSheetCard = null },
                     onSpeak = onSpeakText,
+                    onToggleBookmark = { viewModel.toggleCardBookmark(it) },
                 )
             }
 

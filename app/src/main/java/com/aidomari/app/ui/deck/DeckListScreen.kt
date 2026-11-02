@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
@@ -62,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,6 +82,7 @@ fun DeckListScreen(
     onPartClick: (deckId: String, partIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
     onSpeakText: (String) -> Unit = {},
+    onManageCardsClick: (deckId: String) -> Unit = {},
 ) {
     val decksWithParts by viewModel.decksWithParts.collectAsState()
     val bookmarkModel by viewModel.bookmarkDeckUiModel.collectAsState()
@@ -274,12 +277,21 @@ fun DeckListScreen(
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSurface,
                                                 )
-                                                if (card.isBookmarked) {
+                                                IconButton(
+                                                    onClick = { viewModel.toggleBookmark(card) },
+                                                    modifier = Modifier
+                                                        .size(28.dp)
+                                                        .testTag("SearchBookmarkButton_${card.id}"),
+                                                ) {
                                                     Icon(
                                                         imageVector = Icons.Default.Star,
-                                                        contentDescription = "Bookmarked",
-                                                        tint = Color(0xFFFFB300),
-                                                        modifier = Modifier.size(16.dp),
+                                                        contentDescription = if (card.isBookmarked) "Bookmarked" else "Bookmark",
+                                                        tint = if (card.isBookmarked) {
+                                                            Color(0xFFFFB300)
+                                                        } else {
+                                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                                        },
+                                                        modifier = Modifier.size(18.dp),
                                                     )
                                                 }
                                             }
@@ -636,6 +648,16 @@ fun DeckListScreen(
                                                 },
                                             )
                                         }
+                                        IconButton(
+                                            onClick = { onManageCardsClick(deck.id) },
+                                            modifier = Modifier.testTag("ManageCardsButton_${deck.id}"),
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.List,
+                                                contentDescription = "Manage Cards",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                         IconButton(onClick = { deckToEdit = deck }) {
                                             Icon(
                                                 imageVector = Icons.Default.Edit,
@@ -769,6 +791,7 @@ fun DeckListScreen(
                     allSubjectCards = allSubjectCards,
                     onDismissRequest = { selectedSearchCard = null },
                     onSpeak = onSpeakText,
+                    onToggleBookmark = { viewModel.toggleBookmark(it) },
                 )
             }
         }

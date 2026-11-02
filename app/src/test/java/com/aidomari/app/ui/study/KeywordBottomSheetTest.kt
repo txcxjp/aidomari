@@ -112,4 +112,25 @@ class KeywordBottomSheetTest {
         composeTestRule.onNodeWithContentDescription("Close").performClick()
         assertTrue(closeClicked)
     }
+
+    @Test
+    fun keywordSheetContent_toggleBookmark_invokesCallback() {
+        var toggledCard: Card? = null
+
+        composeTestRule.setContent {
+            KeywordSheetContent(
+                currentCard = cardApple,
+                cardStackSize = 1,
+                allSubjectCards = listOf(cardApple, cardFruit),
+                onBackClick = {},
+                onCloseClick = {},
+                onKeywordClick = {},
+                onSpeak = {},
+                onToggleBookmark = { toggledCard = it },
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Toggle Bookmark").performClick()
+        assertEquals("c1", toggledCard?.id)
+    }
 }

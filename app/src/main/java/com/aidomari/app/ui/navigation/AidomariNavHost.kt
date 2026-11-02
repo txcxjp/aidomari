@@ -11,6 +11,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.aidomari.app.core.tts.TtsManager
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.ui.card.CardListScreen
+import com.aidomari.app.ui.card.CardListViewModel
 import com.aidomari.app.ui.deck.DeckListScreen
 import com.aidomari.app.ui.deck.DeckViewModel
 import com.aidomari.app.ui.study.StudyScreen
@@ -60,6 +62,30 @@ fun AidomariNavHost(
                 },
                 onSpeakText = { text ->
                     ttsManager.speak(text)
+                },
+                onManageCardsClick = { deckId ->
+                    navController.navigate("deck/$deckId/cards")
+                },
+            )
+        }
+
+        composable(
+            route = "deck/{deckId}/cards",
+            arguments = listOf(
+                navArgument("deckId") { type = NavType.StringType },
+            ),
+        ) { backStackEntry ->
+            val deckId = backStackEntry.arguments?.getString("deckId") ?: return@composable
+            val cardListViewModel = remember(deckId) { CardListViewModel(deckId, repository) }
+
+            CardListScreen(
+                viewModel = cardListViewModel,
+                onBack = { navController.popBackStack() },
+                onSpeakText = { text ->
+                    val deck = cardListViewModel.uiState.value.deck
+                    val rate = deck?.speechRate ?: 1.0f
+                    ttsManager.setSpeechRate(rate)
+                    ttsManager.speak(text, "auto")
                 },
             )
         }

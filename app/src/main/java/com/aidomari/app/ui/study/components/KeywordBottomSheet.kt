@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,6 +33,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +50,7 @@ fun KeywordBottomSheet(
     onDismissRequest: () -> Unit,
     onSpeak: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onToggleBookmark: ((Card) -> Unit)? = null,
 ) {
     if (initialCard == null) return
 
@@ -84,6 +87,7 @@ fun KeywordBottomSheet(
             onCloseClick = onDismissRequest,
             onKeywordClick = { nextCard -> cardStack.add(nextCard) },
             onSpeak = onSpeak,
+            onToggleBookmark = onToggleBookmark,
         )
     }
 }
@@ -98,6 +102,7 @@ fun KeywordSheetContent(
     onKeywordClick: (Card) -> Unit,
     onSpeak: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onToggleBookmark: ((Card) -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
 
@@ -165,12 +170,31 @@ fun KeywordSheetContent(
                 modifier = Modifier.weight(1f),
             )
 
-            IconButton(onClick = { onSpeak(currentCard.front) }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = "Speak",
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onToggleBookmark != null) {
+                    IconButton(
+                        onClick = { onToggleBookmark(currentCard) },
+                        modifier = Modifier.semantics { contentDescription = "Toggle Bookmark" },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = if (currentCard.isBookmarked) "Bookmarked" else "Bookmark",
+                            tint = if (currentCard.isBookmarked) {
+                                Color(0xFFFFB300)
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            },
+                        )
+                    }
+                }
+
+                IconButton(onClick = { onSpeak(currentCard.front) }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                        contentDescription = "Speak",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
 
