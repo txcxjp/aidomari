@@ -1,82 +1,55 @@
 package com.aidomari.app.ui.deck
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.ui.deck.components.AddDeckDialog
+import com.aidomari.app.ui.deck.components.BookmarkDeckCard
+import com.aidomari.app.ui.deck.components.DeckItemCard
+import com.aidomari.app.ui.deck.components.DeckSearchContent
+import com.aidomari.app.ui.deck.components.DeleteDeckConfirmDialog
+import com.aidomari.app.ui.deck.components.EditDeckDialog
+import com.aidomari.app.ui.deck.components.RandomQuestionsCard
 import com.aidomari.app.ui.deck.components.RandomQuestionsDialog
 import com.aidomari.app.ui.study.components.KeywordBottomSheet
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeckListScreen(
     subjectName: String,
@@ -186,151 +159,14 @@ fun DeckListScreen(
                 .padding(innerPadding),
         ) {
             if (isSearchActive) {
-                when {
-                    searchQuery.isBlank() -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "教科内の単語を検索",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "見出し語、意味、メモから検索できます",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.outline,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-
-                    isSearching -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
-
-                    searchResults.isEmpty() -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Text(
-                                text = "「$searchQuery」に一致する単語はありません",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-
-                    else -> {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            item {
-                                Text(
-                                    text = "${searchResults.size}件の単語が見つかりました",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(vertical = 4.dp),
-                                )
-                            }
-
-                            items(searchResults, key = { it.id }) { card ->
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { selectedSearchCard = card },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                    ),
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(14.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            ) {
-                                                Text(
-                                                    text = card.front,
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurface,
-                                                )
-                                                IconButton(
-                                                    onClick = { viewModel.toggleBookmark(card) },
-                                                    modifier = Modifier
-                                                        .size(28.dp)
-                                                        .testTag("SearchBookmarkButton_${card.id}"),
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Star,
-                                                        contentDescription = if (card.isBookmarked) "Bookmarked" else "Bookmark",
-                                                        tint = if (card.isBookmarked) {
-                                                            Color(0xFFFFB300)
-                                                        } else {
-                                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                                                        },
-                                                        modifier = Modifier.size(18.dp),
-                                                    )
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                text = card.back,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 2,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                            if (card.userQuestion.isNotBlank() || card.userSupplement.isNotBlank()) {
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Text(
-                                                    text = "📝 メモあり",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                )
-                                            }
-                                        }
-
-                                        IconButton(onClick = { onSpeakText(card.front) }) {
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                                                contentDescription = "発音",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                DeckSearchContent(
+                    searchQuery = searchQuery,
+                    searchResults = searchResults,
+                    isSearching = isSearching,
+                    onCardClick = { selectedSearchCard = it },
+                    onToggleBookmark = { viewModel.toggleBookmark(it) },
+                    onSpeakText = onSpeakText,
+                )
             } else if (decksWithParts.isEmpty() && (bookmarkModel == null || bookmarkModel?.totalCount == 0) && allSubjectCards.isEmpty()) {
                 Column(
                     modifier = Modifier
@@ -357,606 +193,35 @@ fun DeckListScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    // Bookmark study card banner
                     if (bookmarkModel != null && bookmarkModel!!.totalCount > 0) {
-                        val model = bookmarkModel!!
                         item(key = "bookmark_study_section") {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-                                ),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f)),
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Star,
-                                                contentDescription = "Bookmark Study",
-                                                tint = Color(0xFFFFB300),
-                                                modifier = Modifier.size(24.dp),
-                                            )
-                                            Text(
-                                                text = "苦手単語（ブックマーク）",
-                                                style = MaterialTheme.typography.titleMedium.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                ),
-                                            )
-                                        }
-
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.surface,
-                                        ) {
-                                            Text(
-                                                text = "${model.totalCount} 枚",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.tertiary,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                            )
-                                        }
-                                    }
-
-                                    if (model.totalCount > 0) {
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 4.dp),
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically,
-                                            ) {
-                                                Text(
-                                                    text = "進捗率: ${(model.masteryRate * 100).toInt()}%",
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (model.isAllCompleted) Color(0xFF2E7D32) else Color(0xFFE65100),
-                                                )
-                                                Text(
-                                                    text = "${model.learnedCardCount} / ${model.totalCount} 単語",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            LinearProgressIndicator(
-                                                progress = { model.masteryRate },
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(6.dp)
-                                                    .clip(RoundedCornerShape(3.dp)),
-                                                color = if (model.isAllCompleted) Color(0xFF2E7D32) else Color(0xFFFFB300),
-                                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                            )
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(10.dp))
-
-                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        model.parts.forEach { partWithSession ->
-                                            val part = partWithSession.part
-                                            val session = partWithSession.session
-
-                                            Card(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clickable { onPartClick(model.deck.id, part.partIndex) },
-                                                shape = RoundedCornerShape(10.dp),
-                                                colors = CardDefaults.cardColors(
-                                                    containerColor = MaterialTheme.colorScheme.surface,
-                                                ),
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                ) {
-                                                    Column {
-                                                        Text(
-                                                            text = if (model.parts.size > 1) part.displayName else "集中学習をはじめる",
-                                                            style = MaterialTheme.typography.titleSmall,
-                                                            fontWeight = FontWeight.SemiBold,
-                                                        )
-                                                        Text(
-                                                            text = "${part.count} 枚",
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        )
-                                                    }
-
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        when {
-                                                            session?.isCompleted == true -> {
-                                                                Surface(
-                                                                    shape = RoundedCornerShape(6.dp),
-                                                                    color = Color(0xFF2E7D32).copy(alpha = 0.15f),
-                                                                ) {
-                                                                    Row(
-                                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                                        verticalAlignment = Alignment.CenterVertically,
-                                                                    ) {
-                                                                        Icon(
-                                                                            imageVector = Icons.Default.CheckCircle,
-                                                                            contentDescription = null,
-                                                                            tint = Color(0xFF2E7D32),
-                                                                            modifier = Modifier.height(14.dp),
-                                                                        )
-                                                                        Spacer(modifier = Modifier.width(4.dp))
-                                                                        Text(
-                                                                            text = "完了",
-                                                                            style = MaterialTheme.typography.labelSmall,
-                                                                            color = Color(0xFF2E7D32),
-                                                                            fontWeight = FontWeight.Bold,
-                                                                        )
-                                                                    }
-                                                                }
-                                                            }
-                                                            session != null && !session.isCompleted -> {
-                                                                Surface(
-                                                                    shape = RoundedCornerShape(6.dp),
-                                                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                                                ) {
-                                                                    Row(
-                                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                                        verticalAlignment = Alignment.CenterVertically,
-                                                                    ) {
-                                                                        Icon(
-                                                                            imageVector = Icons.Default.PlayArrow,
-                                                                            contentDescription = null,
-                                                                            tint = MaterialTheme.colorScheme.primary,
-                                                                            modifier = Modifier.height(14.dp),
-                                                                        )
-                                                                        Spacer(modifier = Modifier.width(4.dp))
-                                                                        Text(
-                                                                            text = "再開 (${session.currentCardIndex}/${part.count})",
-                                                                            style = MaterialTheme.typography.labelSmall,
-                                                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                                            fontWeight = FontWeight.Bold,
-                                                                        )
-                                                                    }
-                                                                }
-                                                            }
-                                                            else -> {
-                                                                Icon(
-                                                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                                                    contentDescription = null,
-                                                                    tint = MaterialTheme.colorScheme.outline,
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            BookmarkDeckCard(
+                                model = bookmarkModel!!,
+                                onPartClick = onPartClick,
+                            )
                         }
                     }
 
-                    // Random questions study card banner
                     if (allSubjectCards.isNotEmpty()) {
                         item(key = "random_study_section") {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                                ),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)),
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Shuffle,
-                                                contentDescription = "Random Study",
-                                                tint = MaterialTheme.colorScheme.secondary,
-                                                modifier = Modifier.size(24.dp),
-                                            )
-                                            Text(
-                                                text = "ランダム出題",
-                                                style = MaterialTheme.typography.titleMedium.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                ),
-                                            )
-                                        }
-
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.surface,
-                                        ) {
-                                            Text(
-                                                text = "${allSubjectCards.size} 枚",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.secondary,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                            )
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(10.dp))
-
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { showRandomQuestionsDialog = true },
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surface,
-                                        ),
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Column {
-                                                Text(
-                                                    text = "ランダム学習を開始",
-                                                    style = MaterialTheme.typography.titleSmall,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                )
-                                                Text(
-                                                    text = if (randomQuestionCount <= 0) "全問出題" else "${randomQuestionCount}問出題（タップで変更）",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                                contentDescription = "Start Random Study",
-                                                tint = MaterialTheme.colorScheme.secondary,
-                                                modifier = Modifier.size(20.dp),
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                            RandomQuestionsCard(
+                                totalCards = allSubjectCards.size,
+                                randomQuestionCount = randomQuestionCount,
+                                onClick = { showRandomQuestionsDialog = true },
+                            )
                         }
                     }
 
                     items(decksWithParts, key = { it.deck.id }) { item ->
-                        val deck = item.deck
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            ),
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                            ) {
-                                // Deck Header
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = deck.name,
-                                            style = MaterialTheme.typography.titleLarge.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 20.sp,
-                                            ),
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Surface(
-                                                shape = RoundedCornerShape(6.dp),
-                                                color = MaterialTheme.colorScheme.surface,
-                                            ) {
-                                                Text(
-                                                    text = "${item.totalCardCount} 単語",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                )
-                                            }
-                                            if (deck.autoContinue) {
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = MaterialTheme.colorScheme.surface,
-                                                ) {
-                                                    Text(
-                                                        text = "自動継続",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.secondary,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                    )
-                                                }
-                                            }
-                                            Surface(
-                                                shape = RoundedCornerShape(6.dp),
-                                                color = if (deck.shuffleMode) {
-                                                    MaterialTheme.colorScheme.tertiaryContainer
-                                                } else {
-                                                    MaterialTheme.colorScheme.surface
-                                                },
-                                                modifier = Modifier.clickable {
-                                                    viewModel.toggleShuffle(deck.id)
-                                                },
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Shuffle,
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(12.dp),
-                                                        tint = if (deck.shuffleMode) {
-                                                            MaterialTheme.colorScheme.onTertiaryContainer
-                                                        } else {
-                                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                                        },
-                                                    )
-                                                    Text(
-                                                        text = if (deck.shuffleMode) "シャッフル" else "通常順",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = if (deck.shuffleMode) {
-                                                            MaterialTheme.colorScheme.onTertiaryContainer
-                                                        } else {
-                                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                                        },
-                                                        fontWeight = if (deck.shuffleMode) FontWeight.Bold else FontWeight.Normal,
-                                                    )
-                                                }
-                                            }
-                                            if (deck.reverseMode) {
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                                ) {
-                                                    Text(
-                                                        text = "裏面スタート",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                    )
-                                                }
-                                            }
-                                            if (deck.autoSpeak) {
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                                                ) {
-                                                    Text(
-                                                        text = "自動音声 (${deck.speechRate}x)",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(onClick = { viewModel.toggleAutoSpeak(deck.id) }) {
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                                                contentDescription = if (deck.autoSpeak) "Auto-Speak ON" else "Auto-Speak OFF",
-                                                tint = if (deck.autoSpeak) {
-                                                    MaterialTheme.colorScheme.primary
-                                                } else {
-                                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                                },
-                                            )
-                                        }
-                                        IconButton(
-                                            onClick = { onManageCardsClick(deck.id) },
-                                            modifier = Modifier.testTag("ManageCardsButton_${deck.id}"),
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Filled.List,
-                                                contentDescription = "Manage Cards",
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        IconButton(onClick = { deckToEdit = deck }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit Deck",
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        IconButton(onClick = { deckToDelete = deck }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete Deck",
-                                                tint = MaterialTheme.colorScheme.error,
-                                            )
-                                        }
-                                    }
-                                }
-
-                                if (item.totalCardCount > 0) {
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp),
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Text(
-                                                text = "進捗率: ${(item.masteryRate * 100).toInt()}%",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (item.isAllCompleted) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
-                                            )
-                                            Text(
-                                                text = "${item.learnedCardCount} / ${item.totalCardCount} 単語",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        LinearProgressIndicator(
-                                            progress = { item.masteryRate },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(6.dp)
-                                                .clip(RoundedCornerShape(3.dp)),
-                                            color = if (item.isAllCompleted) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
-                                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                // List of Parts
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                                ) {
-                                    item.parts.forEach { partWithSession ->
-                                        val part = partWithSession.part
-                                        val session = partWithSession.session
-
-                                        Card(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable { onPartClick(deck.id, part.partIndex) },
-                                            shape = RoundedCornerShape(10.dp),
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = MaterialTheme.colorScheme.surface,
-                                            ),
-                                        ) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically,
-                                            ) {
-                                                Column {
-                                                    Text(
-                                                        text = part.displayName,
-                                                        style = MaterialTheme.typography.titleSmall,
-                                                        fontWeight = FontWeight.SemiBold,
-                                                    )
-                                                    Text(
-                                                        text = "${part.count} 枚",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                }
-
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    when {
-                                                        session?.isCompleted == true -> {
-                                                            Surface(
-                                                                shape = RoundedCornerShape(6.dp),
-                                                                color = Color(0xFF2E7D32).copy(alpha = 0.15f),
-                                                            ) {
-                                                                Row(
-                                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                                    verticalAlignment = Alignment.CenterVertically,
-                                                                ) {
-                                                                    Icon(
-                                                                        imageVector = Icons.Default.CheckCircle,
-                                                                        contentDescription = null,
-                                                                        tint = Color(0xFF2E7D32),
-                                                                        modifier = Modifier.height(14.dp),
-                                                                    )
-                                                                    Spacer(modifier = Modifier.width(4.dp))
-                                                                    Text(
-                                                                        text = "完了",
-                                                                        style = MaterialTheme.typography.labelSmall,
-                                                                        color = Color(0xFF2E7D32),
-                                                                        fontWeight = FontWeight.Bold,
-                                                                    )
-                                                                }
-                                                            }
-                                                        }
-                                                        session != null && !session.isCompleted -> {
-                                                            Surface(
-                                                                shape = RoundedCornerShape(6.dp),
-                                                                color = MaterialTheme.colorScheme.primaryContainer,
-                                                            ) {
-                                                                Row(
-                                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                                    verticalAlignment = Alignment.CenterVertically,
-                                                                ) {
-                                                                    Icon(
-                                                                        imageVector = Icons.Default.PlayArrow,
-                                                                        contentDescription = null,
-                                                                        tint = MaterialTheme.colorScheme.primary,
-                                                                        modifier = Modifier.height(14.dp),
-                                                                    )
-                                                                    Spacer(modifier = Modifier.width(4.dp))
-                                                                    Text(
-                                                                        text = "再開 (${session.currentCardIndex}/${part.count})",
-                                                                        style = MaterialTheme.typography.labelSmall,
-                                                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                                        fontWeight = FontWeight.Bold,
-                                                                    )
-                                                                }
-                                                            }
-                                                        }
-                                                        else -> {
-                                                            Icon(
-                                                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                                                contentDescription = null,
-                                                                tint = MaterialTheme.colorScheme.outline,
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        DeckItemCard(
+                            item = item,
+                            onPartClick = onPartClick,
+                            onToggleShuffle = { viewModel.toggleShuffle(item.deck.id) },
+                            onToggleAutoSpeak = { viewModel.toggleAutoSpeak(item.deck.id) },
+                            onManageCardsClick = { onManageCardsClick(item.deck.id) },
+                            onEditDeck = { deckToEdit = item.deck },
+                            onDeleteDeck = { deckToDelete = item.deck },
+                        )
                     }
                 }
             }
@@ -976,271 +241,42 @@ fun DeckListScreen(
         }
     }
 
-    // Add Deck Dialog
     if (showAddDialog) {
-        var deckName by remember { mutableStateOf("") }
-        var splitSizeText by remember { mutableStateOf("50") }
-        var autoContinue by remember { mutableStateOf(false) }
-        var shuffleMode by remember { mutableStateOf(false) }
-        var reverseMode by remember { mutableStateOf(false) }
-        var autoSpeak by remember { mutableStateOf(false) }
-        var speechRate by remember { mutableFloatStateOf(1.0f) }
-        val rateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
-
-        AlertDialog(
+        AddDeckDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text(text = "新規デッキの作成") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = deckName,
-                        onValueChange = { deckName = it },
-                        label = { Text(text = "デッキ名") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = splitSizeText,
-                        onValueChange = { splitSizeText = it },
-                        label = { Text(text = "分割枚数（デフォルト: 50枚）") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = "自動継続（終了時に次のPartへ）")
-                        Switch(checked = autoContinue, onCheckedChange = { autoContinue = it })
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = "シャッフル出題")
-                        Switch(checked = shuffleMode, onCheckedChange = { shuffleMode = it })
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = "裏面から出題（和英・意味先出し）")
-                        Switch(checked = reverseMode, onCheckedChange = { reverseMode = it })
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = "自動読み上げ（カード表示時に発音）")
-                        Switch(checked = autoSpeak, onCheckedChange = { autoSpeak = it })
-                    }
-                    if (autoSpeak) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "読み上げ速度: ${speechRate}x",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            rateOptions.forEach { rate ->
-                                val isSelected = (speechRate - rate).let { it >= -0.01f && it <= 0.01f }
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { speechRate = rate },
-                                    label = { Text(text = "${rate}x") },
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (deckName.isNotBlank()) {
-                            val splitSize = splitSizeText.toIntOrNull() ?: 50
-                            viewModel.createDeck(
-                                name = deckName,
-                                splitSize = splitSize,
-                                autoContinue = autoContinue,
-                                shuffleMode = shuffleMode,
-                                reverseMode = reverseMode,
-                                autoSpeak = autoSpeak,
-                                speechRate = speechRate,
-                            )
-                            showAddDialog = false
-                        }
-                    },
-                ) {
-                    Text(text = "作成")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text(text = "キャンセル")
-                }
+            onConfirm = { name, splitSize, autoContinue, shuffleMode, reverseMode, autoSpeak, speechRate ->
+                viewModel.createDeck(
+                    name = name,
+                    splitSize = splitSize,
+                    autoContinue = autoContinue,
+                    shuffleMode = shuffleMode,
+                    reverseMode = reverseMode,
+                    autoSpeak = autoSpeak,
+                    speechRate = speechRate,
+                )
+                showAddDialog = false
             },
         )
     }
 
-    // Edit Deck Dialog
     if (deckToEdit != null) {
-        val target = deckToEdit!!
-        var deckName by remember(target) { mutableStateOf(target.name) }
-        var splitSizeText by remember(target) { mutableStateOf(target.splitSize.toString()) }
-        var autoContinue by remember(target) { mutableStateOf(target.autoContinue) }
-        var shuffleMode by remember(target) { mutableStateOf(target.shuffleMode) }
-        var reverseMode by remember(target) { mutableStateOf(target.reverseMode) }
-        var autoSpeak by remember(target) { mutableStateOf(target.autoSpeak) }
-        var speechRate by remember(target) { mutableFloatStateOf(target.speechRate) }
-        val rateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
-
-        AlertDialog(
+        EditDeckDialog(
+            deck = deckToEdit!!,
             onDismissRequest = { deckToEdit = null },
-            title = { Text(text = "デッキ設定の変更") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = deckName,
-                        onValueChange = { deckName = it },
-                        label = { Text(text = "デッキ名") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = splitSizeText,
-                        onValueChange = { splitSizeText = it },
-                        label = { Text(text = "分割枚数") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = "自動継続（終了時に次のPartへ）")
-                        Switch(checked = autoContinue, onCheckedChange = { autoContinue = it })
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = "シャッフル出題")
-                        Switch(checked = shuffleMode, onCheckedChange = { shuffleMode = it })
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = "裏面から出題（和英・意味先出し）")
-                        Switch(checked = reverseMode, onCheckedChange = { reverseMode = it })
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = "自動読み上げ（カード表示時に発音）")
-                        Switch(checked = autoSpeak, onCheckedChange = { autoSpeak = it })
-                    }
-                    if (autoSpeak) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "読み上げ速度: ${speechRate}x",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            rateOptions.forEach { rate ->
-                                val isSelected = (speechRate - rate).let { it >= -0.01f && it <= 0.01f }
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { speechRate = rate },
-                                    label = { Text(text = "${rate}x") },
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (deckName.isNotBlank()) {
-                            val splitSize = splitSizeText.toIntOrNull()?.coerceAtLeast(1) ?: target.splitSize
-                            val updated = target.copy(
-                                name = deckName.trim(),
-                                splitSize = splitSize,
-                                autoContinue = autoContinue,
-                                shuffleMode = shuffleMode,
-                                reverseMode = reverseMode,
-                                autoSpeak = autoSpeak,
-                                speechRate = speechRate,
-                            )
-                            viewModel.updateDeck(updated)
-                            deckToEdit = null
-                        }
-                    },
-                ) {
-                    Text(text = "保存")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { deckToEdit = null }) {
-                    Text(text = "キャンセル")
-                }
+            onConfirm = { updated ->
+                viewModel.updateDeck(updated)
+                deckToEdit = null
             },
         )
     }
 
-    // Delete confirmation dialog
     if (deckToDelete != null) {
-        val target = deckToDelete!!
-        AlertDialog(
+        DeleteDeckConfirmDialog(
+            deck = deckToDelete!!,
             onDismissRequest = { deckToDelete = null },
-            title = { Text(text = "デッキの削除") },
-            text = {
-                Text(text = "「${target.name}」および所属するすべての単語カードを削除しますか？この操作は取り消せません。")
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.deleteDeck(target.id)
-                        deckToDelete = null
-                    },
-                ) {
-                    Text(text = "削除する")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { deckToDelete = null }) {
-                    Text(text = "キャンセル")
-                }
+            onConfirm = {
+                viewModel.deleteDeck(deckToDelete!!.id)
+                deckToDelete = null
             },
         )
     }
