@@ -253,6 +253,9 @@ fun StudyScreen(
                     onDismissRequest = { bottomSheetCard = null },
                     onSpeak = onSpeakText,
                     onToggleBookmark = { viewModel.toggleCardBookmark(it) },
+                    onSaveNotes = { cardId, question, supplement ->
+                        viewModel.updateCardNotes(cardId, question, supplement)
+                    },
                 )
             }
 

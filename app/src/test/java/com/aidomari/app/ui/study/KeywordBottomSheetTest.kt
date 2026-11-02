@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.ui.study.components.KeywordBottomSheet
 import com.aidomari.app.ui.study.components.KeywordSheetContent
@@ -59,6 +60,68 @@ class KeywordBottomSheetTest {
         assertFalse(dismissed)
         composeTestRule.onNodeWithText("Apple").assertIsDisplayed()
         composeTestRule.onNodeWithText("Rich in vitamin C").assertIsDisplayed()
+    }
+
+    @Test
+    fun keywordBottomSheet_displaysQuestion_whenPresent() {
+        val cardWithQuestion = cardApple.copy(userQuestion = "どんな果物？")
+
+        composeTestRule.setContent {
+            KeywordBottomSheet(
+                initialCard = cardWithQuestion,
+                allSubjectCards = listOf(cardWithQuestion),
+                onDismissRequest = {},
+                onSpeak = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText("疑問点・質問").assertIsDisplayed()
+        composeTestRule.onNodeWithText("どんな果物？").assertIsDisplayed()
+    }
+
+    @Test
+    fun keywordBottomSheet_editNotes_opensDialog_andSavesNotes() {
+        var savedCardId: String? = null
+        var savedQuestion: String? = null
+        var savedSupplement: String? = null
+
+        composeTestRule.setContent {
+            KeywordBottomSheet(
+                initialCard = cardFruit,
+                allSubjectCards = listOf(cardFruit),
+                onDismissRequest = {},
+                onSpeak = {},
+                onSaveNotes = { id, q, s ->
+                    savedCardId = id
+                    savedQuestion = q
+                    savedSupplement = s
+                },
+            )
+        }
+
+        // Tap Edit Notes icon button
+        composeTestRule.onNodeWithContentDescription("Edit Notes").performClick()
+
+        // CardEditNotesDialog is displayed
+        composeTestRule.onNodeWithText("カードの質問・メモを編集").assertIsDisplayed()
+
+        // Input Question and Supplement
+        composeTestRule.onNodeWithText("表面の質問（自分用クイズ）").performTextInput("果物の定義は？")
+        composeTestRule.onNodeWithText("裏面の補足メモ（解説・例文など）").performTextInput("種子を含む器官")
+
+        // Click Save
+        composeTestRule.onNodeWithText("保存").performClick()
+
+        // Verify callback was invoked with updated values
+        assertEquals("c2", savedCardId)
+        assertEquals("果物の定義は？", savedQuestion)
+        assertEquals("種子を含む器官", savedSupplement)
+
+        // Verify updated notes appear in the sheet immediately
+        composeTestRule.onNodeWithText("疑問点・質問").assertIsDisplayed()
+        composeTestRule.onNodeWithText("果物の定義は？").assertIsDisplayed()
+        composeTestRule.onNodeWithText("補足メモ").assertIsDisplayed()
+        composeTestRule.onNodeWithText("種子を含む器官").assertIsDisplayed()
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.aidomari.app.ui.study.components
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -29,8 +31,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,6 +56,7 @@ fun KeywordBottomSheet(
     onSpeak: (String) -> Unit,
     modifier: Modifier = Modifier,
     onToggleBookmark: ((Card) -> Unit)? = null,
+    onSaveNotes: ((cardId: String, userQuestion: String, userSupplement: String) -> Unit)? = null,
 ) {
     if (initialCard == null) return
 
@@ -58,6 +64,7 @@ fun KeywordBottomSheet(
     val cardStack = remember(initialCard) {
         mutableStateListOf(initialCard)
     }
+    var editingCard by remember { mutableStateOf<Card?>(null) }
 
     // Intercept hardware/system back button when deeper in recursive keyword stack
     BackHandler(enabled = cardStack.size > 1) {
@@ -87,7 +94,41 @@ fun KeywordBottomSheet(
             onCloseClick = onDismissRequest,
             onKeywordClick = { nextCard -> cardStack.add(nextCard) },
             onSpeak = onSpeak,
-            onToggleBookmark = onToggleBookmark,
+            onToggleBookmark = onToggleBookmark?.let { callback ->
+                { card ->
+                    val updated = card.copy(isBookmarked = !card.isBookmarked)
+                    val idx = cardStack.indexOfFirst { it.id == card.id }
+                    if (idx >= 0) {
+                        cardStack[idx] = updated
+                    }
+                    callback(card)
+                }
+            },
+            onEditNotesClick = if (onSaveNotes != null) {
+                { editingCard = currentCard }
+            } else {
+                null
+            },
+        )
+    }
+
+    if (editingCard != null) {
+        val targetCard = editingCard!!
+        CardEditNotesDialog(
+            card = targetCard,
+            onDismissRequest = { editingCard = null },
+            onSave = { question, supplement ->
+                val updated = targetCard.copy(
+                    userQuestion = question.trim(),
+                    userSupplement = supplement.trim(),
+                )
+                val idx = cardStack.indexOfFirst { it.id == targetCard.id }
+                if (idx >= 0) {
+                    cardStack[idx] = updated
+                }
+                editingCard = null
+                onSaveNotes?.invoke(targetCard.id, updated.userQuestion, updated.userSupplement)
+            },
         )
     }
 }
@@ -103,6 +144,7 @@ fun KeywordSheetContent(
     onSpeak: (String) -> Unit,
     modifier: Modifier = Modifier,
     onToggleBookmark: ((Card) -> Unit)? = null,
+    onEditNotesClick: (() -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
 
@@ -154,7 +196,7 @@ fun KeywordSheetContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Front word + speaker icon
+        // Front word + speaker icon + bookmark + edit notes
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -188,6 +230,19 @@ fun KeywordSheetContent(
                     }
                 }
 
+                if (onEditNotesClick != null) {
+                    IconButton(
+                        onClick = onEditNotesClick,
+                        modifier = Modifier.semantics { contentDescription = "Edit Notes" },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Notes",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
                 IconButton(onClick = { onSpeak(currentCard.front) }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
@@ -216,11 +271,42 @@ fun KeywordSheetContent(
             )
         }
 
+        // User question if present
+        if (currentCard.userQuestion.isNotBlank()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (onEditNotesClick != null) Modifier.clickable { onEditNotesClick() } else Modifier),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = "疑問点・質問",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = currentCard.userQuestion,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
         // User supplement if present
         if (currentCard.userSupplement.isNotBlank()) {
             Spacer(modifier = Modifier.height(12.dp))
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (onEditNotesClick != null) Modifier.clickable { onEditNotesClick() } else Modifier),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,

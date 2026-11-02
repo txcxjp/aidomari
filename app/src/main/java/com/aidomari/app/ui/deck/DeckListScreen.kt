@@ -792,6 +792,9 @@ fun DeckListScreen(
                     onDismissRequest = { selectedSearchCard = null },
                     onSpeak = onSpeakText,
                     onToggleBookmark = { viewModel.toggleBookmark(it) },
+                    onSaveNotes = { cardId, question, supplement ->
+                        viewModel.updateCardNotes(cardId, question, supplement)
+                    },
                 )
             }
         }

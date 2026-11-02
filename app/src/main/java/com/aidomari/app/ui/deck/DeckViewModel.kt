@@ -82,6 +82,21 @@ class DeckViewModel(
         }
     }
 
+    fun updateCardNotes(cardId: String, userQuestion: String, userSupplement: String) {
+        val q = userQuestion.trim()
+        val s = userSupplement.trim()
+        _searchResults.value = _searchResults.value.map {
+            if (it.id == cardId) it.copy(userQuestion = q, userSupplement = s) else it
+        }
+        _allSubjectCards.value = _allSubjectCards.value.map {
+            if (it.id == cardId) it.copy(userQuestion = q, userSupplement = s) else it
+        }
+        viewModelScope.launch {
+            val card = repository.getCardById(cardId) ?: return@launch
+            repository.saveCard(card.copy(userQuestion = q, userSupplement = s))
+        }
+    }
+
     fun loadDecks() {
         viewModelScope.launch {
             repository.getDecksBySubject(subjectId).collect { decks ->

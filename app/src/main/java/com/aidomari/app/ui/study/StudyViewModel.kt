@@ -181,7 +181,10 @@ class StudyViewModel(
     }
 
     fun updateCardNotes(cardId: String, userQuestion: String, userSupplement: String) {
-        val card = cardsMap[cardId] ?: _uiState.value.currentCard ?: return
+        val card = cardsMap[cardId]
+            ?: _uiState.value.subjectCards.find { it.id == cardId }
+            ?: _uiState.value.currentCard
+            ?: return
         val updatedCard = card.copy(
             userQuestion = userQuestion.trim(),
             userSupplement = userSupplement.trim(),
