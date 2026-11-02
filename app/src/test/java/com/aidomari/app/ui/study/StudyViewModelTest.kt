@@ -214,6 +214,37 @@ class StudyViewModelTest {
         assertFalse(fakeRepository.cards.first { it.id == "c1" }.isBookmarked)
     }
 
+    @Test
+    fun updateCardNotes_updatesRepositoryAndUiState() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        val cardId = viewModel.uiState.value.currentCard?.id ?: ""
+        assertEquals("c1", cardId)
+
+        viewModel.updateCardNotes(
+            cardId = cardId,
+            userQuestion = "How to use?",
+            userSupplement = "An edible fruit produced by an apple tree.",
+        )
+        advanceUntilIdle()
+
+        val currentCard = viewModel.uiState.value.currentCard
+        assertEquals("How to use?", currentCard?.userQuestion)
+        assertEquals("An edible fruit produced by an apple tree.", currentCard?.userSupplement)
+
+        val savedInRepo = fakeRepository.cards.first { it.id == "c1" }
+        assertEquals("How to use?", savedInRepo.userQuestion)
+        assertEquals("An edible fruit produced by an apple tree.", savedInRepo.userSupplement)
+
+        // Clear notes
+        viewModel.updateCardNotes(cardId = cardId, userQuestion = "", userSupplement = "")
+        advanceUntilIdle()
+
+        assertEquals("", viewModel.uiState.value.currentCard?.userQuestion)
+        assertEquals("", viewModel.uiState.value.currentCard?.userSupplement)
+    }
+
     private class FakeStudyWordsRepository : WordsRepository {
         val subjects = mutableListOf<Subject>()
         val decks = mutableListOf<Deck>()
@@ -245,6 +276,7 @@ class StudyViewModelTest {
             cards.filter { it.deckId == deckId }
         override suspend fun getCardById(cardId: String): Card? = cards.find { it.id == cardId }
         override suspend fun saveCard(card: Card) {
+            cards.removeIf { it.id == card.id }
             cards.add(card)
         }
         override suspend fun saveCards(newCards: List<Card>) {

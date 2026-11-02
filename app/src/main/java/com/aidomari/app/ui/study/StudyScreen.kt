@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.core.input.VolumeKeyHandler
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.ui.study.components.CardEditNotesDialog
 import com.aidomari.app.ui.study.components.CardFaceBack
 import com.aidomari.app.ui.study.components.CardFaceFront
 import com.aidomari.app.ui.study.components.FlippableCard
@@ -47,6 +48,7 @@ fun StudyScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var bottomSheetCard by remember { mutableStateOf<Card?>(null) }
+    var showEditNotesDialog by remember { mutableStateOf(false) }
 
     // Register volume key handler while this screen is active
     DisposableEffect(viewModel) {
@@ -74,6 +76,11 @@ fun StudyScreen(
                 onBack = onNavigateBack,
                 onToggleBookmark = { viewModel.toggleBookmark() },
                 onRestart = { viewModel.restartPart() },
+                onEditNotes = if (uiState.currentCard != null) {
+                    { showEditNotesDialog = true }
+                } else {
+                    null
+                },
             )
         },
     ) { innerPadding ->
@@ -167,6 +174,7 @@ fun StudyScreen(
                                             card = card,
                                             onSpeak = { onSpeakText(card.front) },
                                             isReverse = isReverse,
+                                            onEditClick = { showEditNotesDialog = true },
                                         )
                                     },
                                     backContent = {
@@ -180,6 +188,7 @@ fun StudyScreen(
                                             onRetry = { viewModel.markRetry() },
                                             isReverse = isReverse,
                                             onSpeak = { onSpeakText(card.front) },
+                                            onEditClick = { showEditNotesDialog = true },
                                         )
                                     },
                                 )
@@ -202,6 +211,18 @@ fun StudyScreen(
                     allSubjectCards = uiState.subjectCards,
                     onDismissRequest = { bottomSheetCard = null },
                     onSpeak = onSpeakText,
+                )
+            }
+
+            if (showEditNotesDialog && uiState.currentCard != null) {
+                val currentCard = uiState.currentCard!!
+                CardEditNotesDialog(
+                    card = currentCard,
+                    onDismissRequest = { showEditNotesDialog = false },
+                    onSave = { question, supplement ->
+                        viewModel.updateCardNotes(currentCard.id, question, supplement)
+                        showEditNotesDialog = false
+                    },
                 )
             }
         }

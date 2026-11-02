@@ -1,5 +1,6 @@
 package com.aidomari.app.ui.study.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ fun CardFaceBack(
     onKeywordClick: (DomainCard) -> Unit = {},
     isReverse: Boolean = false,
     onSpeak: (() -> Unit)? = null,
+    onEditClick: (() -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
 
@@ -131,7 +133,9 @@ fun CardFaceBack(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (onEditClick != null) Modifier.clickable { onEditClick() } else Modifier),
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
