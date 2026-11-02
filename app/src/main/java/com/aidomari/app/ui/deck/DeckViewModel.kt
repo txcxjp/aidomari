@@ -79,6 +79,8 @@ class DeckViewModel(
         autoContinue: Boolean = false,
         shuffleMode: Boolean = false,
         reverseMode: Boolean = false,
+        autoSpeak: Boolean = false,
+        speechRate: Float = 1.0f,
     ) {
         if (name.isBlank()) return
         viewModelScope.launch {
@@ -90,6 +92,8 @@ class DeckViewModel(
                 autoContinue = autoContinue,
                 shuffleMode = shuffleMode,
                 reverseMode = reverseMode,
+                autoSpeak = autoSpeak,
+                speechRate = speechRate,
                 sortOrder = _decksWithParts.value.size,
             )
             repository.saveDeck(newDeck)
@@ -105,6 +109,11 @@ class DeckViewModel(
     fun toggleShuffle(deckId: String) {
         val current = _decksWithParts.value.find { it.deck.id == deckId }?.deck ?: return
         updateDeck(current.copy(shuffleMode = !current.shuffleMode))
+    }
+
+    fun toggleAutoSpeak(deckId: String) {
+        val current = _decksWithParts.value.find { it.deck.id == deckId }?.deck ?: return
+        updateDeck(current.copy(autoSpeak = !current.autoSpeak))
     }
 
     fun deleteDeck(deckId: String) {

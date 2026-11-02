@@ -89,6 +89,26 @@ class AidomariDaoTest {
     }
 
     @Test
+    fun insertAndGetDeck_preservesTtsSettings() = runBlocking {
+        val subject = SubjectEntity(id = "sub-1", name = "英語")
+        dao.insertSubject(subject)
+
+        val deck = DeckEntity(
+            id = "deck-tts",
+            subjectId = "sub-1",
+            name = "TTS Deck",
+            autoSpeak = true,
+            speechRate = 1.25f,
+        )
+        dao.insertDeck(deck)
+
+        val decks = dao.getDecksBySubject("sub-1").first()
+        assertEquals(1, decks.size)
+        assertTrue(decks[0].autoSpeak)
+        assertEquals(1.25f, decks[0].speechRate, 0.001f)
+    }
+
+    @Test
     fun bookmarkToggleAndFilter() = runBlocking {
         val subject = SubjectEntity(id = "sub-1", name = "英語")
         dao.insertSubject(subject)

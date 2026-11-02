@@ -34,6 +34,7 @@ import com.aidomari.app.ui.study.components.KeywordBottomSheet
 import com.aidomari.app.ui.study.components.StudyCompletionDialog
 import com.aidomari.app.ui.study.components.StudyProgressBar
 import com.aidomari.app.ui.study.components.StudyTopBar
+import com.aidomari.app.ui.study.components.StudyTtsSettingsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +50,26 @@ fun StudyScreen(
     val uiState by viewModel.uiState.collectAsState()
     var bottomSheetCard by remember { mutableStateOf<Card?>(null) }
     var showEditNotesDialog by remember { mutableStateOf(false) }
+    var showTtsSettingsDialog by remember { mutableStateOf(false) }
+
+    val autoSpeak = uiState.deck?.autoSpeak == true
+    val isReverse = uiState.deck?.reverseMode == true
+    val currentCard = uiState.currentCard
+    val currentCardId = currentCard?.id
+
+    // Auto-speak front word on normal mode card display
+    LaunchedEffect(currentCardId, autoSpeak) {
+        if (autoSpeak && currentCard != null && !isReverse) {
+            onSpeakText(currentCard.front)
+        }
+    }
+
+    // Auto-speak front word on reverse mode when card is flipped to back
+    LaunchedEffect(uiState.isFlipped, autoSpeak) {
+        if (autoSpeak && currentCard != null && isReverse && uiState.isFlipped) {
+            onSpeakText(currentCard.front)
+        }
+    }
 
     // Register volume key handler while this screen is active
     DisposableEffect(viewModel) {
@@ -76,6 +97,8 @@ fun StudyScreen(
                 onBack = onNavigateBack,
                 onToggleBookmark = { viewModel.toggleBookmark() },
                 onRestart = { viewModel.restartPart() },
+                autoSpeakEnabled = autoSpeak,
+                onOpenTtsSettings = { showTtsSettingsDialog = true },
                 onEditNotes = if (uiState.currentCard != null) {
                     { showEditNotesDialog = true }
                 } else {
@@ -222,6 +245,22 @@ fun StudyScreen(
                     onSave = { question, supplement ->
                         viewModel.updateCardNotes(currentCard.id, question, supplement)
                         showEditNotesDialog = false
+                    },
+                )
+            }
+
+            if (showTtsSettingsDialog && uiState.deck != null) {
+                val currentDeck = uiState.deck!!
+                StudyTtsSettingsDialog(
+                    autoSpeak = currentDeck.autoSpeak,
+                    speechRate = currentDeck.speechRate,
+                    onDismissRequest = { showTtsSettingsDialog = false },
+                    onSave = { newAutoSpeak, newSpeechRate ->
+                        viewModel.updateTtsSettings(newAutoSpeak, newSpeechRate)
+                        showTtsSettingsDialog = false
+                    },
+                    onTestSpeak = {
+                        onSpeakText(uiState.currentCard?.front ?: "Aidomari")
                     },
                 )
             }

@@ -144,6 +144,8 @@ class WordsRepositoryImpl(
         autoContinue = autoContinue,
         shuffleMode = shuffleMode,
         reverseMode = reverseMode,
+        autoSpeak = autoSpeak,
+        speechRate = speechRate,
         sortOrder = sortOrder,
         createdAt = createdAt,
     )
@@ -156,6 +158,8 @@ class WordsRepositoryImpl(
         autoContinue = autoContinue,
         shuffleMode = shuffleMode,
         reverseMode = reverseMode,
+        autoSpeak = autoSpeak,
+        speechRate = speechRate,
         sortOrder = sortOrder,
         createdAt = createdAt,
     )

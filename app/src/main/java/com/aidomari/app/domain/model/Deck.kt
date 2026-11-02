@@ -8,6 +8,8 @@ data class Deck(
     val autoContinue: Boolean = false,
     val shuffleMode: Boolean = false,
     val reverseMode: Boolean = false,
+    val autoSpeak: Boolean = false,
+    val speechRate: Float = 1.0f,
     val sortOrder: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
 ) {

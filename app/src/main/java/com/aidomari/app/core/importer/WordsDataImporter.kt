@@ -136,6 +136,8 @@ class WordsDataImporter(
             val reverseMode = prefObj?.get("reverseMode")?.jsonPrimitive?.booleanOrNull ?: false
             val shuffleMode = prefObj?.get("shuffleMode")?.jsonPrimitive?.booleanOrNull ?: false
             val autoContinue = prefObj?.get("autoContinue")?.jsonPrimitive?.booleanOrNull ?: false
+            val autoSpeak = prefObj?.get("autoSpeak")?.jsonPrimitive?.booleanOrNull ?: false
+            val speechRate = prefObj?.get("speechRate")?.jsonPrimitive?.floatOrNull ?: 1.0f
             val splitSize = prefObj?.get("numOfPreference")?.jsonPrimitive?.intOrNull ?: 50
 
             val deckId = UUID.randomUUID().toString()
@@ -147,6 +149,8 @@ class WordsDataImporter(
                 autoContinue = autoContinue,
                 shuffleMode = shuffleMode,
                 reverseMode = reverseMode,
+                autoSpeak = autoSpeak,
+                speechRate = speechRate,
                 sortOrder = decksImported,
             )
             repository.saveDeck(deck)
@@ -226,6 +230,8 @@ class WordsDataImporter(
                 val autoContinue = deckObj["autoContinue"]?.jsonPrimitive?.booleanOrNull ?: false
                 val shuffleMode = deckObj["shuffleMode"]?.jsonPrimitive?.booleanOrNull ?: false
                 val reverseMode = deckObj["reverseMode"]?.jsonPrimitive?.booleanOrNull ?: false
+                val autoSpeak = deckObj["autoSpeak"]?.jsonPrimitive?.booleanOrNull ?: false
+                val speechRate = deckObj["speechRate"]?.jsonPrimitive?.floatOrNull ?: 1.0f
 
                 val deckId = UUID.randomUUID().toString()
                 val deck = Deck(
@@ -236,6 +242,8 @@ class WordsDataImporter(
                     autoContinue = autoContinue,
                     shuffleMode = shuffleMode,
                     reverseMode = reverseMode,
+                    autoSpeak = autoSpeak,
+                    speechRate = speechRate,
                     sortOrder = decksImported,
                 )
                 repository.saveDeck(deck)
