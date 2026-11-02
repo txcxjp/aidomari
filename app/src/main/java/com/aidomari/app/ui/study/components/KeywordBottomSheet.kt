@@ -17,8 +17,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +60,7 @@ fun KeywordBottomSheet(
     modifier: Modifier = Modifier,
     onToggleBookmark: ((Card) -> Unit)? = null,
     onSaveNotes: ((cardId: String, userQuestion: String, userSupplement: String) -> Unit)? = null,
+    onDeleteCard: ((cardId: String) -> Unit)? = null,
 ) {
     if (initialCard == null) return
 
@@ -66,6 +69,7 @@ fun KeywordBottomSheet(
         mutableStateListOf(initialCard)
     }
     var editingCard by remember { mutableStateOf<Card?>(null) }
+    var cardToDelete by remember { mutableStateOf<Card?>(null) }
 
     // Intercept hardware/system back button when deeper in recursive keyword stack
     BackHandler(enabled = cardStack.size > 1) {
@@ -110,6 +114,11 @@ fun KeywordBottomSheet(
             } else {
                 null
             },
+            onDeleteClick = if (onDeleteCard != null) {
+                { cardToDelete = currentCard }
+            } else {
+                null
+            },
         )
 
         if (editingCard != null) {
@@ -131,6 +140,38 @@ fun KeywordBottomSheet(
                 },
             )
         }
+
+        if (cardToDelete != null) {
+            val target = cardToDelete!!
+            AlertDialog(
+                onDismissRequest = { cardToDelete = null },
+                title = { Text(text = "カードを削除") },
+                text = { Text(text = "「${target.front}」を削除しますか？\nこの操作は取り消せません。") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val idToDelete = target.id
+                            cardToDelete = null
+                            val isLast = cardStack.size <= 1
+                            if (!isLast) {
+                                cardStack.remove(target)
+                            }
+                            onDeleteCard?.invoke(idToDelete)
+                            if (isLast) {
+                                onDismissRequest()
+                            }
+                        },
+                    ) {
+                        Text(text = "削除", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { cardToDelete = null }) {
+                        Text(text = "キャンセル")
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -146,6 +187,7 @@ fun KeywordSheetContent(
     modifier: Modifier = Modifier,
     onToggleBookmark: ((Card) -> Unit)? = null,
     onEditNotesClick: (() -> Unit)? = null,
+    onDeleteClick: (() -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
     val keywordEngine = remember { KeywordEngine() }
@@ -254,6 +296,19 @@ fun KeywordSheetContent(
                         contentDescription = "Speak",
                         tint = MaterialTheme.colorScheme.primary,
                     )
+                }
+
+                if (onDeleteClick != null) {
+                    IconButton(
+                        onClick = onDeleteClick,
+                        modifier = Modifier.semantics { contentDescription = "Delete Card" },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete Card",
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             }
         }

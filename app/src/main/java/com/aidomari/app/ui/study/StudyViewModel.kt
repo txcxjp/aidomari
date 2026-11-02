@@ -270,6 +270,80 @@ class StudyViewModel(
         updateTtsSettings(autoSpeak = !deck.autoSpeak, speechRate = deck.speechRate)
     }
 
+    fun searchCards(query: String) {
+        val trimmed = query.trim()
+        val results = if (trimmed.isBlank()) {
+            emptyList()
+        } else {
+            _uiState.value.subjectCards.filter { card ->
+                card.front.contains(trimmed, ignoreCase = true) ||
+                    card.back.contains(trimmed, ignoreCase = true) ||
+                    card.userQuestion.contains(trimmed, ignoreCase = true) ||
+                    card.userSupplement.contains(trimmed, ignoreCase = true)
+            }
+        }
+        _uiState.update {
+            it.copy(
+                searchQuery = query,
+                searchResults = results,
+            )
+        }
+    }
+
+    fun clearSearch() {
+        _uiState.update {
+            it.copy(
+                searchQuery = "",
+                searchResults = emptyList(),
+            )
+        }
+    }
+
+    fun deleteCard(cardId: String) {
+        val isCurrentCard = _uiState.value.currentCard?.id == cardId
+        val wasInQueue = queueCardIds.remove(cardId)
+        val wasInRetry = retryCardIds.remove(cardId)
+
+        if (wasInQueue || wasInRetry) {
+            totalInPart = (totalInPart - 1).coerceAtLeast(0)
+            completedCount = completedCount.coerceAtMost(totalInPart).coerceAtLeast(0)
+        }
+
+        allCards = allCards.filter { it.id != cardId }
+        cardsMap = cardsMap - cardId
+
+        _uiState.update { state ->
+            val updatedSubjectCards = state.subjectCards.filter { it.id != cardId }
+            val updatedSearchResults = state.searchResults.filter { it.id != cardId }
+            state.copy(
+                subjectCards = updatedSubjectCards,
+                searchResults = updatedSearchResults,
+                totalInPart = totalInPart,
+                completedCount = completedCount,
+                queueSize = queueCardIds.size,
+                retryCount = retryCardIds.size,
+            )
+        }
+
+        if (isCurrentCard) {
+            advanceToNextCard()
+        } else {
+            val nextCardId = queueCardIds.drop(1).firstOrNull() ?: retryCardIds.firstOrNull()
+            val nextCard = nextCardId?.let { cardsMap[it] }
+            _uiState.update { it.copy(nextCard = nextCard) }
+            saveCurrentSession(isCompleted = _uiState.value.isPartCompleted)
+        }
+
+        viewModelScope.launch {
+            repository.deleteCard(cardId)
+        }
+    }
+
+    fun deleteCurrentCard() {
+        val card = _uiState.value.currentCard ?: return
+        deleteCard(card.id)
+    }
+
     fun restartPart() {
         val deck = currentDeck ?: return
         val parts = if (deck.id.startsWith("random_")) {

@@ -236,4 +236,43 @@ class KeywordBottomSheetTest {
 
         assertEquals("c3", clickedCard?.id)
     }
+
+    @Test
+    fun keywordSheetContent_deleteClick_triggersCallback() {
+        var deleteClicked = false
+
+        composeTestRule.setContent {
+            KeywordSheetContent(
+                currentCard = cardApple,
+                cardStackSize = 1,
+                allSubjectCards = listOf(cardApple),
+                onBackClick = {},
+                onCloseClick = {},
+                onKeywordClick = {},
+                onSpeak = {},
+                onDeleteClick = { deleteClicked = true },
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Delete Card").assertIsDisplayed().performClick()
+        assertTrue(deleteClicked)
+    }
+
+    @Test
+    fun keywordSheetContent_deleteButtonHidden_whenCallbackNull() {
+        composeTestRule.setContent {
+            KeywordSheetContent(
+                currentCard = cardApple,
+                cardStackSize = 1,
+                allSubjectCards = listOf(cardApple),
+                onBackClick = {},
+                onCloseClick = {},
+                onKeywordClick = {},
+                onSpeak = {},
+                onDeleteClick = null,
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Delete Card").assertDoesNotExist()
+    }
 }

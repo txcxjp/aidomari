@@ -2,6 +2,7 @@ package com.aidomari.app.ui.study
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.aidomari.app.domain.model.Card
@@ -12,6 +13,7 @@ import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
@@ -162,6 +164,70 @@ class StudyScreenTest {
         // Since it's the last part (no next part), completion dialog is shown
         composeTestRule.onNodeWithText("学習完了！").assertIsDisplayed()
         assertNull(navigatedPartIndex)
+    }
+
+    @Test
+    fun studyScreen_searchAction_opensSearchDialog() {
+        fakeRepository.decks.add(deckWithoutAutoContinue)
+        fakeRepository.cards.addAll(cards)
+
+        composeTestRule.setContent {
+            StudyScreen(
+                deckId = "deck-manual",
+                partIndex = 0,
+                viewModel = viewModel,
+                onNavigateBack = {},
+                onNavigateToPart = {},
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Click search icon in top bar
+        composeTestRule.onNodeWithContentDescription("Search Words").performClick()
+
+        // Verify search dialog appears
+        composeTestRule.onNodeWithText("単語検索").assertIsDisplayed()
+        composeTestRule.onNodeWithText("教科内の単語を検索").assertIsDisplayed()
+    }
+
+    @Test
+    fun studyScreen_deleteCardAction_showsConfirmationDialog_and_deletes() {
+        fakeRepository.decks.add(deckWithoutAutoContinue)
+        fakeRepository.cards.addAll(cards)
+
+        composeTestRule.setContent {
+            StudyScreen(
+                deckId = "deck-manual",
+                partIndex = 0,
+                viewModel = viewModel,
+                onNavigateBack = {},
+                onNavigateToPart = {},
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Card 1 is displayed
+        composeTestRule.onNodeWithText("Card 1").assertIsDisplayed()
+
+        // Open more options menu
+        composeTestRule.onNodeWithContentDescription("More Options").performClick()
+
+        // Click "カードを削除"
+        composeTestRule.onNodeWithText("カードを削除").performClick()
+
+        // Confirmation dialog is shown
+        composeTestRule.onNodeWithText("「Card 1」を削除しますか？\nこの操作は取り消せません。").assertIsDisplayed()
+
+        // Confirm deletion
+        composeTestRule.onNodeWithText("削除").performClick()
+
+        composeTestRule.waitForIdle()
+
+        // Card 1 is deleted from repo and screen advances to Card 2
+        composeTestRule.onNodeWithText("Card 2").assertIsDisplayed()
+        assertFalse(fakeRepository.cards.any { it.id == "c1" })
     }
 
     private class FakeStudyWordsRepository : WordsRepository {
