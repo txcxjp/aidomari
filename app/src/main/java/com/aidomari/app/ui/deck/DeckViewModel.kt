@@ -51,6 +51,7 @@ class DeckViewModel(
         splitSize: Int = 50,
         autoContinue: Boolean = false,
         shuffleMode: Boolean = false,
+        reverseMode: Boolean = false,
     ) {
         if (name.isBlank()) return
         viewModelScope.launch {
@@ -61,6 +62,7 @@ class DeckViewModel(
                 splitSize = splitSize,
                 autoContinue = autoContinue,
                 shuffleMode = shuffleMode,
+                reverseMode = reverseMode,
                 sortOrder = _decksWithParts.value.size,
             )
             repository.saveDeck(newDeck)

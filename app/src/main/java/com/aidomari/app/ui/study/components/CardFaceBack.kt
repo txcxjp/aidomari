@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
@@ -21,6 +22,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -42,6 +44,8 @@ fun CardFaceBack(
     modifier: Modifier = Modifier,
     candidateCards: List<DomainCard> = emptyList(),
     onKeywordClick: (DomainCard) -> Unit = {},
+    isReverse: Boolean = false,
+    onSpeak: (() -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
 
@@ -69,17 +73,56 @@ fun CardFaceBack(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            KeywordText(
-                text = card.back,
-                candidateCards = candidateCards,
-                currentCardId = card.id,
-                onKeywordClick = onKeywordClick,
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp,
-                ),
-                textAlign = TextAlign.Center,
-            )
+            if (isReverse) {
+                // In reverse mode, answer is the target word (card.front)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = card.front,
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 30.sp,
+                        ),
+                        textAlign = TextAlign.Center,
+                    )
+                    if (onSpeak != null) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        IconButton(onClick = onSpeak) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Speak",
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                // Also display meaning and keyword links
+                KeywordText(
+                    text = card.back,
+                    candidateCards = candidateCards,
+                    currentCardId = card.id,
+                    onKeywordClick = onKeywordClick,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign = TextAlign.Center,
+                )
+            } else {
+                KeywordText(
+                    text = card.back,
+                    candidateCards = candidateCards,
+                    currentCardId = card.id,
+                    onKeywordClick = onKeywordClick,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp,
+                    ),
+                    textAlign = TextAlign.Center,
+                )
+            }
 
             if (card.userSupplement.isNotBlank()) {
                 Spacer(modifier = Modifier.height(20.dp))

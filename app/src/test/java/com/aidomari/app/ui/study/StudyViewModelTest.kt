@@ -80,6 +80,23 @@ class StudyViewModelTest {
     }
 
     @Test
+    fun loadDeckAndPart_withReverseMode_retainsReverseModeInDeck() = runTest {
+        val reverseDeck = testDeck.copy(id = "deck-rev", reverseMode = true)
+        fakeRepository.decks.add(reverseDeck)
+        fakeRepository.cards.add(
+            Card(id = "c-rev", deckId = "deck-rev", front = "Dog", back = "犬", orderIndex = 0),
+        )
+
+        viewModel.loadDeckAndPart("deck-rev", 0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(true, state.deck?.reverseMode)
+        assertEquals("c-rev", state.currentCard?.id)
+        assertFalse(state.isFlipped)
+    }
+
+    @Test
     fun flipCard_togglesIsFlipped() = runTest {
         viewModel.loadDeckAndPart("deck-1", 0)
         advanceUntilIdle()

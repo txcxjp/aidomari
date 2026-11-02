@@ -46,6 +46,7 @@ class DeckViewModelTest {
             splitSize = 50,
             autoContinue = true,
             shuffleMode = true,
+            reverseMode = true,
         )
         advanceUntilIdle()
 
@@ -55,6 +56,7 @@ class DeckViewModelTest {
         assertEquals(50, deck.splitSize)
         assertTrue(deck.autoContinue)
         assertTrue(deck.shuffleMode)
+        assertTrue(deck.reverseMode)
     }
 
     @Test
@@ -91,18 +93,19 @@ class DeckViewModelTest {
 
     @Test
     fun updateDeck_modifiesDeckSettingsAndSaves() = runTest {
-        val deck = Deck(id = "d1", subjectId = "sub-1", name = "Old Name", splitSize = 50)
+        val deck = Deck(id = "d1", subjectId = "sub-1", name = "Old Name", splitSize = 50, reverseMode = false)
         fakeRepository.decksList.add(deck)
         fakeRepository.triggerDecksUpdate()
         advanceUntilIdle()
 
-        viewModel.updateDeck(deck.copy(name = "New Name", splitSize = 30, autoContinue = true))
+        viewModel.updateDeck(deck.copy(name = "New Name", splitSize = 30, autoContinue = true, reverseMode = true))
         advanceUntilIdle()
 
         val updated = fakeRepository.decksList.find { it.id == "d1" }
         assertEquals("New Name", updated?.name)
         assertEquals(30, updated?.splitSize)
         assertTrue(updated?.autoContinue == true)
+        assertTrue(updated?.reverseMode == true)
     }
 
     @Test

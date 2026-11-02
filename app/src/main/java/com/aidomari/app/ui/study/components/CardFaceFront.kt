@@ -33,6 +33,7 @@ fun CardFaceFront(
     card: DomainCard,
     onSpeak: () -> Unit,
     modifier: Modifier = Modifier,
+    isReverse: Boolean = false,
 ) {
     Box(
         modifier = modifier.fillMaxSize(),
@@ -49,19 +50,21 @@ fun CardFaceFront(
             )
         }
 
-        // Speaker icon at top end
-        IconButton(
-            onClick = onSpeak,
-            modifier = Modifier.align(Alignment.TopEnd),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                contentDescription = "Speak",
-                tint = MaterialTheme.colorScheme.primary,
-            )
+        // Speaker icon at top end (only in normal mode; in reverse mode, speaker is on back face)
+        if (!isReverse) {
+            IconButton(
+                onClick = onSpeak,
+                modifier = Modifier.align(Alignment.TopEnd),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = "Speak",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
 
-        // Center content: front word and question
+        // Center content: prompt word/meaning and question
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -71,10 +74,10 @@ fun CardFaceFront(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = card.front,
+                text = if (isReverse) card.back else card.front,
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 32.sp,
+                    fontSize = if (isReverse) 28.sp else 32.sp,
                 ),
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface,
