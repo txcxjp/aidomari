@@ -100,4 +100,36 @@ class KeywordEngineTest {
         assertTrue(plainResult[0] is TextSegment.Plain)
         assertEquals("Hello world", plainResult[0].text)
     }
+
+    @Test
+    fun findRelatedCards_findsCardsByStemAndContent_excludingSelfAndDirectKeywords() {
+        val cardFruit = Card(id = "c0", deckId = "d1", front = "fruit", back = "Seed-bearing structure including apple")
+        val cardApple = Card(id = "c1", deckId = "d1", front = "apple", back = "A red sweet fruit")
+        val cardPie = Card(id = "c2", deckId = "d1", front = "apple pie", back = "A pastry with fruit filling")
+        val cardOrchard = Card(id = "c3", deckId = "d1", front = "orchard", back = "A piece of land planted with fruit trees")
+        val cardOrange = Card(id = "c4", deckId = "d1", front = "orange", back = "A citrus crop")
+
+        val allCards = listOf(cardFruit, cardApple, cardPie, cardOrchard, cardOrange)
+
+        val relatedToFruit = keywordEngine.findRelatedCards(cardFruit, allCards)
+        val relatedIds = relatedToFruit.map { it.id }.toSet()
+
+        assertTrue(relatedIds.contains("c2"))
+        assertTrue(relatedIds.contains("c3"))
+        assertTrue(!relatedIds.contains("c0"))
+        assertTrue(!relatedIds.contains("c1"))
+        assertTrue(!relatedIds.contains("c4"))
+
+        val relatedToApple = keywordEngine.findRelatedCards(cardApple, allCards)
+        val appleRelatedIds = relatedToApple.map { it.id }.toSet()
+        assertTrue(appleRelatedIds.contains("c2"))
+    }
+
+    @Test
+    fun findRelatedCards_shortTargetLength_returnsEmptyList() {
+        val shortCard = Card(id = "s1", deckId = "d1", front = "in", back = "inside")
+        val otherCard = Card(id = "s2", deckId = "d1", front = "inn", back = "hotel")
+        val related = keywordEngine.findRelatedCards(shortCard, listOf(shortCard, otherCard))
+        assertTrue(related.isEmpty())
+    }
 }

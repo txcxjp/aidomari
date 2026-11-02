@@ -8,6 +8,7 @@ import androidx.compose.ui.test.performClick
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.ui.study.components.CardFaceBack
 import com.aidomari.app.ui.study.components.CardFaceFront
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -90,5 +91,31 @@ class CardFaceReverseTest {
 
         composeTestRule.onNodeWithText("もう一度").assertIsDisplayed().performClick()
         assertTrue(retryClicked)
+    }
+
+    @Test
+    fun cardFaceBack_withRelatedCards_displaysRelatedSectionAndNavigates() {
+        val relatedCard = Card(
+            id = "c2",
+            deckId = "d1",
+            front = "Prospect",
+            back = "見通し・展望 (shares root with perspective)",
+        )
+        var clickedCard: Card? = null
+
+        composeTestRule.setContent {
+            CardFaceBack(
+                card = testCard,
+                onDone = {},
+                onRetry = {},
+                candidateCards = listOf(testCard, relatedCard),
+                onKeywordClick = { clickedCard = it },
+            )
+        }
+
+        composeTestRule.onNodeWithText("関連項目 (1)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("関連項目 (1)").performClick()
+        composeTestRule.onNodeWithText("Prospect").assertIsDisplayed().performClick()
+        assertEquals("c2", clickedCard?.id)
     }
 }
