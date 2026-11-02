@@ -92,6 +92,28 @@ class DeckViewModelTest {
     }
 
     @Test
+    fun observeBookmarks_updatesBookmarkDeckUiModel() = runTest {
+        assertEquals(null, viewModel.bookmarkDeckUiModel.value)
+
+        val card1 = Card(id = "c1", deckId = "d1", front = "A", back = "a", isBookmarked = true)
+        val card2 = Card(id = "c2", deckId = "d1", front = "B", back = "b", isBookmarked = true)
+        fakeRepository.bookmarkedFlow.value = listOf(card1, card2)
+        advanceUntilIdle()
+
+        val bookmarkModel = viewModel.bookmarkDeckUiModel.value
+        assertEquals(2, bookmarkModel?.totalCount)
+        assertEquals("bookmark_sub-1", bookmarkModel?.deck?.id)
+        assertEquals(1, bookmarkModel?.parts?.size)
+        assertEquals(2, bookmarkModel?.parts?.get(0)?.part?.count)
+
+        // When all bookmarks are removed
+        fakeRepository.bookmarkedFlow.value = emptyList()
+        advanceUntilIdle()
+
+        assertEquals(null, viewModel.bookmarkDeckUiModel.value)
+    }
+
+    @Test
     fun updateDeck_modifiesDeckSettingsAndSaves() = runTest {
         val deck = Deck(id = "d1", subjectId = "sub-1", name = "Old Name", splitSize = 50, reverseMode = false)
         fakeRepository.decksList.add(deck)
@@ -162,6 +184,19 @@ class DeckViewModelTest {
 
         override fun getDecksBySubject(subjectId: String): Flow<List<Deck>> = decksFlow
         override suspend fun getDeckById(deckId: String): Deck? = decksList.find { it.id == deckId }
+        override suspend fun getOrCreateBookmarkDeck(subjectId: String): Deck {
+            val id = "bookmark_$subjectId"
+            val existing = decksList.find { it.id == id }
+            if (existing != null) return existing
+            val newDeck = Deck(
+                id = id,
+                subjectId = subjectId,
+                name = "苦手単語（ブックマーク）",
+                splitSize = 50,
+            )
+            decksList.add(newDeck)
+            return newDeck
+        }
         override suspend fun saveDeck(deck: Deck) {
             decksList.removeIf { it.id == deck.id }
             decksList.add(deck)
@@ -186,9 +221,11 @@ class DeckViewModelTest {
         override suspend fun deleteCard(cardId: String) {
             cardsList.removeIf { it.id == cardId }
         }
+        val bookmarkedFlow = MutableStateFlow<List<Card>>(emptyList())
+
         override suspend fun setBookmark(cardId: String, isBookmarked: Boolean) {
         }
-        override fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>> = MutableStateFlow(emptyList())
+        override fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>> = bookmarkedFlow
         override suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card> = emptyList()
         override suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card? = null
         override suspend fun getAllCardsInSubject(subjectId: String): List<Card> = cardsList

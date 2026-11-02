@@ -17,6 +17,21 @@ interface WordsRepository {
     // Deck
     fun getDecksBySubject(subjectId: String): Flow<List<Deck>>
     suspend fun getDeckById(deckId: String): Deck?
+    suspend fun getOrCreateBookmarkDeck(subjectId: String): Deck {
+        val id = "bookmark_$subjectId"
+        val existing = getDeckById(id)
+        if (existing != null) return existing
+        val newDeck = Deck(
+            id = id,
+            subjectId = subjectId,
+            name = "苦手単語（ブックマーク）",
+            splitSize = 50,
+            autoContinue = true,
+            shuffleMode = false,
+        )
+        saveDeck(newDeck)
+        return newDeck
+    }
     suspend fun saveDeck(deck: Deck)
     suspend fun deleteDeck(deckId: String)
 
