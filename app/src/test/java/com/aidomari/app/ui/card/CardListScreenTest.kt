@@ -235,6 +235,8 @@ class CardListScreenTest {
         override suspend fun deleteSession(deckId: String) {
         }
         override suspend fun getOrCreateBookmarkDeck(subjectId: String): Deck = deck
-        override suspend fun calculateSubjectProgress(subjectId: String): Float = 0f
+        override suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card? =
+            cards.find { it.front.equals(frontWord, ignoreCase = true) }
+        override fun getSessionFlow(deckId: String): Flow<StudySession?> = flowOf(null)
     }
 }
