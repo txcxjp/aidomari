@@ -58,6 +58,9 @@ fun AidomariNavHost(
                 onPartClick = { deckId, partIndex ->
                     navController.navigate("study/$deckId/$partIndex")
                 },
+                onSpeakText = { text ->
+                    ttsManager.speak(text)
+                },
             )
         }
 
