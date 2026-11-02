@@ -109,7 +109,7 @@ class DeckSearchScreenTest {
         }
 
         composeTestRule.onNodeWithContentDescription("単語検索").performClick()
-        composeTestRule.onNodeWithText("教科内の単語を検索").performTextInput("Enthu")
+        composeTestRule.onNodeWithText("単語・意味・メモを検索...").performTextInput("Enthu")
 
         // Toggle bookmark from search result
         composeTestRule.onNodeWithTag("SearchBookmarkButton_c1").performClick()
