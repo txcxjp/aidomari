@@ -11,9 +11,11 @@ data class StudySession(
     val retryCardIds: List<String> = emptyList(),
     val isCompleted: Boolean = false,
     val lastStudiedAt: Long = System.currentTimeMillis(),
+    val completedPartIndices: Set<Int> = emptySet(),
 ) {
     fun queueCardIdsJson(): String = Json.encodeToString(queueCardIds)
     fun retryCardIdsJson(): String = Json.encodeToString(retryCardIds)
+    fun completedPartIndicesJson(): String = Json.encodeToString(completedPartIndices.toList())
 
     companion object {
         fun parseCardIds(json: String): List<String> =
@@ -21,6 +23,13 @@ data class StudySession(
                 Json.decodeFromString(json)
             } catch (_: Exception) {
                 emptyList()
+            }
+
+        fun parsePartIndices(json: String): Set<Int> =
+            try {
+                Json.decodeFromString<List<Int>>(json).toSet()
+            } catch (_: Exception) {
+                emptySet()
             }
     }
 }

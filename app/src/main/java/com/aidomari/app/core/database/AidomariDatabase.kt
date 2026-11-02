@@ -18,7 +18,7 @@ import com.aidomari.app.core.database.entity.SubjectEntity
         CardEntity::class,
         StudySessionEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class AidomariDatabase : RoomDatabase() {
@@ -32,6 +32,12 @@ abstract class AidomariDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE decks ADD COLUMN auto_speak INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE decks ADD COLUMN speech_rate REAL NOT NULL DEFAULT 1.0")
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE study_sessions ADD COLUMN completed_part_indices_json TEXT NOT NULL DEFAULT '[]'")
             }
         }
 
@@ -49,7 +55,7 @@ abstract class AidomariDatabase : RoomDatabase() {
                 AidomariDatabase::class.java,
                 DATABASE_NAME,
             )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .fallbackToDestructiveMigration()
                 .build()
     }

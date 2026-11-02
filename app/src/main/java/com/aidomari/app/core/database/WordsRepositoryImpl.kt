@@ -214,6 +214,7 @@ class WordsRepositoryImpl(
         retryCardIds = StudySession.parseCardIds(retryCardIdsJson),
         isCompleted = isCompleted,
         lastStudiedAt = lastStudiedAt,
+        completedPartIndices = StudySession.parsePartIndices(completedPartIndicesJson),
     )
 
     private fun StudySession.toEntity() = StudySessionEntity(
@@ -224,5 +225,6 @@ class WordsRepositoryImpl(
         retryCardIdsJson = retryCardIdsJson(),
         isCompleted = isCompleted,
         lastStudiedAt = lastStudiedAt,
+        completedPartIndicesJson = completedPartIndicesJson(),
     )
 }

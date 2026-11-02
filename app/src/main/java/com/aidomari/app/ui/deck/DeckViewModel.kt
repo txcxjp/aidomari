@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -111,9 +112,23 @@ class DeckViewModel(
                     val cards = repository.getCardsByDeckSync(deck.id)
                     val parts = deck.calculateParts(cards.size)
                     val session = repository.getSession(deck.id)
+                    val completedParts = session?.completedPartIndices ?: emptySet()
 
                     val partModels = parts.map { part ->
-                        val matchingSession = if (session?.partIndex == part.partIndex) session else null
+                        val isPartCompleted = completedParts.contains(part.partIndex) ||
+                            (session?.partIndex == part.partIndex && session.isCompleted)
+                        val matchingSession = if (session?.partIndex == part.partIndex) {
+                            session.copy(isCompleted = isPartCompleted)
+                        } else if (isPartCompleted) {
+                            StudySession(
+                                deckId = deck.id,
+                                partIndex = part.partIndex,
+                                isCompleted = true,
+                                completedPartIndices = completedParts,
+                            )
+                        } else {
+                            null
+                        }
                         DeckPartWithSession(part = part, session = matchingSession)
                     }
 
@@ -137,8 +152,22 @@ class DeckViewModel(
                     val bookmarkDeck = repository.getOrCreateBookmarkDeck(subjectId)
                     val parts = bookmarkDeck.calculateParts(bookmarkedCards.size)
                     val session = repository.getSession(bookmarkDeck.id)
+                    val completedParts = session?.completedPartIndices ?: emptySet()
                     val partModels = parts.map { part ->
-                        val matchingSession = if (session?.partIndex == part.partIndex) session else null
+                        val isPartCompleted = completedParts.contains(part.partIndex) ||
+                            (session?.partIndex == part.partIndex && session.isCompleted)
+                        val matchingSession = if (session?.partIndex == part.partIndex) {
+                            session.copy(isCompleted = isPartCompleted)
+                        } else if (isPartCompleted) {
+                            StudySession(
+                                deckId = bookmarkDeck.id,
+                                partIndex = part.partIndex,
+                                isCompleted = true,
+                                completedPartIndices = completedParts,
+                            )
+                        } else {
+                            null
+                        }
                         DeckPartWithSession(part = part, session = matchingSession)
                     }
                     _bookmarkDeckUiModel.value = BookmarkDeckUiModel(

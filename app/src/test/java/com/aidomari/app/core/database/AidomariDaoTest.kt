@@ -191,4 +191,26 @@ class AidomariDaoTest {
         val emptyMatches = dao.searchCardsInSubject("sub-search", "zebra")
         assertTrue(emptyMatches.isEmpty())
     }
+
+    @Test
+    fun insertAndGetStudySession_withCompletedPartIndices() = runBlocking {
+        val subject = SubjectEntity(id = "sub-session", name = "英語")
+        dao.insertSubject(subject)
+        val deck = DeckEntity(id = "deck-session", subjectId = "sub-session", name = "単語帳")
+        dao.insertDeck(deck)
+
+        val session = StudySessionEntity(
+            deckId = "deck-session",
+            partIndex = 1,
+            isCompleted = false,
+            completedPartIndicesJson = "[0,1]",
+        )
+        dao.insertOrUpdateSession(session)
+
+        val retrieved = dao.getSession("deck-session")
+        assertNotNull(retrieved)
+        assertEquals("[0,1]", retrieved?.completedPartIndicesJson)
+        assertEquals(1, retrieved?.partIndex)
+        assertEquals(false, retrieved?.isCompleted)
+    }
 }
