@@ -86,6 +86,18 @@ fun StudyScreen(
         viewModel.loadDeckAndPart(deckId, partIndex)
     }
 
+    val isAutoContinue = uiState.deck?.autoContinue == true
+    val isPartCompleted = uiState.isPartCompleted
+    val hasNextPart = uiState.hasNextPart
+    val nextPartIndex = uiState.partIndex + 1
+
+    // Automatically advance to next part if autoContinue is enabled and there is a next part
+    LaunchedEffect(uiState.isLoading, isPartCompleted, isAutoContinue, hasNextPart, nextPartIndex) {
+        if (!uiState.isLoading && isPartCompleted && isAutoContinue && hasNextPart) {
+            onNavigateToPart(nextPartIndex)
+        }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -120,14 +132,20 @@ fun StudyScreen(
                 }
 
                 uiState.isPartCompleted -> {
-                    StudyCompletionDialog(
-                        partName = "Part ${uiState.partIndex + 1}",
-                        totalCards = uiState.totalInPart,
-                        hasNextPart = uiState.hasNextPart,
-                        onNextPart = { onNavigateToPart(uiState.partIndex + 1) },
-                        onRestartPart = { viewModel.restartPart() },
-                        onBackToDecks = onNavigateBack,
-                    )
+                    if (isAutoContinue && hasNextPart) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    } else {
+                        StudyCompletionDialog(
+                            partName = "Part ${uiState.partIndex + 1}",
+                            totalCards = uiState.totalInPart,
+                            hasNextPart = uiState.hasNextPart,
+                            onNextPart = { onNavigateToPart(uiState.partIndex + 1) },
+                            onRestartPart = { viewModel.restartPart() },
+                            onBackToDecks = onNavigateBack,
+                        )
+                    }
                 }
 
                 uiState.currentCard != null -> {
