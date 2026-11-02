@@ -3,7 +3,6 @@ package com.aidomari.app.ui.card
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aidomari.app.domain.model.Card
-import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
