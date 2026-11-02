@@ -1,5 +1,6 @@
 package com.aidomari.app.ui.study.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,7 @@ fun CardFaceFront(
     onSpeak: () -> Unit,
     modifier: Modifier = Modifier,
     isReverse: Boolean = false,
+    onEditClick: (() -> Unit)? = null,
 ) {
     Box(
         modifier = modifier.fillMaxSize(),
@@ -90,6 +92,7 @@ fun CardFaceFront(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                     ),
+                    modifier = if (onEditClick != null) Modifier.clickable { onEditClick() } else Modifier,
                 ) {
                     Text(
                         text = card.userQuestion,

@@ -2,6 +2,7 @@ package com.aidomari.app.ui.study.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
@@ -26,6 +27,7 @@ fun StudyTopBar(
     onToggleBookmark: () -> Unit,
     onRestart: () -> Unit,
     modifier: Modifier = Modifier,
+    onEditNotes: (() -> Unit)? = null,
 ) {
     TopAppBar(
         modifier = modifier,
@@ -55,6 +57,16 @@ fun StudyTopBar(
             }
         },
         actions = {
+            if (onEditNotes != null) {
+                IconButton(onClick = onEditNotes) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Card Notes",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
             IconButton(onClick = onToggleBookmark) {
                 Icon(
                     imageVector = if (isBookmarked) {

@@ -156,6 +156,30 @@ class StudyViewModel(
         }
     }
 
+    fun updateCardNotes(cardId: String, userQuestion: String, userSupplement: String) {
+        val card = cardsMap[cardId] ?: _uiState.value.currentCard ?: return
+        val updatedCard = card.copy(
+            userQuestion = userQuestion.trim(),
+            userSupplement = userSupplement.trim(),
+        )
+
+        cardsMap = cardsMap + (cardId to updatedCard)
+        _uiState.update { state ->
+            val updatedSubjectCards = state.subjectCards.map {
+                if (it.id == cardId) updatedCard else it
+            }
+            state.copy(
+                currentCard = if (state.currentCard?.id == cardId) updatedCard else state.currentCard,
+                nextCard = if (state.nextCard?.id == cardId) updatedCard else state.nextCard,
+                subjectCards = updatedSubjectCards,
+            )
+        }
+
+        viewModelScope.launch {
+            repository.saveCard(updatedCard)
+        }
+    }
+
     fun restartPart() {
         val deck = currentDeck ?: return
         val parts = deck.calculateParts(allCards.size)
