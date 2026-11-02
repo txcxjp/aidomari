@@ -327,6 +327,7 @@ class DeckViewModelTest {
             cardsList.filter { it.deckId == deckId }
         override suspend fun getCardById(cardId: String): Card? = cardsList.find { it.id == cardId }
         override suspend fun saveCard(card: Card) {
+            cardsList.removeIf { it.id == card.id }
             cardsList.add(card)
         }
         override suspend fun saveCards(newCards: List<Card>) {

@@ -110,26 +110,26 @@ fun KeywordBottomSheet(
                 null
             },
         )
-    }
 
-    if (editingCard != null) {
-        val targetCard = editingCard!!
-        CardEditNotesDialog(
-            card = targetCard,
-            onDismissRequest = { editingCard = null },
-            onSave = { question, supplement ->
-                val updated = targetCard.copy(
-                    userQuestion = question.trim(),
-                    userSupplement = supplement.trim(),
-                )
-                val idx = cardStack.indexOfFirst { it.id == targetCard.id }
-                if (idx >= 0) {
-                    cardStack[idx] = updated
-                }
-                editingCard = null
-                onSaveNotes?.invoke(targetCard.id, updated.userQuestion, updated.userSupplement)
-            },
-        )
+        if (editingCard != null) {
+            val targetCard = editingCard!!
+            CardEditNotesDialog(
+                card = targetCard,
+                onDismissRequest = { editingCard = null },
+                onSave = { question, supplement ->
+                    val updated = targetCard.copy(
+                        userQuestion = question.trim(),
+                        userSupplement = supplement.trim(),
+                    )
+                    val idx = cardStack.indexOfFirst { it.id == targetCard.id }
+                    if (idx >= 0) {
+                        cardStack[idx] = updated
+                    }
+                    editingCard = null
+                    onSaveNotes?.invoke(targetCard.id, updated.userQuestion, updated.userSupplement)
+                },
+            )
+        }
     }
 }
 

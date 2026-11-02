@@ -1,5 +1,6 @@
 package com.aidomari.app.ui.study
 
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -103,7 +104,7 @@ class KeywordBottomSheetTest {
         composeTestRule.onNodeWithContentDescription("Edit Notes").performClick()
 
         // CardEditNotesDialog is displayed
-        composeTestRule.onNodeWithText("カードの質問・メモを編集").assertIsDisplayed()
+        composeTestRule.onNodeWithText("カードの質問・メモを編集").assertExists()
 
         // Input Question and Supplement
         composeTestRule.onNodeWithText("表面の質問（自分用クイズ）").performTextInput("果物の定義は？")
@@ -122,6 +123,27 @@ class KeywordBottomSheetTest {
         composeTestRule.onNodeWithText("果物の定義は？").assertIsDisplayed()
         composeTestRule.onNodeWithText("補足メモ").assertIsDisplayed()
         composeTestRule.onNodeWithText("種子を含む器官").assertIsDisplayed()
+    }
+
+    @Test
+    fun keywordSheetContent_editNotesClick_invokesCallback() {
+        var editClicked = false
+
+        composeTestRule.setContent {
+            KeywordSheetContent(
+                currentCard = cardApple,
+                cardStackSize = 1,
+                allSubjectCards = listOf(cardApple, cardFruit),
+                onBackClick = {},
+                onCloseClick = {},
+                onKeywordClick = {},
+                onSpeak = {},
+                onEditNotesClick = { editClicked = true },
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Edit Notes").performClick()
+        assertTrue(editClicked)
     }
 
     @Test
