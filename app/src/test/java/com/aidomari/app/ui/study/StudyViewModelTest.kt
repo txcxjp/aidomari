@@ -330,6 +330,108 @@ class StudyViewModelTest {
         assertEquals(5, state.queueSize)
     }
 
+    @Test
+    fun deleteCurrentCard_advancesToNextCard() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        assertEquals("c1", viewModel.uiState.value.currentCard?.id)
+        assertEquals("c2", viewModel.uiState.value.nextCard?.id)
+        assertEquals(3, viewModel.uiState.value.totalInPart)
+
+        viewModel.deleteCurrentCard()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("c2", state.currentCard?.id)
+        assertEquals("c3", state.nextCard?.id)
+        assertEquals(2, state.queueSize)
+        assertEquals(2, state.totalInPart)
+        assertFalse(fakeRepository.cards.any { it.id == "c1" })
+    }
+
+    @Test
+    fun deleteCurrentCard_lastCardInPart_marksPartCompleted() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        viewModel.markDone()
+        viewModel.markDone()
+        advanceUntilIdle()
+
+        assertEquals("c3", viewModel.uiState.value.currentCard?.id)
+
+        viewModel.deleteCurrentCard()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.currentCard)
+        assertTrue(state.isPartCompleted)
+        assertFalse(fakeRepository.cards.any { it.id == "c3" })
+    }
+
+    @Test
+    fun deleteCard_deletesNonCurrentCard_removesFromCards() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        assertEquals("c1", viewModel.uiState.value.currentCard?.id)
+
+        viewModel.deleteCard("c2")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("c1", state.currentCard?.id)
+        assertEquals("c3", state.nextCard?.id)
+        assertEquals(2, state.queueSize)
+        assertEquals(2, state.totalInPart)
+        assertFalse(fakeRepository.cards.any { it.id == "c2" })
+    }
+
+    @Test
+    fun searchCards_filtersCardsByFrontBackAndNotes() = runTest {
+        val customCards = listOf(
+            Card(id = "c1", deckId = "deck-1", front = "Algorithm", back = "アルゴリズム", userQuestion = "計算手順"),
+            Card(id = "c2", deckId = "deck-1", front = "Binary", back = "2進数", userSupplement = "0と1"),
+            Card(id = "c3", deckId = "deck-1", front = "Compiler", back = "コンパイラ"),
+        )
+        fakeRepository.cards.clear()
+        fakeRepository.cards.addAll(customCards)
+
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        // Search by front
+        viewModel.searchCards("algo")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.searchResults.size)
+        assertEquals("c1", viewModel.uiState.value.searchResults.first().id)
+
+        // Search by back
+        viewModel.searchCards("2進数")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.searchResults.size)
+        assertEquals("c2", viewModel.uiState.value.searchResults.first().id)
+
+        // Search by supplement
+        viewModel.searchCards("0と1")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.searchResults.size)
+        assertEquals("c2", viewModel.uiState.value.searchResults.first().id)
+
+        // Search by question
+        viewModel.searchCards("計算手順")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.searchResults.size)
+        assertEquals("c1", viewModel.uiState.value.searchResults.first().id)
+
+        // Clear search
+        viewModel.clearSearch()
+        advanceUntilIdle()
+        assertEquals("", viewModel.uiState.value.searchQuery)
+        assertTrue(viewModel.uiState.value.searchResults.isEmpty())
+    }
+
     private class FakeStudyWordsRepository : WordsRepository {
         val subjects = mutableListOf<Subject>()
         val decks = mutableListOf<Deck>()

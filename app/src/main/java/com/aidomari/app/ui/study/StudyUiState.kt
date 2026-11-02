@@ -17,4 +17,6 @@ data class StudyUiState(
     val isPartCompleted: Boolean = false,
     val hasNextPart: Boolean = false,
     val subjectCards: List<Card> = emptyList(),
+    val searchQuery: String = "",
+    val searchResults: List<Card> = emptyList(),
 )

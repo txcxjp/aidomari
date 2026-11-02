@@ -6,11 +6,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -33,6 +35,7 @@ import com.aidomari.app.ui.study.components.FlippableCard
 import com.aidomari.app.ui.study.components.KeywordBottomSheet
 import com.aidomari.app.ui.study.components.StudyCompletionDialog
 import com.aidomari.app.ui.study.components.StudyProgressBar
+import com.aidomari.app.ui.study.components.StudySearchDialog
 import com.aidomari.app.ui.study.components.StudyTopBar
 import com.aidomari.app.ui.study.components.StudyTtsSettingsDialog
 
@@ -51,6 +54,8 @@ fun StudyScreen(
     var bottomSheetCard by remember { mutableStateOf<Card?>(null) }
     var showEditNotesDialog by remember { mutableStateOf(false) }
     var showTtsSettingsDialog by remember { mutableStateOf(false) }
+    var showSearchDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     val autoSpeak = uiState.deck?.autoSpeak == true
     val isReverse = uiState.deck?.reverseMode == true
@@ -111,6 +116,12 @@ fun StudyScreen(
                 onRestart = { viewModel.restartPart() },
                 autoSpeakEnabled = autoSpeak,
                 onOpenTtsSettings = { showTtsSettingsDialog = true },
+                onSearchClick = { showSearchDialog = true },
+                onDeleteCard = if (uiState.currentCard != null) {
+                    { showDeleteConfirmDialog = true }
+                } else {
+                    null
+                },
                 onEditNotes = if (uiState.currentCard != null) {
                     { showEditNotesDialog = true }
                 } else {
@@ -256,6 +267,9 @@ fun StudyScreen(
                     onSaveNotes = { cardId, question, supplement ->
                         viewModel.updateCardNotes(cardId, question, supplement)
                     },
+                    onDeleteCard = { cardId ->
+                        viewModel.deleteCard(cardId)
+                    },
                 )
             }
 
@@ -283,6 +297,47 @@ fun StudyScreen(
                     },
                     onTestSpeak = {
                         onSpeakText(uiState.currentCard?.front ?: "Aidomari")
+                    },
+                )
+            }
+
+            if (showSearchDialog) {
+                StudySearchDialog(
+                    searchQuery = uiState.searchQuery,
+                    searchResults = uiState.searchResults,
+                    onQueryChange = { viewModel.searchCards(it) },
+                    onCardClick = { card ->
+                        viewModel.clearSearch()
+                        showSearchDialog = false
+                        bottomSheetCard = card
+                    },
+                    onDismissRequest = {
+                        viewModel.clearSearch()
+                        showSearchDialog = false
+                    },
+                )
+            }
+
+            if (showDeleteConfirmDialog && uiState.currentCard != null) {
+                val cardToDelete = uiState.currentCard!!
+                AlertDialog(
+                    onDismissRequest = { showDeleteConfirmDialog = false },
+                    title = { Text(text = "カードを削除") },
+                    text = { Text(text = "「${cardToDelete.front}」を削除しますか？\nこの操作は取り消せません。") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showDeleteConfirmDialog = false
+                                viewModel.deleteCurrentCard()
+                            },
+                        ) {
+                            Text(text = "削除", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                            Text(text = "キャンセル")
+                        }
                     },
                 )
             }
