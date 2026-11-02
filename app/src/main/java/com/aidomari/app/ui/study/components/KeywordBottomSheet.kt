@@ -69,12 +69,6 @@ fun KeywordBottomSheet(
     }
 
     val currentCard = cardStack.last()
-    val scrollState = rememberScrollState()
-
-    // Reset scroll to top when current card in stack changes
-    LaunchedEffect(currentCard.id) {
-        scrollState.scrollTo(0)
-    }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -82,124 +76,149 @@ fun KeywordBottomSheet(
         modifier = modifier,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
     ) {
-        Column(
+        KeywordSheetContent(
+            currentCard = currentCard,
+            cardStackSize = cardStack.size,
+            allSubjectCards = allSubjectCards,
+            onBackClick = { cardStack.removeAt(cardStack.lastIndex) },
+            onCloseClick = onDismissRequest,
+            onKeywordClick = { nextCard -> cardStack.add(nextCard) },
+            onSpeak = onSpeak,
+        )
+    }
+}
+
+@Composable
+fun KeywordSheetContent(
+    currentCard: Card,
+    cardStackSize: Int,
+    allSubjectCards: List<Card>,
+    onBackClick: () -> Unit,
+    onCloseClick: () -> Unit,
+    onKeywordClick: (Card) -> Unit,
+    onSpeak: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scrollState = rememberScrollState()
+
+    // Reset scroll to top when current card in stack changes
+    LaunchedEffect(currentCard.id) {
+        scrollState.scrollTo(0)
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .verticalScroll(scrollState),
+    ) {
+        // Header: Back navigation & Close button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (cardStackSize > 1) {
+                TextButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.padding(start = 4.dp))
+                    Text(text = "戻る (${cardStackSize - 1})")
+                }
+            } else {
+                Text(
+                    text = "関連キーワード詳細",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            IconButton(
+                onClick = onCloseClick,
+                modifier = Modifier.semantics { contentDescription = "Close" },
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = null,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Front word + speaker icon
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = currentCard.front,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp,
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+
+            IconButton(onClick = { onSpeak(currentCard.front) }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = "Speak",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Meaning / Back text with hyperlinked recursive keywords
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp)
-                .verticalScroll(scrollState),
+                .padding(vertical = 8.dp),
         ) {
-            // Header: Back navigation & Close button
-            Row(
+            KeywordText(
+                text = currentCard.back,
+                candidateCards = allSubjectCards,
+                currentCardId = currentCard.id,
+                onKeywordClick = onKeywordClick,
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp),
+                textAlign = TextAlign.Start,
+            )
+        }
+
+        // User supplement if present
+        if (currentCard.userSupplement.isNotBlank()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
             ) {
-                if (cardStack.size > 1) {
-                    TextButton(
-                        onClick = { cardStack.removeAt(cardStack.lastIndex) },
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
-                        )
-                        Spacer(modifier = Modifier.padding(start = 4.dp))
-                        Text(text = "戻る (${cardStack.size - 1})")
-                    }
-                } else {
+                Column(modifier = Modifier.padding(14.dp)) {
                     Text(
-                        text = "関連キーワード詳細",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "補足メモ",
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                }
-
-                IconButton(
-                    onClick = onDismissRequest,
-                    modifier = Modifier.semantics { contentDescription = "Close" },
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = null,
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = currentCard.userSupplement,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Front word + speaker icon
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = currentCard.front,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 28.sp,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                )
-
-                IconButton(onClick = { onSpeak(currentCard.front) }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                        contentDescription = "Speak",
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Meaning / Back text with hyperlinked recursive keywords
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-            ) {
-                KeywordText(
-                    text = currentCard.back,
-                    candidateCards = allSubjectCards,
-                    currentCardId = currentCard.id,
-                    onKeywordClick = { nextCard ->
-                        cardStack.add(nextCard)
-                    },
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp),
-                    textAlign = TextAlign.Start,
-                )
-            }
-
-            // User supplement if present
-            if (currentCard.userSupplement.isNotBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    ),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(
-                            text = "補足メモ",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = currentCard.userSupplement,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }

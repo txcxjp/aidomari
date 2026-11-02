@@ -10,6 +10,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.ui.study.components.KeywordBottomSheet
+import com.aidomari.app.ui.study.components.KeywordSheetContent
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -60,51 +62,54 @@ class KeywordBottomSheetTest {
     }
 
     @Test
-    fun keywordBottomSheet_recursiveKeywordClick_pushesToStackAndAllowsBackNavigation() {
-        var dismissed = false
+    fun keywordSheetContent_recursiveKeywordClick_invokesCallback() {
+        var clickedCard: Card? = null
 
         composeTestRule.setContent {
-            KeywordBottomSheet(
-                initialCard = cardApple,
+            KeywordSheetContent(
+                currentCard = cardApple,
+                cardStackSize = 1,
                 allSubjectCards = listOf(cardApple, cardFruit),
-                onDismissRequest = { dismissed = true },
+                onBackClick = {},
+                onCloseClick = {},
+                onKeywordClick = { card -> clickedCard = card },
                 onSpeak = {},
             )
         }
-
-        // Initial state: shows "Apple"
-        composeTestRule.onNodeWithText("Apple").assertIsDisplayed()
 
         // Scroll to and tap recursive keyword chip "fruit" in Apple's meaning
         composeTestRule.onNode(hasText("fruit") and hasClickAction())
             .performScrollTo()
             .performClick()
 
-        // Stack updated: back button in header appears
-        composeTestRule.onNodeWithText("戻る (1)").assertIsDisplayed()
-
-        // Click "戻る (1)" button to pop back to Apple
-        composeTestRule.onNodeWithText("戻る (1)").performClick()
-
-        // Back on Apple
-        composeTestRule.onNodeWithText("Apple").assertIsDisplayed()
-        assertFalse(dismissed)
+        assertEquals("c2", clickedCard?.id)
+        assertEquals("fruit", clickedCard?.front)
     }
 
     @Test
-    fun keywordBottomSheet_closeButton_triggersDismiss() {
-        var dismissed = false
+    fun keywordSheetContent_backButton_and_closeButton_invokeCallbacks() {
+        var backClicked = false
+        var closeClicked = false
 
         composeTestRule.setContent {
-            KeywordBottomSheet(
-                initialCard = cardApple,
+            KeywordSheetContent(
+                currentCard = cardFruit,
+                cardStackSize = 2,
                 allSubjectCards = listOf(cardApple, cardFruit),
-                onDismissRequest = { dismissed = true },
+                onBackClick = { backClicked = true },
+                onCloseClick = { closeClicked = true },
+                onKeywordClick = {},
                 onSpeak = {},
             )
         }
 
+        // Stack size > 1 shows "戻る (1)" button
+        composeTestRule.onNodeWithText("戻る (1)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("戻る (1)").performClick()
+        assertTrue(backClicked)
+
+        // Close button calls onCloseClick
         composeTestRule.onNodeWithContentDescription("Close").performClick()
-        assertTrue(dismissed)
+        assertTrue(closeClicked)
     }
 }
