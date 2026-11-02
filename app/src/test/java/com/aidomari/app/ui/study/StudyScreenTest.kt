@@ -125,8 +125,8 @@ class StudyScreenTest {
         composeTestRule.onNodeWithText("学習完了！").assertIsDisplayed()
         assertNull(navigatedPartIndex)
 
-        // Tapping "次のパートへ" navigates to next part
-        composeTestRule.onNodeWithText("次のパートへ").performClick()
+        // Tapping "次のパートへ進む" navigates to next part
+        composeTestRule.onNodeWithText("次のパートへ進む").performClick()
         assertEquals(1, navigatedPartIndex)
     }
 
