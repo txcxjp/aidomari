@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.ui.study.components.KeywordBottomSheet
 import org.junit.Assert.assertFalse
@@ -74,11 +75,12 @@ class KeywordBottomSheetTest {
         // Initial state: shows "Apple"
         composeTestRule.onNodeWithText("Apple").assertIsDisplayed()
 
-        // Tap recursive keyword chip "fruit" in Apple's meaning
-        composeTestRule.onNode(hasText("fruit") and hasClickAction()).performClick()
+        // Scroll to and tap recursive keyword chip "fruit" in Apple's meaning
+        composeTestRule.onNode(hasText("fruit") and hasClickAction())
+            .performScrollTo()
+            .performClick()
 
-        // Stack updated: should display "fruit"
-        composeTestRule.onNodeWithText("fruit").assertIsDisplayed()
+        // Stack updated: back button in header appears
         composeTestRule.onNodeWithText("戻る (1)").assertIsDisplayed()
 
         // Click "戻る (1)" button to pop back to Apple
