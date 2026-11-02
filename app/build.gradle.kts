@@ -73,6 +73,12 @@ android {
         abortOnError = false
         checkDependencies = true
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
@@ -109,6 +115,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 
     // Android Testing
     androidTestImplementation(libs.androidx.junit)

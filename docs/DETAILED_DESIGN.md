@@ -379,9 +379,9 @@ flowchart TD
 
 ### 7.2 芋づる式スタック探索 (`KeywordBottomSheet`)
 学習の文脈を失わずに知識を深掘りできるよう、モーダルシート内に独立したナビゲーションスタックを実装：
-- `cardStack = remember { mutableStateListOf<Card>() }`
-- **階層遷移**: BottomSheet 内の解説文にあるキーワードをタップすると、現在のカードの上に新しいカードを `push`（`cardStack.add(nextCard)`）。
-- **戻る操作**: ヘッダーの「← 戻る (N)」ボタンで直前のカードへ `pop`（`cardStack.removeLast()`）。
+- `cardStack = remember(initialCard) { mutableStateListOf(initialCard) }`（初回描画時から選択単語を保持し、同期的に安全展開）
+- **階層遷移**: BottomSheet 内の解説文にあるキーワードをタップすると、現在のカードの上に新しいカードを `push`（`cardStack.add(nextCard)`）。単語切り替え時はスクロール位置を最上部に自動リセット（`scrollTo(0)`）。
+- **戻る操作**: ヘッダーの「← 戻る (N)」ボタンおよび端末の物理/システム戻るジェスチャー（`BackHandler(enabled = cardStack.size > 1)`）で直前のカードへ `pop`（`cardStack.removeAt(cardStack.lastIndex)`）。
 - **セッション非破壊**: 探索を何十回繰り返しても、シートを閉じれば背面の学習セッションは 1 ミリも狂わずにそのまま継続。
 
 ---
