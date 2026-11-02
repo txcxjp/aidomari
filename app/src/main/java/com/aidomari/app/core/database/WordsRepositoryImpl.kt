@@ -54,6 +54,24 @@ class WordsRepositoryImpl(
         return newDeck
     }
 
+    override suspend fun getOrCreateRandomDeck(subjectId: String): Deck {
+        val id = "random_$subjectId"
+        val existing = dao.getDeckById(id)
+        if (existing != null) {
+            return existing.toDomain()
+        }
+        val newDeck = Deck(
+            id = id,
+            subjectId = subjectId,
+            name = "ランダム出題",
+            splitSize = 10,
+            autoContinue = false,
+            shuffleMode = true,
+        )
+        dao.insertDeck(newDeck.toEntity())
+        return newDeck
+    }
+
     override suspend fun saveDeck(deck: Deck) {
         dao.insertDeck(deck.toEntity())
     }

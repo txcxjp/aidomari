@@ -45,7 +45,7 @@ interface AidomariDao {
     suspend fun deleteSubjectById(id: String)
 
     // --- Deck Operations ---
-    @Query("SELECT * FROM decks WHERE subject_id = :subjectId AND id NOT LIKE 'bookmark_%' ORDER BY sort_order ASC, created_at ASC")
+    @Query("SELECT * FROM decks WHERE subject_id = :subjectId AND id NOT LIKE 'bookmark_%' AND id NOT LIKE 'random_%' ORDER BY sort_order ASC, created_at ASC")
     fun getDecksBySubject(subjectId: String): Flow<List<DeckEntity>>
 
     @Query("SELECT * FROM decks WHERE id = :id")
