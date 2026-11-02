@@ -4,19 +4,42 @@ import android.content.Context
 import android.speech.tts.TextToSpeech
 import java.util.Locale
 
-class TtsManager(context: Context) : TextToSpeech.OnInitListener {
+open class TtsManager(
+    context: Context? = null,
+    private val initTts: Boolean = true,
+) : TextToSpeech.OnInitListener {
 
-    private var tts: TextToSpeech? = TextToSpeech(context.applicationContext, this)
+    private var tts: TextToSpeech? = if (context != null && initTts) {
+        TextToSpeech(context.applicationContext, this)
+    } else {
+        null
+    }
     private var isInitialized = false
+    private var currentSpeechRate: Float = 1.0f
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             isInitialized = true
             tts?.language = Locale.getDefault()
+            tts?.setSpeechRate(currentSpeechRate)
         }
     }
 
-    fun speak(text: String, languageTag: String = "auto") {
+    fun setSpeechRate(rate: Float) {
+        currentSpeechRate = rate.coerceIn(0.5f, 2.0f)
+        if (isInitialized) {
+            tts?.setSpeechRate(currentSpeechRate)
+        }
+    }
+
+    fun getSpeechRate(): Float = currentSpeechRate
+
+    fun isReady(): Boolean = isInitialized
+
+    fun speak(text: String, languageTag: String = "auto", speechRate: Float? = null) {
+        if (speechRate != null) {
+            setSpeechRate(speechRate)
+        }
         if (!isInitialized || text.isBlank()) return
 
         val targetLocale = resolveLocale(languageTag)

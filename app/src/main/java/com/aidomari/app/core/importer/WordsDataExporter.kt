@@ -19,6 +19,9 @@ data class ExportDeck(
     val splitSize: Int = 50,
     val autoContinue: Boolean = false,
     val shuffleMode: Boolean = false,
+    val reverseMode: Boolean = false,
+    val autoSpeak: Boolean = false,
+    val speechRate: Float = 1.0f,
     val cards: List<ExportCard> = emptyList(),
 )
 
@@ -66,6 +69,9 @@ class WordsDataExporter(
                     splitSize = deck.splitSize,
                     autoContinue = deck.autoContinue,
                     shuffleMode = deck.shuffleMode,
+                    reverseMode = deck.reverseMode,
+                    autoSpeak = deck.autoSpeak,
+                    speechRate = deck.speechRate,
                     cards = exportCards,
                 )
             }

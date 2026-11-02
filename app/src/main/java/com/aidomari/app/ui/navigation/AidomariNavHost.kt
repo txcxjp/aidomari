@@ -83,7 +83,10 @@ fun AidomariNavHost(
                     }
                 },
                 onSpeakText = { text ->
-                    val lang = studyViewModel.uiState.value.deck?.let { "auto" } ?: "auto"
+                    val deck = studyViewModel.uiState.value.deck
+                    val rate = deck?.speechRate ?: 1.0f
+                    ttsManager.setSpeechRate(rate)
+                    val lang = "auto"
                     ttsManager.speak(text, lang)
                 },
             )

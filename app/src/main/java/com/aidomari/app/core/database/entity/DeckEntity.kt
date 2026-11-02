@@ -35,6 +35,10 @@ data class DeckEntity(
     val shuffleMode: Boolean = false,
     @ColumnInfo(name = "reverse_mode")
     val reverseMode: Boolean = false,
+    @ColumnInfo(name = "auto_speak")
+    val autoSpeak: Boolean = false,
+    @ColumnInfo(name = "speech_rate")
+    val speechRate: Float = 1.0f,
     @ColumnInfo(name = "sort_order")
     val sortOrder: Int = 0,
     @ColumnInfo(name = "created_at")

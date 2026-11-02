@@ -60,6 +60,41 @@ class DeckViewModelTest {
     }
 
     @Test
+    fun createDeck_withTtsSettings_savesAutoSpeakAndSpeechRate() = runTest {
+        viewModel.createDeck(
+            name = "リスニング用",
+            splitSize = 30,
+            autoSpeak = true,
+            speechRate = 1.25f,
+        )
+        advanceUntilIdle()
+
+        val deck = fakeRepository.decksList.find { it.name == "リスニング用" }
+        assertEquals(true, deck?.autoSpeak)
+        assertEquals(1.25f, deck?.speechRate ?: 0f, 0.001f)
+    }
+
+    @Test
+    fun toggleAutoSpeak_invertsAutoSpeakAndSaves() = runTest {
+        val deck = Deck(id = "d-tts", subjectId = "sub-1", name = "TTS Test", autoSpeak = false)
+        fakeRepository.decksList.add(deck)
+        fakeRepository.triggerDecksUpdate()
+        advanceUntilIdle()
+
+        viewModel.toggleAutoSpeak("d-tts")
+        advanceUntilIdle()
+
+        val updated = fakeRepository.decksList.find { it.id == "d-tts" }
+        assertEquals(true, updated?.autoSpeak)
+
+        viewModel.toggleAutoSpeak("d-tts")
+        advanceUntilIdle()
+
+        val toggledBack = fakeRepository.decksList.find { it.id == "d-tts" }
+        assertEquals(false, toggledBack?.autoSpeak)
+    }
+
+    @Test
     fun deleteDeck_removesDeckFromRepository() = runTest {
         viewModel.createDeck("Deck to Delete")
         advanceUntilIdle()

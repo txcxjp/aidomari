@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -31,6 +34,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +49,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -56,7 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.domain.model.Deck
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DeckListScreen(
     subjectName: String,
@@ -391,10 +396,34 @@ fun DeckListScreen(
                                                     )
                                                 }
                                             }
+                                            if (deck.autoSpeak) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                                ) {
+                                                    Text(
+                                                        text = "自動音声 (${deck.speechRate}x)",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
 
                                     Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(onClick = { viewModel.toggleAutoSpeak(deck.id) }) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                                contentDescription = if (deck.autoSpeak) "Auto-Speak ON" else "Auto-Speak OFF",
+                                                tint = if (deck.autoSpeak) {
+                                                    MaterialTheme.colorScheme.primary
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                                },
+                                            )
+                                        }
                                         IconButton(onClick = { deckToEdit = deck }) {
                                             Icon(
                                                 imageVector = Icons.Default.Edit,
@@ -531,6 +560,9 @@ fun DeckListScreen(
         var autoContinue by remember { mutableStateOf(false) }
         var shuffleMode by remember { mutableStateOf(false) }
         var reverseMode by remember { mutableStateOf(false) }
+        var autoSpeak by remember { mutableStateOf(false) }
+        var speechRate by remember { mutableFloatStateOf(1.0f) }
+        val rateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
@@ -579,6 +611,37 @@ fun DeckListScreen(
                         Text(text = "裏面から出題（和英・意味先出し）")
                         Switch(checked = reverseMode, onCheckedChange = { reverseMode = it })
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(text = "自動読み上げ（カード表示時に発音）")
+                        Switch(checked = autoSpeak, onCheckedChange = { autoSpeak = it })
+                    }
+                    if (autoSpeak) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "読み上げ速度: ${speechRate}x",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            rateOptions.forEach { rate ->
+                                val isSelected = (speechRate - rate).let { it >= -0.01f && it <= 0.01f }
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { speechRate = rate },
+                                    label = { Text(text = "${rate}x") },
+                                )
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -586,7 +649,15 @@ fun DeckListScreen(
                     onClick = {
                         if (deckName.isNotBlank()) {
                             val splitSize = splitSizeText.toIntOrNull() ?: 50
-                            viewModel.createDeck(deckName, splitSize, autoContinue, shuffleMode, reverseMode)
+                            viewModel.createDeck(
+                                name = deckName,
+                                splitSize = splitSize,
+                                autoContinue = autoContinue,
+                                shuffleMode = shuffleMode,
+                                reverseMode = reverseMode,
+                                autoSpeak = autoSpeak,
+                                speechRate = speechRate,
+                            )
                             showAddDialog = false
                         }
                     },
@@ -610,6 +681,9 @@ fun DeckListScreen(
         var autoContinue by remember(target) { mutableStateOf(target.autoContinue) }
         var shuffleMode by remember(target) { mutableStateOf(target.shuffleMode) }
         var reverseMode by remember(target) { mutableStateOf(target.reverseMode) }
+        var autoSpeak by remember(target) { mutableStateOf(target.autoSpeak) }
+        var speechRate by remember(target) { mutableFloatStateOf(target.speechRate) }
+        val rateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
 
         AlertDialog(
             onDismissRequest = { deckToEdit = null },
@@ -658,6 +732,37 @@ fun DeckListScreen(
                         Text(text = "裏面から出題（和英・意味先出し）")
                         Switch(checked = reverseMode, onCheckedChange = { reverseMode = it })
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(text = "自動読み上げ（カード表示時に発音）")
+                        Switch(checked = autoSpeak, onCheckedChange = { autoSpeak = it })
+                    }
+                    if (autoSpeak) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "読み上げ速度: ${speechRate}x",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            rateOptions.forEach { rate ->
+                                val isSelected = (speechRate - rate).let { it >= -0.01f && it <= 0.01f }
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { speechRate = rate },
+                                    label = { Text(text = "${rate}x") },
+                                )
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -671,6 +776,8 @@ fun DeckListScreen(
                                 autoContinue = autoContinue,
                                 shuffleMode = shuffleMode,
                                 reverseMode = reverseMode,
+                                autoSpeak = autoSpeak,
+                                speechRate = speechRate,
                             )
                             viewModel.updateDeck(updated)
                             deckToEdit = null

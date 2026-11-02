@@ -97,6 +97,37 @@ class StudyViewModelTest {
     }
 
     @Test
+    fun updateTtsSettings_updatesDeckAndPersists() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        viewModel.updateTtsSettings(autoSpeak = true, speechRate = 1.5f)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(true, state.deck?.autoSpeak)
+        assertEquals(1.5f, state.deck?.speechRate ?: 0f, 0.001f)
+
+        val savedDeck = fakeRepository.decks.find { it.id == "deck-1" }
+        assertEquals(true, savedDeck?.autoSpeak)
+        assertEquals(1.5f, savedDeck?.speechRate ?: 0f, 0.001f)
+    }
+
+    @Test
+    fun toggleAutoSpeak_invertsAutoSpeakState() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        viewModel.toggleAutoSpeak()
+        advanceUntilIdle()
+        assertEquals(true, viewModel.uiState.value.deck?.autoSpeak)
+
+        viewModel.toggleAutoSpeak()
+        advanceUntilIdle()
+        assertEquals(false, viewModel.uiState.value.deck?.autoSpeak)
+    }
+
+    @Test
     fun loadDeckAndPart_bookmarkMode_loadsOnlyBookmarkedCards() = runTest {
         // testCards: c1, c2, c3. Bookmark only c2
         fakeRepository.setBookmark("c2", true)
@@ -293,6 +324,7 @@ class StudyViewModelTest {
             return newDeck
         }
         override suspend fun saveDeck(deck: Deck) {
+            decks.removeIf { it.id == deck.id }
             decks.add(deck)
         }
         override suspend fun deleteDeck(deckId: String) {

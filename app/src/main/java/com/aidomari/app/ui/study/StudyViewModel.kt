@@ -191,6 +191,25 @@ class StudyViewModel(
         }
     }
 
+    fun updateTtsSettings(autoSpeak: Boolean, speechRate: Float) {
+        val deck = currentDeck ?: return
+        val updatedDeck = deck.copy(
+            autoSpeak = autoSpeak,
+            speechRate = speechRate,
+        )
+        currentDeck = updatedDeck
+        _uiState.update { it.copy(deck = updatedDeck) }
+
+        viewModelScope.launch {
+            repository.saveDeck(updatedDeck)
+        }
+    }
+
+    fun toggleAutoSpeak() {
+        val deck = currentDeck ?: return
+        updateTtsSettings(autoSpeak = !deck.autoSpeak, speechRate = deck.speechRate)
+    }
+
     fun restartPart() {
         val deck = currentDeck ?: return
         val parts = deck.calculateParts(allCards.size)
