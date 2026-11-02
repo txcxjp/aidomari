@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 class DeckViewModel(
-    private val subjectId: String,
+    val subjectId: String,
     private val repository: WordsRepository,
 ) : ViewModel() {
 
@@ -34,6 +34,9 @@ class DeckViewModel(
     private val _allSubjectCards = MutableStateFlow<List<Card>>(emptyList())
     val allSubjectCards: StateFlow<List<Card>> = _allSubjectCards.asStateFlow()
 
+    private val _randomQuestionCount = MutableStateFlow(10)
+    val randomQuestionCount: StateFlow<Int> = _randomQuestionCount.asStateFlow()
+
     init {
         loadDecks()
         observeBookmarks()
@@ -44,6 +47,10 @@ class DeckViewModel(
         viewModelScope.launch {
             _allSubjectCards.value = repository.getAllCardsInSubject(subjectId)
         }
+    }
+
+    fun setRandomQuestionCount(count: Int) {
+        _randomQuestionCount.value = count
     }
 
     fun onSearchQueryChanged(query: String) {

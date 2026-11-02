@@ -278,6 +278,27 @@ class DeckViewModelTest {
         assertEquals("バラ科の植物", repoCard?.userSupplement)
     }
 
+    @Test
+    fun setRandomQuestionCount_updatesState() {
+        assertEquals(10, viewModel.randomQuestionCount.value)
+        viewModel.setRandomQuestionCount(20)
+        assertEquals(20, viewModel.randomQuestionCount.value)
+        viewModel.setRandomQuestionCount(-1)
+        assertEquals(-1, viewModel.randomQuestionCount.value)
+    }
+
+    @Test
+    fun loadAllSubjectCards_populatesSubjectCards() = runTest {
+        val card1 = Card(id = "c1", deckId = "d1", front = "Front 1", back = "Back 1")
+        val card2 = Card(id = "c2", deckId = "d1", front = "Front 2", back = "Back 2")
+        fakeRepository.cardsList.addAll(listOf(card1, card2))
+
+        viewModel.loadAllSubjectCards()
+        advanceUntilIdle()
+
+        assertEquals(2, viewModel.allSubjectCards.value.size)
+    }
+
     private class FakeDeckRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()

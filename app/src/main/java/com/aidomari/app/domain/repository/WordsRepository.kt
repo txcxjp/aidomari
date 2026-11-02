@@ -32,6 +32,21 @@ interface WordsRepository {
         saveDeck(newDeck)
         return newDeck
     }
+    suspend fun getOrCreateRandomDeck(subjectId: String): Deck {
+        val id = "random_$subjectId"
+        val existing = getDeckById(id)
+        if (existing != null) return existing
+        val newDeck = Deck(
+            id = id,
+            subjectId = subjectId,
+            name = "ランダム出題",
+            splitSize = 10,
+            autoContinue = false,
+            shuffleMode = true,
+        )
+        saveDeck(newDeck)
+        return newDeck
+    }
     suspend fun saveDeck(deck: Deck)
     suspend fun deleteDeck(deckId: String)
 

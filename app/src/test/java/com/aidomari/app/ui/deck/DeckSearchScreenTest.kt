@@ -117,9 +117,50 @@ class DeckSearchScreenTest {
         assertTrue(updated!!.isBookmarked)
     }
 
+    @Test
+    fun randomStudyCard_isDisplayedWhenSubjectHasCards() {
+        val card = Card(id = "c1", deckId = "d1", front = "Eloquent", back = "雄弁な")
+        fakeRepository.cardsList.add(card)
+        fakeRepository.decksList.add(Deck(id = "d1", subjectId = "sub-1", name = "Deck 1"))
+        fakeRepository.triggerDecksUpdate()
+        viewModel.loadAllSubjectCards()
+
+        var clickedDeckId = ""
+        var clickedPart = -1
+
+        composeTestRule.setContent {
+            DeckListScreen(
+                subjectName = "英単語",
+                viewModel = viewModel,
+                onBack = {},
+                onPartClick = { d, p ->
+                    clickedDeckId = d
+                    clickedPart = p
+                },
+            )
+        }
+
+        composeTestRule.onNodeWithText("ランダム出題").assertIsDisplayed()
+        composeTestRule.onNodeWithText("ランダム学習を開始").assertIsDisplayed()
+
+        // Clicking random study card opens dialog
+        composeTestRule.onNodeWithText("ランダム学習を開始").performClick()
+        composeTestRule.onNodeWithText("ランダム出題の設定").assertIsDisplayed()
+
+        // Clicking start study initiates random study session
+        composeTestRule.onNodeWithText("学習開始").performClick()
+        assertEquals("random_10_sub-1", clickedDeckId)
+        assertEquals(0, clickedPart)
+    }
+
     private class FakeTestRepository : WordsRepository {
         val cardsList = mutableListOf<Card>()
         val decksList = mutableListOf<Deck>()
+        val decksFlow = MutableStateFlow<List<Deck>>(emptyList())
+
+        fun triggerDecksUpdate() {
+            decksFlow.value = decksList.toList()
+        }
 
         override fun getAllSubjects(): Flow<List<Subject>> = MutableStateFlow(emptyList())
         override suspend fun getSubjectById(id: String): Subject? = null
@@ -128,7 +169,7 @@ class DeckSearchScreenTest {
         override suspend fun deleteSubject(id: String) {
         }
 
-        override fun getDecksBySubject(subjectId: String): Flow<List<Deck>> = MutableStateFlow(decksList)
+        override fun getDecksBySubject(subjectId: String): Flow<List<Deck>> = decksFlow
         override suspend fun getDeckById(deckId: String): Deck? = decksList.find { it.id == deckId }
         override suspend fun getOrCreateBookmarkDeck(subjectId: String): Deck =
             Deck(id = "bookmark_$subjectId", subjectId = subjectId, name = "苦手単語")

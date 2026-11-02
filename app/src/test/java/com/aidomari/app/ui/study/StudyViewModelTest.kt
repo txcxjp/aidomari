@@ -292,6 +292,44 @@ class StudyViewModelTest {
         assertEquals("", viewModel.uiState.value.currentCard?.userSupplement)
     }
 
+    @Test
+    fun loadDeckAndPart_randomMode_loadsSpecifiedCountFromSubject() = runTest {
+        val manyCards = (1..10).map { i ->
+            Card(id = "card-$i", deckId = "deck-1", front = "Word $i", back = "Meaning $i", orderIndex = i)
+        }
+        fakeRepository.cards.clear()
+        fakeRepository.cards.addAll(manyCards)
+
+        viewModel.loadDeckAndPart(deckId = "random_3_sub-1", partIndex = 0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNotNull(state.deck)
+        assertTrue(state.deck!!.name.contains("3問"))
+        assertEquals(3, state.totalInPart)
+        assertEquals(3, state.queueSize)
+        assertNotNull(state.currentCard)
+        assertFalse(state.isPartCompleted)
+    }
+
+    @Test
+    fun loadDeckAndPart_randomMode_allQuestions_loadsAllCardsFromSubject() = runTest {
+        val manyCards = (1..5).map { i ->
+            Card(id = "card-$i", deckId = "deck-1", front = "Word $i", back = "Meaning $i", orderIndex = i)
+        }
+        fakeRepository.cards.clear()
+        fakeRepository.cards.addAll(manyCards)
+
+        viewModel.loadDeckAndPart(deckId = "random_-1_sub-1", partIndex = 0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNotNull(state.deck)
+        assertTrue(state.deck!!.name.contains("全問"))
+        assertEquals(5, state.totalInPart)
+        assertEquals(5, state.queueSize)
+    }
+
     private class FakeStudyWordsRepository : WordsRepository {
         val subjects = mutableListOf<Subject>()
         val decks = mutableListOf<Deck>()

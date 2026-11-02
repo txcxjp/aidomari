@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.ui.deck.components.RandomQuestionsDialog
 import com.aidomari.app.ui.study.components.KeywordBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -90,10 +91,12 @@ fun DeckListScreen(
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
     val allSubjectCards by viewModel.allSubjectCards.collectAsState()
+    val randomQuestionCount by viewModel.randomQuestionCount.collectAsState()
 
     var isSearchActive by remember { mutableStateOf(false) }
     var selectedSearchCard by remember { mutableStateOf<Card?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showRandomQuestionsDialog by remember { mutableStateOf(false) }
     var deckToEdit by remember { mutableStateOf<Deck?>(null) }
     var deckToDelete by remember { mutableStateOf<Deck?>(null) }
 
@@ -326,7 +329,7 @@ fun DeckListScreen(
                         }
                     }
                 }
-            } else if (decksWithParts.isEmpty() && (bookmarkModel == null || bookmarkModel?.totalCount == 0)) {
+            } else if (decksWithParts.isEmpty() && (bookmarkModel == null || bookmarkModel?.totalCount == 0) && allSubjectCards.isEmpty()) {
                 Column(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -505,6 +508,103 @@ fun DeckListScreen(
                                                     }
                                                 }
                                             }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Random questions study card banner
+                    if (allSubjectCards.isNotEmpty()) {
+                        item(key = "random_study_section") {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Shuffle,
+                                                contentDescription = "Random Study",
+                                                tint = MaterialTheme.colorScheme.secondary,
+                                                modifier = Modifier.size(24.dp),
+                                            )
+                                            Text(
+                                                text = "ランダム出題",
+                                                style = MaterialTheme.typography.titleMedium.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                ),
+                                            )
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.surface,
+                                        ) {
+                                            Text(
+                                                text = "${allSubjectCards.size} 枚",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.secondary,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { showRandomQuestionsDialog = true },
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surface,
+                                        ),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = "ランダム学習を開始",
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                )
+                                                Text(
+                                                    text = if (randomQuestionCount <= 0) "全問出題" else "${randomQuestionCount}問出題（タップで変更）",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                                contentDescription = "Start Random Study",
+                                                tint = MaterialTheme.colorScheme.secondary,
+                                                modifier = Modifier.size(20.dp),
+                                            )
                                         }
                                     }
                                 }
@@ -1065,6 +1165,20 @@ fun DeckListScreen(
                 TextButton(onClick = { deckToDelete = null }) {
                     Text(text = "キャンセル")
                 }
+            },
+        )
+    }
+
+    if (showRandomQuestionsDialog && allSubjectCards.isNotEmpty()) {
+        RandomQuestionsDialog(
+            totalCards = allSubjectCards.size,
+            initialCount = randomQuestionCount,
+            onDismissRequest = { showRandomQuestionsDialog = false },
+            onStartStudy = { count ->
+                viewModel.setRandomQuestionCount(count)
+                showRandomQuestionsDialog = false
+                val randomDeckId = "random_${count}_${viewModel.subjectId}"
+                onPartClick(randomDeckId, 0)
             },
         )
     }

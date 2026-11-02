@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.DeckPart
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,25 +36,68 @@ class StudyViewModel(
             _uiState.update { it.copy(isLoading = true) }
 
             val isBookmarkMode = deckId.startsWith("bookmark_")
-            val deck = if (isBookmarkMode) {
-                val subjectId = deckId.removePrefix("bookmark_")
-                repository.getOrCreateBookmarkDeck(subjectId)
-            } else {
-                repository.getDeckById(deckId) ?: return@launch
+            val isRandomMode = deckId.startsWith("random_")
+            val deck = when {
+                isBookmarkMode -> {
+                    val subjectId = deckId.removePrefix("bookmark_")
+                    repository.getOrCreateBookmarkDeck(subjectId)
+                }
+                isRandomMode -> {
+                    val rest = deckId.removePrefix("random_")
+                    val countPart = rest.substringBefore("_")
+                    val subjectId = rest.substringAfter("_")
+                    val questionCount = countPart.toIntOrNull() ?: 10
+                    val baseDeck = repository.getOrCreateRandomDeck(subjectId)
+                    val countLabel = if (questionCount <= 0) "全問" else "${questionCount}問"
+                    baseDeck.copy(
+                        id = deckId,
+                        name = "ランダム出題 ($countLabel)",
+                        shuffleMode = true,
+                    )
+                }
+                else -> {
+                    repository.getDeckById(deckId) ?: return@launch
+                }
             }
             currentDeck = deck
             currentPartIndex = partIndex
 
             val subjectCards = repository.getAllCardsInSubject(deck.subjectId)
-            val cards = if (isBookmarkMode) {
-                repository.getBookmarkedCardsBySubject(deck.subjectId).first()
-            } else {
-                repository.getCardsByDeckSync(deckId)
+            val cards = when {
+                isBookmarkMode -> {
+                    repository.getBookmarkedCardsBySubject(deck.subjectId).first()
+                }
+                isRandomMode -> {
+                    val rest = deckId.removePrefix("random_")
+                    val countPart = rest.substringBefore("_")
+                    val questionCount = countPart.toIntOrNull() ?: 10
+                    val shuffled = subjectCards.shuffled()
+                    if (questionCount > 0 && questionCount < shuffled.size) {
+                        shuffled.take(questionCount)
+                    } else {
+                        shuffled
+                    }
+                }
+                else -> {
+                    repository.getCardsByDeckSync(deckId)
+                }
             }
             allCards = cards
             cardsMap = cards.associateBy { it.id }
 
-            val parts = deck.calculateParts(cards.size)
+            val parts = if (isRandomMode) {
+                listOf(
+                    DeckPart(
+                        partIndex = 0,
+                        partNumber = 1,
+                        startIndex = 0,
+                        endIndex = cards.size,
+                        count = cards.size,
+                    ),
+                )
+            } else {
+                deck.calculateParts(cards.size)
+            }
             val currentPart = parts.getOrNull(partIndex)
             val hasNextPart = partIndex + 1 < parts.size
 
@@ -78,7 +122,7 @@ class StudyViewModel(
             )
 
             // Check if there is an existing non-completed session
-            val savedSession = repository.getSession(deckId)
+            val savedSession = if (isRandomMode) null else repository.getSession(deckId)
             val canResume = savedSession != null &&
                 savedSession.partIndex == partIndex &&
                 !savedSession.isCompleted &&
@@ -228,7 +272,19 @@ class StudyViewModel(
 
     fun restartPart() {
         val deck = currentDeck ?: return
-        val parts = deck.calculateParts(allCards.size)
+        val parts = if (deck.id.startsWith("random_")) {
+            listOf(
+                DeckPart(
+                    partIndex = 0,
+                    partNumber = 1,
+                    startIndex = 0,
+                    endIndex = allCards.size,
+                    count = allCards.size,
+                ),
+            )
+        } else {
+            deck.calculateParts(allCards.size)
+        }
         val currentPart = parts.getOrNull(currentPartIndex) ?: return
 
         val partCards = allCards.subList(
