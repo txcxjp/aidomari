@@ -259,6 +259,25 @@ class DeckViewModelTest {
         assertTrue(repoCard!!.isBookmarked)
     }
 
+    @Test
+    fun updateCardNotes_updatesSearchResultsAndRepository() = runTest {
+        val card = Card(id = "c1", deckId = "d1", front = "Apple", back = "りんご")
+        fakeRepository.cardsList.add(card)
+        viewModel.onSearchQueryChanged("Apple")
+        advanceUntilIdle()
+
+        viewModel.updateCardNotes("c1", "どんな果物？", "バラ科の植物")
+        advanceUntilIdle()
+
+        val searchCard = viewModel.searchResults.value.find { it.id == "c1" }
+        assertEquals("どんな果物？", searchCard?.userQuestion)
+        assertEquals("バラ科の植物", searchCard?.userSupplement)
+
+        val repoCard = fakeRepository.cardsList.find { it.id == "c1" }
+        assertEquals("どんな果物？", repoCard?.userQuestion)
+        assertEquals("バラ科の植物", repoCard?.userSupplement)
+    }
+
     private class FakeDeckRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()
@@ -308,6 +327,7 @@ class DeckViewModelTest {
             cardsList.filter { it.deckId == deckId }
         override suspend fun getCardById(cardId: String): Card? = cardsList.find { it.id == cardId }
         override suspend fun saveCard(card: Card) {
+            cardsList.removeIf { it.id == card.id }
             cardsList.add(card)
         }
         override suspend fun saveCards(newCards: List<Card>) {

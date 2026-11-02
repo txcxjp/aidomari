@@ -62,6 +62,79 @@ class KeywordBottomSheetTest {
     }
 
     @Test
+    fun keywordBottomSheet_displaysQuestion_whenPresent() {
+        val cardWithQuestion = cardApple.copy(userQuestion = "どんな果物？")
+
+        composeTestRule.setContent {
+            KeywordBottomSheet(
+                initialCard = cardWithQuestion,
+                allSubjectCards = listOf(cardWithQuestion),
+                onDismissRequest = {},
+                onSpeak = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText("疑問点・質問").assertIsDisplayed()
+        composeTestRule.onNodeWithText("どんな果物？").assertIsDisplayed()
+    }
+
+    @Test
+    fun keywordBottomSheet_displaysSupplement_whenPresent() {
+        val cardWithSupplement = cardApple.copy(userSupplement = "ビタミンCが豊富に含まれる")
+
+        composeTestRule.setContent {
+            KeywordBottomSheet(
+                initialCard = cardWithSupplement,
+                allSubjectCards = listOf(cardWithSupplement),
+                onDismissRequest = {},
+                onSpeak = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText("補足メモ").assertIsDisplayed()
+        composeTestRule.onNodeWithText("ビタミンCが豊富に含まれる").assertIsDisplayed()
+    }
+
+    @Test
+    fun keywordSheetContent_editNotesClick_hiddenWhenCallbackNull() {
+        composeTestRule.setContent {
+            KeywordSheetContent(
+                currentCard = cardApple,
+                cardStackSize = 1,
+                allSubjectCards = listOf(cardApple, cardFruit),
+                onBackClick = {},
+                onCloseClick = {},
+                onKeywordClick = {},
+                onSpeak = {},
+                onEditNotesClick = null,
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Edit Notes").assertDoesNotExist()
+    }
+
+    @Test
+    fun keywordSheetContent_editNotesClick_invokesCallback() {
+        var editClicked = false
+
+        composeTestRule.setContent {
+            KeywordSheetContent(
+                currentCard = cardApple,
+                cardStackSize = 1,
+                allSubjectCards = listOf(cardApple, cardFruit),
+                onBackClick = {},
+                onCloseClick = {},
+                onKeywordClick = {},
+                onSpeak = {},
+                onEditNotesClick = { editClicked = true },
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Edit Notes").performClick()
+        assertTrue(editClicked)
+    }
+
+    @Test
     fun keywordSheetContent_recursiveKeywordClick_invokesCallback() {
         var clickedCard: Card? = null
 
