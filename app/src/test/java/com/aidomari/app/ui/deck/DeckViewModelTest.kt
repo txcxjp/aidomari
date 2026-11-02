@@ -199,6 +199,49 @@ class DeckViewModelTest {
         assertEquals(25, part0.session?.currentCardIndex)
     }
 
+    @Test
+    fun onSearchQueryChanged_matchingQuery_updatesSearchResults() = runTest {
+        val c1 = Card(id = "c1", deckId = "d1", front = "Abundant", back = "豊富な")
+        val c2 = Card(id = "c2", deckId = "d1", front = "Scarcity", back = "不足、希少")
+        val c3 = Card(id = "c3", deckId = "d1", front = "Dog", back = "犬", userSupplement = "Canine friend")
+        fakeRepository.cardsList.addAll(listOf(c1, c2, c3))
+
+        viewModel.onSearchQueryChanged("Abund")
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.searchResults.value.size)
+        assertEquals("Abundant", viewModel.searchResults.value[0].front)
+
+        // Search by meaning
+        viewModel.onSearchQueryChanged("希少")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.searchResults.value.size)
+        assertEquals("Scarcity", viewModel.searchResults.value[0].front)
+
+        // Search by supplement note
+        viewModel.onSearchQueryChanged("canine")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.searchResults.value.size)
+        assertEquals("Dog", viewModel.searchResults.value[0].front)
+
+        // Empty query clears
+        viewModel.onSearchQueryChanged("")
+        advanceUntilIdle()
+        assertTrue(viewModel.searchResults.value.isEmpty())
+    }
+
+    @Test
+    fun clearSearch_resetsQueryAndResults() = runTest {
+        fakeRepository.cardsList.add(Card(id = "c1", deckId = "d1", front = "Apple", back = "りんご"))
+        viewModel.onSearchQueryChanged("Apple")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.searchResults.value.size)
+
+        viewModel.clearSearch()
+        assertEquals("", viewModel.searchQuery.value)
+        assertTrue(viewModel.searchResults.value.isEmpty())
+    }
+
     private class FakeDeckRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()
@@ -261,7 +304,13 @@ class DeckViewModelTest {
         override suspend fun setBookmark(cardId: String, isBookmarked: Boolean) {
         }
         override fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>> = bookmarkedFlow
-        override suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card> = emptyList()
+        override suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card> =
+            cardsList.filter {
+                it.front.contains(query, ignoreCase = true) ||
+                    it.back.contains(query, ignoreCase = true) ||
+                    it.userQuestion.contains(query, ignoreCase = true) ||
+                    it.userSupplement.contains(query, ignoreCase = true)
+            }
         override suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card? = null
         override suspend fun getAllCardsInSubject(subjectId: String): List<Card> = cardsList
 

@@ -2,13 +2,14 @@ package com.aidomari.app.ui.deck
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.repository.WordsRepository
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 class DeckViewModel(
     private val subjectId: String,
@@ -21,9 +22,50 @@ class DeckViewModel(
     private val _bookmarkDeckUiModel = MutableStateFlow<BookmarkDeckUiModel?>(null)
     val bookmarkDeckUiModel: StateFlow<BookmarkDeckUiModel?> = _bookmarkDeckUiModel.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _searchResults = MutableStateFlow<List<Card>>(emptyList())
+    val searchResults: StateFlow<List<Card>> = _searchResults.asStateFlow()
+
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    private val _allSubjectCards = MutableStateFlow<List<Card>>(emptyList())
+    val allSubjectCards: StateFlow<List<Card>> = _allSubjectCards.asStateFlow()
+
     init {
         loadDecks()
         observeBookmarks()
+        loadAllSubjectCards()
+    }
+
+    fun loadAllSubjectCards() {
+        viewModelScope.launch {
+            _allSubjectCards.value = repository.getAllCardsInSubject(subjectId)
+        }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) {
+            _searchResults.value = emptyList()
+            _isSearching.value = false
+            return
+        }
+        viewModelScope.launch {
+            _isSearching.value = true
+            val results = repository.searchCardsInSubject(subjectId, trimmed)
+            _searchResults.value = results
+            _isSearching.value = false
+        }
+    }
+
+    fun clearSearch() {
+        _searchQuery.value = ""
+        _searchResults.value = emptyList()
+        _isSearching.value = false
     }
 
     fun loadDecks() {

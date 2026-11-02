@@ -110,7 +110,12 @@ interface AidomariDao {
         """
         SELECT cards.* FROM cards
         INNER JOIN decks ON cards.deck_id = decks.id
-        WHERE decks.subject_id = :subjectId AND (cards.front LIKE '%' || :query || '%' OR cards.back LIKE '%' || :query || '%')
+        WHERE decks.subject_id = :subjectId AND (
+            cards.front LIKE '%' || :query || '%'
+            OR cards.back LIKE '%' || :query || '%'
+            OR cards.user_question LIKE '%' || :query || '%'
+            OR cards.user_supplement LIKE '%' || :query || '%'
+        )
         ORDER BY cards.front ASC
         """,
     )

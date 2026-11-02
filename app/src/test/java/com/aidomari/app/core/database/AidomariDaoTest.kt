@@ -147,4 +147,48 @@ class AidomariDaoTest {
         assertEquals(15, restored?.currentCardIndex)
         assertEquals("[\"c1\",\"c2\"]", restored?.queueCardIdsJson)
     }
+
+    @Test
+    fun searchCardsInSubject_matchesFrontBackAndNotes() = runBlocking {
+        val subject = SubjectEntity(id = "sub-search", name = "英語")
+        dao.insertSubject(subject)
+        val deck = DeckEntity(id = "deck-search", subjectId = "sub-search", name = "単語帳S")
+        dao.insertDeck(deck)
+
+        val c1 = CardEntity(id = "c1", deckId = "deck-search", front = "apple", back = "りんご")
+        val c2 = CardEntity(
+            id = "c2",
+            deckId = "deck-search",
+            front = "banana",
+            back = "バナナ",
+            userSupplement = "tropical fruit",
+        )
+        val c3 = CardEntity(
+            id = "c3",
+            deckId = "deck-search",
+            front = "cat",
+            back = "ねこ",
+            userQuestion = "kitten?",
+        )
+        dao.insertCards(listOf(c1, c2, c3))
+
+        val frontMatches = dao.searchCardsInSubject("sub-search", "app")
+        assertEquals(1, frontMatches.size)
+        assertEquals("apple", frontMatches[0].front)
+
+        val backMatches = dao.searchCardsInSubject("sub-search", "バナナ")
+        assertEquals(1, backMatches.size)
+        assertEquals("banana", backMatches[0].front)
+
+        val supplementMatches = dao.searchCardsInSubject("sub-search", "tropical")
+        assertEquals(1, supplementMatches.size)
+        assertEquals("banana", supplementMatches[0].front)
+
+        val questionMatches = dao.searchCardsInSubject("sub-search", "kitten")
+        assertEquals(1, questionMatches.size)
+        assertEquals("cat", questionMatches[0].front)
+
+        val emptyMatches = dao.searchCardsInSubject("sub-search", "zebra")
+        assertTrue(emptyMatches.isEmpty())
+    }
 }
