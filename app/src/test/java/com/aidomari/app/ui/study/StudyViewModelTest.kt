@@ -432,6 +432,23 @@ class StudyViewModelTest {
         assertTrue(viewModel.uiState.value.searchResults.isEmpty())
     }
 
+    @Test
+    fun partCompletion_persistsCompletedPartIndexInSession() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        viewModel.markDone()
+        viewModel.markDone()
+        viewModel.markDone()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isPartCompleted)
+        val session = fakeRepository.lastSavedSession
+        assertNotNull(session)
+        assertTrue(session!!.isCompleted)
+        assertTrue(session.completedPartIndices.contains(0))
+    }
+
     private class FakeStudyWordsRepository : WordsRepository {
         val subjects = mutableListOf<Subject>()
         val decks = mutableListOf<Deck>()

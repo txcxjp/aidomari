@@ -32,4 +32,6 @@ data class StudySessionEntity(
     val isCompleted: Boolean = false,
     @ColumnInfo(name = "last_studied_at")
     val lastStudiedAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "completed_part_indices_json")
+    val completedPartIndicesJson: String = "[]",
 )

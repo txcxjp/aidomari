@@ -30,6 +30,7 @@ class StudyViewModel(
     private var currentPartIndex: Int = 0
     private var totalInPart: Int = 0
     private var completedCount: Int = 0
+    private var savedCompletedParts: Set<Int> = emptySet()
 
     fun loadDeckAndPart(deckId: String, partIndex: Int) {
         viewModelScope.launch {
@@ -123,6 +124,7 @@ class StudyViewModel(
 
             // Check if there is an existing non-completed session
             val savedSession = if (isRandomMode) null else repository.getSession(deckId)
+            savedCompletedParts = savedSession?.completedPartIndices ?: emptySet()
             val canResume = savedSession != null &&
                 savedSession.partIndex == partIndex &&
                 !savedSession.isCompleted &&
@@ -445,6 +447,15 @@ class StudyViewModel(
 
     private fun saveCurrentSession(isCompleted: Boolean) {
         val deck = currentDeck ?: return
+        if (deck.id.startsWith("random_")) return
+
+        val newCompletedParts = if (isCompleted) {
+            savedCompletedParts + currentPartIndex
+        } else {
+            savedCompletedParts
+        }
+        savedCompletedParts = newCompletedParts
+
         viewModelScope.launch {
             val session = StudySession(
                 deckId = deck.id,
@@ -454,6 +465,7 @@ class StudyViewModel(
                 retryCardIds = retryCardIds.toList(),
                 isCompleted = isCompleted,
                 lastStudiedAt = System.currentTimeMillis(),
+                completedPartIndices = newCompletedParts,
             )
             repository.saveSession(session)
         }

@@ -299,6 +299,67 @@ class DeckViewModelTest {
         assertEquals(2, viewModel.allSubjectCards.value.size)
     }
 
+    @Test
+    fun loadDecks_withCompletedParts_calculatesMasteryRateCorrectly() = runTest {
+        val deck = Deck(id = "d1", subjectId = "sub-1", name = "Test Deck", splitSize = 2)
+        val cards = listOf(
+            Card(id = "c1", deckId = "d1", front = "f1", back = "b1"),
+            Card(id = "c2", deckId = "d1", front = "f2", back = "b2"),
+            Card(id = "c3", deckId = "d1", front = "f3", back = "b3"),
+            Card(id = "c4", deckId = "d1", front = "f4", back = "b4"),
+        )
+        fakeRepository.decksList.add(deck)
+        fakeRepository.cardsList.addAll(cards)
+        fakeRepository.savedSession = StudySession(
+            deckId = "d1",
+            partIndex = 1,
+            isCompleted = false,
+            completedPartIndices = setOf(0),
+        )
+        fakeRepository.triggerDecksUpdate()
+        advanceUntilIdle()
+
+        val uiModels = viewModel.decksWithParts.value
+        assertEquals(1, uiModels.size)
+        val deckModel = uiModels[0]
+        assertEquals(2, deckModel.totalPartsCount)
+        assertEquals(1, deckModel.completedPartsCount)
+        assertEquals(2, deckModel.learnedCardCount)
+        assertEquals(4, deckModel.totalCardCount)
+        assertEquals(0.5f, deckModel.masteryRate, 0.001f)
+        assertEquals(false, deckModel.isAllCompleted)
+
+        assertEquals(true, deckModel.parts[0].isCompleted)
+        assertEquals(false, deckModel.parts[0].isInProgress)
+        assertEquals(false, deckModel.parts[1].isCompleted)
+        assertEquals(true, deckModel.parts[1].isInProgress)
+    }
+
+    @Test
+    fun loadDecks_allPartsCompleted_masteryRateIs100Percent() = runTest {
+        val deck = Deck(id = "d1", subjectId = "sub-1", name = "Test Deck", splitSize = 2)
+        val cards = listOf(
+            Card(id = "c1", deckId = "d1", front = "f1", back = "b1"),
+            Card(id = "c2", deckId = "d1", front = "f2", back = "b2"),
+        )
+        fakeRepository.decksList.add(deck)
+        fakeRepository.cardsList.addAll(cards)
+        fakeRepository.savedSession = StudySession(
+            deckId = "d1",
+            partIndex = 0,
+            isCompleted = true,
+            completedPartIndices = setOf(0),
+        )
+        fakeRepository.triggerDecksUpdate()
+        advanceUntilIdle()
+
+        val deckModel = viewModel.decksWithParts.value[0]
+        assertEquals(1, deckModel.completedPartsCount)
+        assertEquals(1.0f, deckModel.masteryRate, 0.001f)
+        assertEquals(true, deckModel.isAllCompleted)
+        assertEquals(true, deckModel.parts[0].isCompleted)
+    }
+
     private class FakeDeckRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()
