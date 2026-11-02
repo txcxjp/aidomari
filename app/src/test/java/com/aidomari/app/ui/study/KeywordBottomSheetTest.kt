@@ -206,4 +206,34 @@ class KeywordBottomSheetTest {
         composeTestRule.onNodeWithContentDescription("Toggle Bookmark").performClick()
         assertEquals("c1", toggledCard?.id)
     }
+
+    @Test
+    fun keywordSheetContent_showsRelatedItems_andInvokesKeywordClick() {
+        val cardPie = Card(id = "c3", deckId = "deck-1", front = "apple pie", back = "Pastry with apples")
+        var clickedCard: Card? = null
+
+        composeTestRule.setContent {
+            KeywordSheetContent(
+                currentCard = cardApple,
+                cardStackSize = 1,
+                allSubjectCards = listOf(cardApple, cardFruit, cardPie),
+                onBackClick = {},
+                onCloseClick = {},
+                onKeywordClick = { clickedCard = it },
+                onSpeak = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText("関連項目 (1)")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+
+        composeTestRule.onNodeWithText("apple pie")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+
+        assertEquals("c3", clickedCard?.id)
+    }
 }

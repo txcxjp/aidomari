@@ -118,4 +118,41 @@ class KeywordEngine {
 
         return result
     }
+
+    /**
+     * Finds related cards that share a word stem or reference [card] in their meaning/notes,
+     * excluding direct inline keywords already present in [card]'s definition.
+     */
+    fun findRelatedCards(
+        card: Card,
+        allSubjectCards: List<Card>,
+    ): List<Card> {
+        val rawTarget = card.front.substringBefore("<").trim()
+        val targetLower = rawTarget.lowercase()
+        if (targetLower.length < 3) return emptyList()
+
+        // Cards already directly referenced in this card's back
+        val directKeywords = extractRelatedCards(card.back, allSubjectCards, card.id).map { it.id }.toSet()
+
+        return allSubjectCards
+            .filter { candidate ->
+                if (candidate.id == card.id || directKeywords.contains(candidate.id)) {
+                    false
+                } else {
+                    val candFront = candidate.front.substringBefore("<").trim().lowercase()
+                    // 1. Stem / Substring sharing in front word
+                    val frontMatches = (candFront.length >= 3) &&
+                        (candFront.contains(targetLower) || targetLower.contains(candFront))
+
+                    // 2. Candidate's definition, question or supplement mentions target word
+                    val backMatches = candidate.back.contains(targetLower, ignoreCase = true) ||
+                        candidate.userQuestion.contains(targetLower, ignoreCase = true) ||
+                        candidate.userSupplement.contains(targetLower, ignoreCase = true)
+
+                    frontMatches || backMatches
+                }
+            }
+            .distinctBy { it.id }
+            .sortedBy { it.front.lowercase() }
+    }
 }

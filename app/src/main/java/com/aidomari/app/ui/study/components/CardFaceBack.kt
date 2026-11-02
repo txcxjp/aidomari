@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aidomari.app.core.keyword.KeywordEngine
 import com.aidomari.app.domain.model.Card as DomainCard
 
 @Composable
@@ -50,6 +52,10 @@ fun CardFaceBack(
     onEditClick: (() -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
+    val keywordEngine = remember { KeywordEngine() }
+    val relatedCards = remember(card, candidateCards) {
+        keywordEngine.findRelatedCards(card, candidateCards)
+    }
 
     Box(
         modifier = modifier.fillMaxSize(),
@@ -154,6 +160,14 @@ fun CardFaceBack(
                         )
                     }
                 }
+            }
+
+            if (relatedCards.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                RelatedItemsSection(
+                    relatedCards = relatedCards,
+                    onCardClick = onKeywordClick,
+                )
             }
         }
 

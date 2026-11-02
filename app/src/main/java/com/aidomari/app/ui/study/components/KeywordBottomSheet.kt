@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aidomari.app.core.keyword.KeywordEngine
 import com.aidomari.app.domain.model.Card
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,6 +148,10 @@ fun KeywordSheetContent(
     onEditNotesClick: (() -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
+    val keywordEngine = remember { KeywordEngine() }
+    val relatedCards = remember(currentCard, allSubjectCards) {
+        keywordEngine.findRelatedCards(currentCard, allSubjectCards)
+    }
 
     // Reset scroll to top when current card in stack changes
     LaunchedEffect(currentCard.id) {
@@ -327,6 +332,14 @@ fun KeywordSheetContent(
                     )
                 }
             }
+        }
+
+        if (relatedCards.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            RelatedItemsSection(
+                relatedCards = relatedCards,
+                onCardClick = onKeywordClick,
+            )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
