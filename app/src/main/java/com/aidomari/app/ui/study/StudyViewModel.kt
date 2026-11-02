@@ -156,11 +156,24 @@ class StudyViewModel(
 
     fun toggleBookmark() {
         val card = _uiState.value.currentCard ?: return
+        toggleCardBookmark(card)
+    }
+
+    fun toggleCardBookmark(card: Card) {
         val newBookmarkState = !card.isBookmarked
         val updatedCard = card.copy(isBookmarked = newBookmarkState)
 
         cardsMap = cardsMap + (card.id to updatedCard)
-        _uiState.update { it.copy(currentCard = updatedCard) }
+        _uiState.update { state ->
+            val updatedSubjectCards = state.subjectCards.map {
+                if (it.id == card.id) updatedCard else it
+            }
+            state.copy(
+                currentCard = if (state.currentCard?.id == card.id) updatedCard else state.currentCard,
+                nextCard = if (state.nextCard?.id == card.id) updatedCard else state.nextCard,
+                subjectCards = updatedSubjectCards,
+            )
+        }
 
         viewModelScope.launch {
             repository.setBookmark(card.id, newBookmarkState)

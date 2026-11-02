@@ -242,6 +242,23 @@ class DeckViewModelTest {
         assertTrue(viewModel.searchResults.value.isEmpty())
     }
 
+    @Test
+    fun toggleBookmark_updatesSearchResultsAndSubjectCards() = runTest {
+        val card = Card(id = "c1", deckId = "d1", front = "Apple", back = "りんご", isBookmarked = false)
+        fakeRepository.cardsList.add(card)
+        viewModel.onSearchQueryChanged("Apple")
+        advanceUntilIdle()
+
+        viewModel.toggleBookmark(card)
+        advanceUntilIdle()
+
+        val searchCard = viewModel.searchResults.value.find { it.id == "c1" }
+        assertTrue(searchCard!!.isBookmarked)
+
+        val repoCard = fakeRepository.cardsList.find { it.id == "c1" }
+        assertTrue(repoCard!!.isBookmarked)
+    }
+
     private class FakeDeckRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()
@@ -302,6 +319,10 @@ class DeckViewModelTest {
         val bookmarkedFlow = MutableStateFlow<List<Card>>(emptyList())
 
         override suspend fun setBookmark(cardId: String, isBookmarked: Boolean) {
+            val idx = cardsList.indexOfFirst { it.id == cardId }
+            if (idx != -1) {
+                cardsList[idx] = cardsList[idx].copy(isBookmarked = isBookmarked)
+            }
         }
         override fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>> = bookmarkedFlow
         override suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card> =

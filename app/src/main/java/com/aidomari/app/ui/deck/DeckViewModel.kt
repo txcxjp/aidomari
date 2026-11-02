@@ -68,6 +68,20 @@ class DeckViewModel(
         _isSearching.value = false
     }
 
+    fun toggleBookmark(card: Card) {
+        val newBookmarkState = !card.isBookmarked
+        val updatedCard = card.copy(isBookmarked = newBookmarkState)
+        _searchResults.value = _searchResults.value.map {
+            if (it.id == card.id) updatedCard else it
+        }
+        _allSubjectCards.value = _allSubjectCards.value.map {
+            if (it.id == card.id) updatedCard else it
+        }
+        viewModelScope.launch {
+            repository.setBookmark(card.id, newBookmarkState)
+        }
+    }
+
     fun loadDecks() {
         viewModelScope.launch {
             repository.getDecksBySubject(subjectId).collect { decks ->
