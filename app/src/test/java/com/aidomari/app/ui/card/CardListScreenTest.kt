@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
@@ -121,15 +122,16 @@ class CardListScreenTest {
         composeTestRule.onNodeWithText("単語カードを編集").assertIsDisplayed()
 
         // Update back text
-        composeTestRule.onNodeWithTag("CardEditBackTextField").performTextInput("、ありあまるほどの")
+        composeTestRule.onNodeWithTag("CardEditBackTextField").performTextClearance()
+        composeTestRule.onNodeWithTag("CardEditBackTextField").performTextInput("ありあまるほどの")
 
         // Save
         composeTestRule.onNodeWithTag("CardEditSaveButton").performClick()
 
         // Verify updated text in list
-        composeTestRule.onNodeWithText("豊富な、ありあまるほどの").assertIsDisplayed()
+        composeTestRule.onNodeWithText("ありあまるほどの").assertIsDisplayed()
         val updated = fakeRepository.cards.find { it.id == "card-1" }
-        assertEquals("豊富な、ありあまるほどの", updated?.back)
+        assertEquals("ありあまるほどの", updated?.back)
     }
 
     @Test
