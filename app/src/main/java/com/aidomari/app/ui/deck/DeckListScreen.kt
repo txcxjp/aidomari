@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,7 +21,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -62,6 +65,7 @@ fun DeckListScreen(
 ) {
     val decksWithParts by viewModel.decksWithParts.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var deckToEdit by remember { mutableStateOf<Deck?>(null) }
     var deckToDelete by remember { mutableStateOf<Deck?>(null) }
 
     Scaffold(
@@ -147,6 +151,7 @@ fun DeckListScreen(
                                         Spacer(modifier = Modifier.height(6.dp))
                                         Row(
                                             horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Surface(
                                                 shape = RoundedCornerShape(6.dp),
@@ -172,28 +177,62 @@ fun DeckListScreen(
                                                     )
                                                 }
                                             }
-                                            if (deck.shuffleMode) {
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = MaterialTheme.colorScheme.surface,
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = if (deck.shuffleMode) {
+                                                    MaterialTheme.colorScheme.tertiaryContainer
+                                                } else {
+                                                    MaterialTheme.colorScheme.surface
+                                                },
+                                                modifier = Modifier.clickable {
+                                                    viewModel.toggleShuffle(deck.id)
+                                                },
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                                                 ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Shuffle,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(12.dp),
+                                                        tint = if (deck.shuffleMode) {
+                                                            MaterialTheme.colorScheme.onTertiaryContainer
+                                                        } else {
+                                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                                        },
+                                                    )
                                                     Text(
-                                                        text = "シャッフル",
+                                                        text = if (deck.shuffleMode) "シャッフル" else "通常順",
                                                         style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.tertiary,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                        color = if (deck.shuffleMode) {
+                                                            MaterialTheme.colorScheme.onTertiaryContainer
+                                                        } else {
+                                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                        },
+                                                        fontWeight = if (deck.shuffleMode) FontWeight.Bold else FontWeight.Normal,
                                                     )
                                                 }
                                             }
                                         }
                                     }
 
-                                    IconButton(onClick = { deckToDelete = deck }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Delete Deck",
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(onClick = { deckToEdit = deck }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "Edit Deck",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        IconButton(onClick = { deckToDelete = deck }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete Deck",
+                                                tint = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
                                     }
                                 }
 
@@ -371,6 +410,81 @@ fun DeckListScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) {
+                    Text(text = "キャンセル")
+                }
+            },
+        )
+    }
+
+    // Edit Deck Dialog
+    if (deckToEdit != null) {
+        val target = deckToEdit!!
+        var deckName by remember(target) { mutableStateOf(target.name) }
+        var splitSizeText by remember(target) { mutableStateOf(target.splitSize.toString()) }
+        var autoContinue by remember(target) { mutableStateOf(target.autoContinue) }
+        var shuffleMode by remember(target) { mutableStateOf(target.shuffleMode) }
+
+        AlertDialog(
+            onDismissRequest = { deckToEdit = null },
+            title = { Text(text = "デッキ設定の変更") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = deckName,
+                        onValueChange = { deckName = it },
+                        label = { Text(text = "デッキ名") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = splitSizeText,
+                        onValueChange = { splitSizeText = it },
+                        label = { Text(text = "分割枚数") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(text = "自動継続（終了時に次のPartへ）")
+                        Switch(checked = autoContinue, onCheckedChange = { autoContinue = it })
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(text = "シャッフル出題")
+                        Switch(checked = shuffleMode, onCheckedChange = { shuffleMode = it })
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (deckName.isNotBlank()) {
+                            val splitSize = splitSizeText.toIntOrNull()?.coerceAtLeast(1) ?: target.splitSize
+                            val updated = target.copy(
+                                name = deckName.trim(),
+                                splitSize = splitSize,
+                                autoContinue = autoContinue,
+                                shuffleMode = shuffleMode,
+                            )
+                            viewModel.updateDeck(updated)
+                            deckToEdit = null
+                        }
+                    },
+                ) {
+                    Text(text = "保存")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deckToEdit = null }) {
                     Text(text = "キャンセル")
                 }
             },

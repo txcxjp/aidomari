@@ -73,6 +73,11 @@ class DeckViewModel(
         }
     }
 
+    fun toggleShuffle(deckId: String) {
+        val current = _decksWithParts.value.find { it.deck.id == deckId }?.deck ?: return
+        updateDeck(current.copy(shuffleMode = !current.shuffleMode))
+    }
+
     fun deleteDeck(deckId: String) {
         viewModelScope.launch {
             repository.deleteDeck(deckId)
