@@ -320,19 +320,20 @@ DisposableEffect(viewModel) {
 
 ### 6.1 リアルタイム追従 3D Y軸フリップ (`FlippableCard`)
 Jetpack Compose の `Modifier.pointerInput` と `Modifier.graphicsLayer` を活用し、指の動きに1フレーム単位でリアルタイム追従する 3D 物理演算を実装：
-- **指の動き幅へのリアルタイム連動（表面）**:
-  表面表示時、左右水平ドラッグ量 $\Delta x$ に応じて回転角 $\theta \in [0^\circ, 180^\circ]$ をリアルタイム更新：
-  $$\text{progress} = \min\left(1.0, \frac{|\Delta x|}{\text{flipDistance}}\right), \quad \theta = \text{progress} \times 180^\circ$$
-  指を途中で戻せばカードも戻り、めくり進捗が 38%（約 70°）を超えて離すと $180^\circ$（裏面）へ吸い付くようにスナップ完了。未満なら表面へバネ復帰（`Spring.DampingRatioMediumBouncy`）。
+- **指の動き幅＆スワイプ方向へのリアルタイム連動（表面）**:
+  表面表示時、左右水平ドラッグ量 $\Delta x$ とその方向に応じて回転角 $\theta \in [-180^\circ, +180^\circ]$ をリアルタイム更新：
+  $$\text{progress} = \min\left(1.0, \frac{|\Delta x|}{\text{flipDistance}}\right), \quad \text{direction} = \begin{cases} +1 & (\Delta x \ge 0: \text{右スワイプ} \Rightarrow \text{左回転}) \\ -1 & (\Delta x < 0: \text{左スワイプ} \Rightarrow \text{右回転}) \end{cases}$$
+  $$\theta = \text{direction} \times \text{progress} \times 180^\circ$$
+  指を途中で戻せばカードも戻り、めくり進捗が 38%（約 70°）を超えて離すと $\text{direction} \times 180^\circ$（裏面）へ吸い付くようにスナップ完了。未満なら表面（0°）へバネ復帰（`Spring.DampingRatioMediumBouncy`）。
 - **タップ即時フリップ**:
-  ドラッグせずタップした場合は、`260ms` の高速トゥイーンアニメーションで即座に裏面へフリップ。
+  ドラッグせずタップした場合は、`260ms` の高速トゥイーンアニメーションで即座に裏面（+180°）へフリップ。
 - **カード単位のキーイング (`key(card.id)`)**:
-  カードごとに Composable ノードを完全分離。次カード遷移時に前カードの裏面回転角（180°）が引き継がれて表面へ逆回転（180° ➔ 0°）する現象を完全に防止し、新カードは常に初期姿勢（表面 0°）で描画。
+  カードごとに Composable ノードを完全分離。次カード遷移時に前カードの裏面回転角が引き継がれて表面へ逆回転する現象を完全に防止し、新カードは常に初期姿勢（表面 0°）で描画。
 - **カードスタック構造（次カードの背面プレビュー）**:
   前面カードの背面に `nextCard` を `scale = 0.94f`, `alpha = 0.85f`, `elevation = 2.dp` で待機描画。前面カード退場時、次カードが `scale = 0.94f ➔ 1.0f`（160ms）へスムーズにスケールアップして昇格。
 - **カメラ距離**: `cameraDistance = 16f * density`（パースペクティブ歪みを防止し、自然な立体感を演出）。
 - **裏面テキスト反転防止**:
-  回転角 $\theta > 90^\circ$ の瞬間、裏面 Composable に切り替わり、裏面コンテナ内部で `rotationY = 180f` を適用して文字の鏡像反転を相殺。
+  回転角 $|\theta| > 90^\circ$ の瞬間、裏面 Composable に切り替わり、裏面コンテナ内部で `rotationY = 180f` を適用して文字の鏡像反転を相殺。
 
 ### 6.2 リアルタイム Tinder 風ドラッグジェスチャーと判定物理
 裏面表示時、`awaitEachGesture` による低遅延入力パイプラインで指に吸い付くドラッグを実現：

@@ -79,7 +79,7 @@ fun FlippableCard(
     val rotation = remember { Animatable(if (isFlipped) 180f else 0f) }
     LaunchedEffect(isFlipped) {
         val target = if (isFlipped) 180f else 0f
-        if (rotation.value != target) {
+        if (abs(rotation.value) != abs(target)) {
             rotation.animateTo(
                 targetValue = target,
                 animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
@@ -87,7 +87,7 @@ fun FlippableCard(
         }
     }
 
-    val isBackFace = rotation.value > 90f
+    val isBackFace = abs(rotation.value) > 90f
 
     val gestureModifier = if (isDismissing) {
         Modifier
@@ -126,12 +126,13 @@ fun FlippableCard(
                             }
                         } else if (isHorizontalDrag) {
                             if (!isFlipped) {
-                                // Front face drag end: snap to back or bounce to front
+                                // Front face drag end: snap to back or bounce to front (direction-aware)
                                 val progress = (abs(totalDragX) / flipDistance).coerceIn(0f, 1f)
+                                val direction = if (totalDragX >= 0) 1f else -1f
                                 coroutineScope.launch {
                                     if (progress >= 0.38f) {
                                         rotation.animateTo(
-                                            targetValue = 180f,
+                                            targetValue = direction * 180f,
                                             animationSpec = tween(
                                                 durationMillis = 180,
                                                 easing = FastOutSlowInEasing,
@@ -209,7 +210,8 @@ fun FlippableCard(
                         pointer.consume()
                         if (!isFlipped) {
                             val progress = (abs(totalDragX) / flipDistance).coerceIn(0f, 1f)
-                            val targetRot = progress * 180f
+                            val direction = if (totalDragX >= 0) 1f else -1f
+                            val targetRot = direction * progress * 180f
                             coroutineScope.launch {
                                 rotation.snapTo(targetRot)
                             }
