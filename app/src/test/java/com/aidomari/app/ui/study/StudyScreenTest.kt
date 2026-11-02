@@ -168,12 +168,12 @@ class StudyScreenTest {
 
     @Test
     fun studyScreen_searchAction_opensSearchDialog() {
-        fakeRepository.decks.add(deckWithoutAutoContinue)
+        fakeRepository.decks.add(deckWithAutoContinue)
         fakeRepository.cards.addAll(cards)
 
         composeTestRule.setContent {
             StudyScreen(
-                deckId = "deck-manual",
+                deckId = "deck-auto",
                 partIndex = 0,
                 viewModel = viewModel,
                 onNavigateBack = {},
@@ -193,12 +193,24 @@ class StudyScreenTest {
 
     @Test
     fun studyScreen_deleteCardAction_showsConfirmationDialog_and_deletes() {
-        fakeRepository.decks.add(deckWithoutAutoContinue)
-        fakeRepository.cards.addAll(cards)
+        val manualDeck = Deck(
+            id = "deck-test-del",
+            subjectId = "sub-1",
+            name = "Test Delete Deck",
+            splitSize = 10,
+            autoContinue = false,
+            shuffleMode = false,
+        )
+        val deleteCards = listOf(
+            Card(id = "d1", deckId = "deck-test-del", front = "Delete Card 1", back = "意味1", orderIndex = 0),
+            Card(id = "d2", deckId = "deck-test-del", front = "Delete Card 2", back = "意味2", orderIndex = 1),
+        )
+        fakeRepository.decks.add(manualDeck)
+        fakeRepository.cards.addAll(deleteCards)
 
         composeTestRule.setContent {
             StudyScreen(
-                deckId = "deck-manual",
+                deckId = "deck-test-del",
                 partIndex = 0,
                 viewModel = viewModel,
                 onNavigateBack = {},
@@ -209,7 +221,7 @@ class StudyScreenTest {
         composeTestRule.waitForIdle()
 
         // Card 1 is displayed
-        composeTestRule.onNodeWithText("Card 1").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Delete Card 1").assertIsDisplayed()
 
         // Open more options menu
         composeTestRule.onNodeWithContentDescription("More Options").performClick()
@@ -218,7 +230,7 @@ class StudyScreenTest {
         composeTestRule.onNodeWithText("カードを削除").performClick()
 
         // Confirmation dialog is shown
-        composeTestRule.onNodeWithText("「Card 1」を削除しますか？\nこの操作は取り消せません。").assertIsDisplayed()
+        composeTestRule.onNodeWithText("「Delete Card 1」を削除しますか？\nこの操作は取り消せません。").assertIsDisplayed()
 
         // Confirm deletion
         composeTestRule.onNodeWithText("削除").performClick()
@@ -226,8 +238,8 @@ class StudyScreenTest {
         composeTestRule.waitForIdle()
 
         // Card 1 is deleted from repo and screen advances to Card 2
-        composeTestRule.onNodeWithText("Card 2").assertIsDisplayed()
-        assertFalse(fakeRepository.cards.any { it.id == "c1" })
+        composeTestRule.onNodeWithText("Delete Card 2").assertIsDisplayed()
+        assertFalse(fakeRepository.cards.any { it.id == "d1" })
     }
 
     private class FakeStudyWordsRepository : WordsRepository {
