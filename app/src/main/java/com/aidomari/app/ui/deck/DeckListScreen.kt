@@ -215,6 +215,19 @@ fun DeckListScreen(
                                                     )
                                                 }
                                             }
+                                            if (deck.reverseMode) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                                ) {
+                                                    Text(
+                                                        text = "裏面スタート",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
 
@@ -354,6 +367,7 @@ fun DeckListScreen(
         var splitSizeText by remember { mutableStateOf("50") }
         var autoContinue by remember { mutableStateOf(false) }
         var shuffleMode by remember { mutableStateOf(false) }
+        var reverseMode by remember { mutableStateOf(false) }
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
@@ -393,6 +407,15 @@ fun DeckListScreen(
                         Text(text = "シャッフル出題")
                         Switch(checked = shuffleMode, onCheckedChange = { shuffleMode = it })
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(text = "裏面から出題（和英・意味先出し）")
+                        Switch(checked = reverseMode, onCheckedChange = { reverseMode = it })
+                    }
                 }
             },
             confirmButton = {
@@ -400,7 +423,7 @@ fun DeckListScreen(
                     onClick = {
                         if (deckName.isNotBlank()) {
                             val splitSize = splitSizeText.toIntOrNull() ?: 50
-                            viewModel.createDeck(deckName, splitSize, autoContinue, shuffleMode)
+                            viewModel.createDeck(deckName, splitSize, autoContinue, shuffleMode, reverseMode)
                             showAddDialog = false
                         }
                     },
@@ -423,6 +446,7 @@ fun DeckListScreen(
         var splitSizeText by remember(target) { mutableStateOf(target.splitSize.toString()) }
         var autoContinue by remember(target) { mutableStateOf(target.autoContinue) }
         var shuffleMode by remember(target) { mutableStateOf(target.shuffleMode) }
+        var reverseMode by remember(target) { mutableStateOf(target.reverseMode) }
 
         AlertDialog(
             onDismissRequest = { deckToEdit = null },
@@ -462,6 +486,15 @@ fun DeckListScreen(
                         Text(text = "シャッフル出題")
                         Switch(checked = shuffleMode, onCheckedChange = { shuffleMode = it })
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(text = "裏面から出題（和英・意味先出し）")
+                        Switch(checked = reverseMode, onCheckedChange = { reverseMode = it })
+                    }
                 }
             },
             confirmButton = {
@@ -474,6 +507,7 @@ fun DeckListScreen(
                                 splitSize = splitSize,
                                 autoContinue = autoContinue,
                                 shuffleMode = shuffleMode,
+                                reverseMode = reverseMode,
                             )
                             viewModel.updateDeck(updated)
                             deckToEdit = null

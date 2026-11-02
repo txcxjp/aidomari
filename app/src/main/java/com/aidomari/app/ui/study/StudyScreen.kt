@@ -120,6 +120,8 @@ fun StudyScreen(
                                 .padding(vertical = 16.dp),
                             contentAlignment = Alignment.Center,
                         ) {
+                            val isReverse = uiState.deck?.reverseMode == true
+
                             // 1. Background card stack preview
                             uiState.nextCard?.let { nextCard ->
                                 androidx.compose.material3.Card(
@@ -146,6 +148,7 @@ fun StudyScreen(
                                         CardFaceFront(
                                             card = nextCard,
                                             onSpeak = {},
+                                            isReverse = isReverse,
                                         )
                                     }
                                 }
@@ -163,6 +166,7 @@ fun StudyScreen(
                                         CardFaceFront(
                                             card = card,
                                             onSpeak = { onSpeakText(card.front) },
+                                            isReverse = isReverse,
                                         )
                                     },
                                     backContent = {
@@ -174,6 +178,8 @@ fun StudyScreen(
                                             },
                                             onDone = { viewModel.markDone() },
                                             onRetry = { viewModel.markRetry() },
+                                            isReverse = isReverse,
+                                            onSpeak = { onSpeakText(card.front) },
                                         )
                                     },
                                 )
