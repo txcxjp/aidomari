@@ -18,8 +18,12 @@ class DeckViewModel(
     private val _decksWithParts = MutableStateFlow<List<DeckWithPartsUiModel>>(emptyList())
     val decksWithParts: StateFlow<List<DeckWithPartsUiModel>> = _decksWithParts.asStateFlow()
 
+    private val _bookmarkDeckUiModel = MutableStateFlow<BookmarkDeckUiModel?>(null)
+    val bookmarkDeckUiModel: StateFlow<BookmarkDeckUiModel?> = _bookmarkDeckUiModel.asStateFlow()
+
     init {
         loadDecks()
+        observeBookmarks()
     }
 
     fun loadDecks() {
@@ -42,6 +46,29 @@ class DeckViewModel(
                     )
                 }
                 _decksWithParts.value = uiModels
+            }
+        }
+    }
+
+    private fun observeBookmarks() {
+        viewModelScope.launch {
+            repository.getBookmarkedCardsBySubject(subjectId).collect { bookmarkedCards ->
+                if (bookmarkedCards.isEmpty()) {
+                    _bookmarkDeckUiModel.value = null
+                } else {
+                    val bookmarkDeck = repository.getOrCreateBookmarkDeck(subjectId)
+                    val parts = bookmarkDeck.calculateParts(bookmarkedCards.size)
+                    val session = repository.getSession(bookmarkDeck.id)
+                    val partModels = parts.map { part ->
+                        val matchingSession = if (session?.partIndex == part.partIndex) session else null
+                        DeckPartWithSession(part = part, session = matchingSession)
+                    }
+                    _bookmarkDeckUiModel.value = BookmarkDeckUiModel(
+                        deck = bookmarkDeck,
+                        parts = partModels,
+                        totalCount = bookmarkedCards.size,
+                    )
+                }
             }
         }
     }

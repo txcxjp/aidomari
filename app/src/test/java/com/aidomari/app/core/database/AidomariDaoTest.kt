@@ -74,6 +74,21 @@ class AidomariDaoTest {
     }
 
     @Test
+    fun getDecksBySubject_excludesBookmarkDecks() = runBlocking {
+        val subject = SubjectEntity(id = "sub-1", name = "英語")
+        dao.insertSubject(subject)
+
+        val regularDeck = DeckEntity(id = "deck-1", subjectId = "sub-1", name = "単語帳A")
+        val bookmarkDeck = DeckEntity(id = "bookmark_sub-1", subjectId = "sub-1", name = "苦手単語（ブックマーク）")
+        dao.insertDeck(regularDeck)
+        dao.insertDeck(bookmarkDeck)
+
+        val decks = dao.getDecksBySubject("sub-1").first()
+        assertEquals(1, decks.size)
+        assertEquals("deck-1", decks[0].id)
+    }
+
+    @Test
     fun bookmarkToggleAndFilter() = runBlocking {
         val subject = SubjectEntity(id = "sub-1", name = "英語")
         dao.insertSubject(subject)

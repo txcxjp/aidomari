@@ -9,6 +9,7 @@ import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -33,12 +34,22 @@ class StudyViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            val deck = repository.getDeckById(deckId) ?: return@launch
+            val isBookmarkMode = deckId.startsWith("bookmark_")
+            val deck = if (isBookmarkMode) {
+                val subjectId = deckId.removePrefix("bookmark_")
+                repository.getOrCreateBookmarkDeck(subjectId)
+            } else {
+                repository.getDeckById(deckId) ?: return@launch
+            }
             currentDeck = deck
             currentPartIndex = partIndex
 
             val subjectCards = repository.getAllCardsInSubject(deck.subjectId)
-            val cards = repository.getCardsByDeckSync(deckId)
+            val cards = if (isBookmarkMode) {
+                repository.getBookmarkedCardsBySubject(deck.subjectId).first()
+            } else {
+                repository.getCardsByDeckSync(deckId)
+            }
             allCards = cards
             cardsMap = cards.associateBy { it.id }
 

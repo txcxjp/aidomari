@@ -97,6 +97,22 @@ class StudyViewModelTest {
     }
 
     @Test
+    fun loadDeckAndPart_bookmarkMode_loadsOnlyBookmarkedCards() = runTest {
+        // testCards: c1, c2, c3. Bookmark only c2
+        fakeRepository.setBookmark("c2", true)
+
+        viewModel.loadDeckAndPart("bookmark_sub-1", 0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("bookmark_sub-1", state.deck?.id)
+        assertEquals("苦手単語（ブックマーク）", state.deck?.name)
+        assertEquals("c2", state.currentCard?.id)
+        assertEquals(1, state.queueSize)
+        assertEquals(1, state.totalInPart)
+    }
+
+    @Test
     fun flipCard_togglesIsFlipped() = runTest {
         viewModel.loadDeckAndPart("deck-1", 0)
         advanceUntilIdle()
@@ -263,6 +279,19 @@ class StudyViewModelTest {
         override fun getDecksBySubject(subjectId: String): Flow<List<Deck>> =
             flowOf(decks.filter { it.subjectId == subjectId })
         override suspend fun getDeckById(deckId: String): Deck? = decks.find { it.id == deckId }
+        override suspend fun getOrCreateBookmarkDeck(subjectId: String): Deck {
+            val id = "bookmark_$subjectId"
+            val existing = decks.find { it.id == id }
+            if (existing != null) return existing
+            val newDeck = Deck(
+                id = id,
+                subjectId = subjectId,
+                name = "苦手単語（ブックマーク）",
+                splitSize = 50,
+            )
+            decks.add(newDeck)
+            return newDeck
+        }
         override suspend fun saveDeck(deck: Deck) {
             decks.add(deck)
         }

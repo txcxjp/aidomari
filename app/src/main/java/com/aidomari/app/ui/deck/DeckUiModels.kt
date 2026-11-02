@@ -14,3 +14,9 @@ data class DeckWithPartsUiModel(
     val parts: List<DeckPartWithSession>,
     val totalCardCount: Int,
 )
+
+data class BookmarkDeckUiModel(
+    val deck: Deck,
+    val parts: List<DeckPartWithSession>,
+    val totalCount: Int,
+)

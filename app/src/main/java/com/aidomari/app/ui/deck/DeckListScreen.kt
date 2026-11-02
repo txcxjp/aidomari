@@ -1,5 +1,6 @@
 package com.aidomari.app.ui.deck
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -64,6 +66,7 @@ fun DeckListScreen(
     modifier: Modifier = Modifier,
 ) {
     val decksWithParts by viewModel.decksWithParts.collectAsState()
+    val bookmarkModel by viewModel.bookmarkDeckUiModel.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var deckToEdit by remember { mutableStateOf<Deck?>(null) }
     var deckToDelete by remember { mutableStateOf<Deck?>(null) }
@@ -94,7 +97,7 @@ fun DeckListScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            if (decksWithParts.isEmpty()) {
+            if (decksWithParts.isEmpty() && (bookmarkModel == null || bookmarkModel?.totalCount == 0)) {
                 Column(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -120,6 +123,166 @@ fun DeckListScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
+                    // Bookmark study card banner
+                    if (bookmarkModel != null && bookmarkModel!!.totalCount > 0) {
+                        val model = bookmarkModel!!
+                        item(key = "bookmark_study_section") {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f)),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Star,
+                                                contentDescription = "Bookmark Study",
+                                                tint = Color(0xFFFFB300),
+                                                modifier = Modifier.size(24.dp),
+                                            )
+                                            Text(
+                                                text = "苦手単語（ブックマーク）",
+                                                style = MaterialTheme.typography.titleMedium.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                ),
+                                            )
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.surface,
+                                        ) {
+                                            Text(
+                                                text = "${model.totalCount} 枚",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.tertiary,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        model.parts.forEach { partWithSession ->
+                                            val part = partWithSession.part
+                                            val session = partWithSession.session
+
+                                            Card(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable { onPartClick(model.deck.id, part.partIndex) },
+                                                shape = RoundedCornerShape(10.dp),
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = MaterialTheme.colorScheme.surface,
+                                                ),
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                ) {
+                                                    Column {
+                                                        Text(
+                                                            text = if (model.parts.size > 1) part.displayName else "集中学習をはじめる",
+                                                            style = MaterialTheme.typography.titleSmall,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                        )
+                                                        Text(
+                                                            text = "${part.count} 枚",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        )
+                                                    }
+
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        when {
+                                                            session?.isCompleted == true -> {
+                                                                Surface(
+                                                                    shape = RoundedCornerShape(6.dp),
+                                                                    color = Color(0xFF2E7D32).copy(alpha = 0.15f),
+                                                                ) {
+                                                                    Row(
+                                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                                        verticalAlignment = Alignment.CenterVertically,
+                                                                    ) {
+                                                                        Icon(
+                                                                            imageVector = Icons.Default.CheckCircle,
+                                                                            contentDescription = null,
+                                                                            tint = Color(0xFF2E7D32),
+                                                                            modifier = Modifier.height(14.dp),
+                                                                        )
+                                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                                        Text(
+                                                                            text = "完了",
+                                                                            style = MaterialTheme.typography.labelSmall,
+                                                                            color = Color(0xFF2E7D32),
+                                                                            fontWeight = FontWeight.Bold,
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+                                                            session != null && !session.isCompleted -> {
+                                                                Surface(
+                                                                    shape = RoundedCornerShape(6.dp),
+                                                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                                                ) {
+                                                                    Row(
+                                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                                        verticalAlignment = Alignment.CenterVertically,
+                                                                    ) {
+                                                                        Icon(
+                                                                            imageVector = Icons.Default.PlayArrow,
+                                                                            contentDescription = null,
+                                                                            tint = MaterialTheme.colorScheme.primary,
+                                                                            modifier = Modifier.height(14.dp),
+                                                                        )
+                                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                                        Text(
+                                                                            text = "再開 (${session.currentCardIndex}/${part.count})",
+                                                                            style = MaterialTheme.typography.labelSmall,
+                                                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                                            fontWeight = FontWeight.Bold,
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+                                                            else -> {
+                                                                Icon(
+                                                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                                                    contentDescription = null,
+                                                                    tint = MaterialTheme.colorScheme.outline,
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     items(decksWithParts, key = { it.deck.id }) { item ->
                         val deck = item.deck
                         Card(

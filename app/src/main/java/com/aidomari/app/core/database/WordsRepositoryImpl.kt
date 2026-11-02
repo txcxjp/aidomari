@@ -36,6 +36,24 @@ class WordsRepositoryImpl(
     override suspend fun getDeckById(deckId: String): Deck? =
         dao.getDeckById(deckId)?.toDomain()
 
+    override suspend fun getOrCreateBookmarkDeck(subjectId: String): Deck {
+        val id = "bookmark_$subjectId"
+        val existing = dao.getDeckById(id)
+        if (existing != null) {
+            return existing.toDomain()
+        }
+        val newDeck = Deck(
+            id = id,
+            subjectId = subjectId,
+            name = "苦手単語（ブックマーク）",
+            splitSize = 50,
+            autoContinue = true,
+            shuffleMode = false,
+        )
+        dao.insertDeck(newDeck.toEntity())
+        return newDeck
+    }
+
     override suspend fun saveDeck(deck: Deck) {
         dao.insertDeck(deck.toEntity())
     }
