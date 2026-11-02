@@ -26,7 +26,7 @@ class BookmarkDeckCardTest {
     @Test
     fun bookmarkDeckCard_displaysInfo_andHandlesPartClick() {
         val deck = Deck(id = "bookmark-deck", subjectId = "sub1", name = "苦手単語")
-        val part = DeckPart(deckId = "bookmark-deck", partIndex = 0, startIndex = 0, endIndex = 5, totalCards = 5)
+        val part = DeckPart(partIndex = 0, partNumber = 1, startIndex = 0, endIndex = 5, count = 5)
         val partWithSession = DeckPartWithSession(part = part, session = null)
         val model = BookmarkDeckUiModel(
             deck = deck,
@@ -59,7 +59,7 @@ class BookmarkDeckCardTest {
     @Test
     fun bookmarkDeckCard_displaysCompletionBadge_whenCompleted() {
         val deck = Deck(id = "bookmark-deck", subjectId = "sub1", name = "苦手単語")
-        val part = DeckPart(deckId = "bookmark-deck", partIndex = 0, startIndex = 0, endIndex = 3, totalCards = 3)
+        val part = DeckPart(partIndex = 0, partNumber = 1, startIndex = 0, endIndex = 3, count = 3)
         val session = StudySession(deckId = "bookmark-deck", partIndex = 0, isCompleted = true, completedPartIndices = setOf(0))
         val partWithSession = DeckPartWithSession(part = part, session = session)
         val model = BookmarkDeckUiModel(

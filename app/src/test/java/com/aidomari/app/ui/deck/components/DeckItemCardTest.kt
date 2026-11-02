@@ -35,7 +35,7 @@ class DeckItemCardTest {
             autoContinue = true,
             shuffleMode = true,
         )
-        val part = DeckPart(deckId = "deck-1", partIndex = 0, startIndex = 0, endIndex = 30, totalCards = 30)
+        val part = DeckPart(partIndex = 0, partNumber = 1, startIndex = 0, endIndex = 30, count = 30)
         val partWithSession = DeckPartWithSession(part = part, session = null)
         val item = DeckWithPartsUiModel(
             deck = deck,
