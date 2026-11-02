@@ -127,10 +127,17 @@ fun SubjectListScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Aidomari（相泊）",
-                        fontWeight = FontWeight.Bold,
-                    )
+                    Column {
+                        Text(
+                            text = "Aidomari（相泊）",
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = "v${com.aidomari.app.BuildConfig.VERSION_NAME}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 },
                 actions = {
                     TextButton(onClick = { showImportDialog = true }) {

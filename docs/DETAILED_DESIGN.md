@@ -444,7 +444,9 @@ flowchart LR
    - JUnit4, Robolectric (SQLite / Room In-Memory 検証), Kotlin Coroutines Test による非同期フロー検証。
 3. **Job 3: Build Debug APK**
    - `./gradlew assembleDebug`
-   - ビルド完了後、署名済みデバッグ APK（`aidomari-debug-apk`、約15.9MB）を GitHub Artifacts へ自動アップロード。
+   - **CI自動バージョン発番**: `GITHUB_RUN_NUMBER` 環境変数を `versionCode`（単調増加整数）および `versionName`（`1.0.0.<run_number>`）に動的バインド。ローカル時は `1.0.0-dev`。
+   - **固定デバッグ署名 (`app/debug.keystore`)**: CI ランナー間で共通の署名キーストアを使用し、ビルドごとに署名鍵が変わって端末で上書きインストール（インプレースアップデート）に失敗する現象を防止。
+   - ビルド完了後、署名済みデバッグ APK（`aidomari-debug-apk`）を GitHub Artifacts へ自動アップロード。教科一覧画面のヘッダーに現在のバージョン番号を表示。
 
 ### 10.2 ユニットテスト一覧
 
