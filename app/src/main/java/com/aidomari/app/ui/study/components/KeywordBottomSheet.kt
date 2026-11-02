@@ -1,5 +1,6 @@
 package com.aidomari.app.ui.study.components
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,20 +50,29 @@ fun KeywordBottomSheet(
     if (initialCard == null) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val cardStack = remember { mutableStateListOf<Card>() }
+    val cardStack = remember(initialCard) {
+        mutableStateListOf(initialCard)
+    }
 
-    LaunchedEffect(initialCard) {
-        cardStack.clear()
-        cardStack.add(initialCard)
+    // Intercept hardware/system back button when deeper in recursive keyword stack
+    BackHandler(enabled = cardStack.size > 1) {
+        cardStack.removeAt(cardStack.lastIndex)
     }
 
     if (cardStack.isEmpty()) {
-        onDismissRequest()
+        LaunchedEffect(Unit) {
+            onDismissRequest()
+        }
         return
     }
 
     val currentCard = cardStack.last()
     val scrollState = rememberScrollState()
+
+    // Reset scroll to top when current card in stack changes
+    LaunchedEffect(currentCard.id) {
+        scrollState.scrollTo(0)
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
