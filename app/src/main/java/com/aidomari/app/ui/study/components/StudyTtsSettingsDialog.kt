@@ -1,5 +1,6 @@
 package com.aidomari.app.ui.study.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -62,7 +63,9 @@ fun StudyTtsSettingsDialog(
                     .padding(vertical = 4.dp),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { currentAutoSpeak = !currentAutoSpeak },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -79,7 +82,7 @@ fun StudyTtsSettingsDialog(
                     }
                     Switch(
                         checked = currentAutoSpeak,
-                        onCheckedChange = { currentAutoSpeak = it },
+                        onCheckedChange = null,
                     )
                 }
 

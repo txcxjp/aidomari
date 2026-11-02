@@ -324,6 +324,7 @@ class StudyViewModelTest {
             return newDeck
         }
         override suspend fun saveDeck(deck: Deck) {
+            decks.removeIf { it.id == deck.id }
             decks.add(deck)
         }
         override suspend fun deleteDeck(deckId: String) {
