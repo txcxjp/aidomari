@@ -89,7 +89,11 @@ class WordsDataImporterTest {
         assertEquals(1, summary.decksCount)
         assertEquals(1, summary.cardsCount)
 
+        val subject = fakeRepository.subjects.first()
+        assertEquals("ターゲット1900", subject.name)
+
         val deck = fakeRepository.decks.first()
+        assertEquals(subject.id, deck.subjectId)
         assertEquals("ターゲット1900", deck.name)
         assertTrue(deck.shuffleMode)
         assertTrue(deck.autoContinue)
@@ -163,6 +167,47 @@ class WordsDataImporterTest {
     }
 
     @Test
+    fun importElmModel_withTargetSubject_importsIntoExistingSubject() = runBlocking {
+        val existingSubject = com.aidomari.app.domain.model.Subject(
+            id = "target-sub-123",
+            name = "英語",
+        )
+        fakeRepository.saveSubject(existingSubject)
+
+        val json = """
+            {
+              "modelState": "Menu",
+              "menuModel": {
+                "books": [
+                  {
+                    "bookHead": { "title": "ターゲット1900", "part": 1 },
+                    "content": [
+                      { "word": "concern", "meaning": "関係・関心" }
+                    ]
+                  }
+                ]
+              }
+            }
+        """.trimIndent()
+
+        val result = importer.importJson(json, targetSubjectId = "target-sub-123")
+        assertTrue(result.isSuccess)
+
+        val summary = result.getOrThrow()
+        assertEquals(0, summary.subjectsCount) // 既存教科を使用
+        assertEquals(1, summary.decksCount)
+        assertEquals(1, summary.cardsCount)
+
+        // No new subjects created
+        assertEquals(1, fakeRepository.subjects.size)
+        assertEquals("英語", fakeRepository.subjects.first().name)
+
+        val deck = fakeRepository.decks.first()
+        assertEquals("target-sub-123", deck.subjectId)
+        assertEquals("ターゲット1900", deck.name)
+    }
+
+    @Test
     fun importCsvToJson_multipleChunks_mergedIntoSingleDeck() = runBlocking {
         val json = """
             [
@@ -190,8 +235,13 @@ class WordsDataImporterTest {
         assertEquals(1, summary.decksCount)
         assertEquals(4, summary.cardsCount)
 
+        assertEquals(1, fakeRepository.subjects.size)
+        val subject = fakeRepository.subjects.first()
+        assertEquals("基本英単語", subject.name)
+
         assertEquals(1, fakeRepository.decks.size)
         val deck = fakeRepository.decks.first()
+        assertEquals(subject.id, deck.subjectId)
         assertEquals("基本英単語", deck.name)
         assertEquals(10, deck.splitSize)
 
