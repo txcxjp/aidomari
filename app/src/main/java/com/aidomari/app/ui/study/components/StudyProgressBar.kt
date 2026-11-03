@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @Composable
 fun StudyProgressBar(
@@ -84,6 +86,18 @@ fun StudyProgressBar(
                 .clip(RoundedCornerShape(4.dp)),
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun StudyProgressBarPreview() {
+    AidomariTheme {
+        StudyProgressBar(
+            completedCount = 3,
+            totalInPart = 10,
+            retryCount = 2,
         )
     }
 }

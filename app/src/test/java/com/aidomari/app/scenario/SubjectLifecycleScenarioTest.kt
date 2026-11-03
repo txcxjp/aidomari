@@ -80,18 +80,24 @@ class SubjectLifecycleScenarioTest {
         composeTestRule.waitForIdle()
 
         // 3. Verify Subject appears in Active Subject List
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithText("実戦英語").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithText("相泊").assertIsDisplayed()
         composeTestRule.onNodeWithText("実戦英語").assertIsDisplayed()
 
         // 4. Tap Subject to navigate to DeckListScreen and verify Deck is present
         composeTestRule.onNodeWithText("実戦英語").performClick()
-        composeTestRule.waitForIdle()
-
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithText("基礎英単語500").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithText("基礎英単語500").assertIsDisplayed()
 
         // 5. Navigate back to SubjectListScreen
         composeTestRule.onNodeWithContentDescription("Back").performClick()
-        composeTestRule.waitForIdle()
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithText("相泊").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithText("相泊").assertIsDisplayed()
 
         // 6. Open Subject 3-dot menu and Archive Subject
@@ -108,8 +114,9 @@ class SubjectLifecycleScenarioTest {
 
         // 8. Navigate to Archived View
         composeTestRule.onNodeWithTag("ArchivedEmptyViewButton").performClick()
-        composeTestRule.waitForIdle()
-
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithText("アーカイブ済み教科").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithText("アーカイブ済み教科").assertIsDisplayed()
         composeTestRule.onNodeWithText("実戦英語").assertIsDisplayed()
 
@@ -124,6 +131,9 @@ class SubjectLifecycleScenarioTest {
         composeTestRule.onNodeWithText("アーカイブされた教科").assertIsDisplayed()
 
         // Verify Deck is still intact (NOT deleted)
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithText("基礎英単語500").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithText("基礎英単語500").assertIsDisplayed()
 
         // 10. Unarchive from the banner button

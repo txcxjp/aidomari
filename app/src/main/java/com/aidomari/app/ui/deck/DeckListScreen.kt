@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
@@ -58,7 +59,10 @@ import com.aidomari.app.ui.deck.components.DeleteDeckConfirmDialog
 import com.aidomari.app.ui.deck.components.EditDeckDialog
 import com.aidomari.app.ui.deck.components.RandomQuestionsCard
 import com.aidomari.app.ui.deck.components.RandomQuestionsDialog
+import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.study.components.KeywordBottomSheet
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,6 +99,151 @@ fun DeckListScreen(
         viewModel.clearSearch()
     }
 
+    DeckListContent(
+        subjectName = subjectName,
+        decksWithParts = decksWithParts,
+        bookmarkModel = bookmarkModel,
+        randomQuestionCount = randomQuestionCount,
+        totalCards = allSubjectCards.size,
+        isSubjectArchived = isSubjectArchived,
+        isSearchActive = isSearchActive,
+        searchQuery = searchQuery,
+        searchResults = searchResults,
+        isSearching = isSearching,
+        onBack = onBack,
+        onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
+        onSearchActiveChanged = { isSearchActive = it },
+        onClearSearch = { viewModel.clearSearch() },
+        onSearchCardClick = { selectedSearchCard = it },
+        onToggleBookmark = { viewModel.toggleBookmark(it) },
+        onPartClick = { deckId, partIndex ->
+            if (isSubjectArchived) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("アーカイブされた教科は演習できません。演習を行うには元に戻してください。")
+                }
+            } else {
+                onPartClick(deckId, partIndex)
+            }
+        },
+        onToggleShuffle = { viewModel.toggleShuffle(it.id) },
+        onToggleAutoSpeak = { viewModel.toggleAutoSpeak(it.id) },
+        onEditDeck = { deckToEdit = it },
+        onDeleteDeck = { deckToDelete = it },
+        onManageCardsClick = onManageCardsClick,
+        onAddDeckClick = { showAddDialog = true },
+        onRandomQuestionsClick = { showRandomQuestionsDialog = true },
+        onUnarchiveSubject = {
+            viewModel.unarchiveSubject {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("アーカイブを解除しました")
+                }
+            }
+        },
+        onSpeakText = onSpeakText,
+        modifier = modifier,
+        snackbarHostState = snackbarHostState,
+    )
+
+    if (selectedSearchCard != null) {
+        KeywordBottomSheet(
+            initialCard = selectedSearchCard,
+            allSubjectCards = allSubjectCards,
+            onDismissRequest = { selectedSearchCard = null },
+            onSpeak = onSpeakText,
+            onToggleBookmark = { viewModel.toggleBookmark(it) },
+            onSaveNotes = { cardId, question, supplement ->
+                viewModel.updateCardNotes(cardId, question, supplement)
+            },
+        )
+    }
+
+    if (showAddDialog) {
+        AddDeckDialog(
+            onDismissRequest = { showAddDialog = false },
+            onConfirm = { name, splitSize, autoContinue, shuffleMode, reverseMode, autoSpeak, speechRate ->
+                viewModel.createDeck(
+                    name = name,
+                    splitSize = splitSize,
+                    autoContinue = autoContinue,
+                    shuffleMode = shuffleMode,
+                    reverseMode = reverseMode,
+                    autoSpeak = autoSpeak,
+                    speechRate = speechRate,
+                )
+                showAddDialog = false
+            },
+        )
+    }
+
+    if (deckToEdit != null) {
+        EditDeckDialog(
+            deck = deckToEdit!!,
+            onDismissRequest = { deckToEdit = null },
+            onConfirm = { updated ->
+                viewModel.updateDeck(updated)
+                deckToEdit = null
+            },
+        )
+    }
+
+    if (deckToDelete != null) {
+        DeleteDeckConfirmDialog(
+            deck = deckToDelete!!,
+            onDismissRequest = { deckToDelete = null },
+            onConfirm = {
+                viewModel.deleteDeck(deckToDelete!!.id)
+                deckToDelete = null
+            },
+        )
+    }
+
+    if (showRandomQuestionsDialog && allSubjectCards.isNotEmpty()) {
+        RandomQuestionsDialog(
+            totalCards = allSubjectCards.size,
+            initialCount = randomQuestionCount,
+            onDismissRequest = { showRandomQuestionsDialog = false },
+            onStartStudy = { count ->
+                viewModel.setRandomQuestionCount(count)
+                showRandomQuestionsDialog = false
+                val randomDeckId = "random_${count}_${viewModel.subjectId}"
+                onPartClick(randomDeckId, 0)
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DeckListContent(
+    subjectName: String,
+    decksWithParts: List<DeckWithPartsUiModel>,
+    bookmarkModel: BookmarkDeckUiModel?,
+    randomQuestionCount: Int,
+    totalCards: Int,
+    isSubjectArchived: Boolean,
+    isSearchActive: Boolean,
+    searchQuery: String,
+    searchResults: List<Card>,
+    isSearching: Boolean,
+    onBack: () -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
+    onSearchActiveChanged: (Boolean) -> Unit,
+    onClearSearch: () -> Unit,
+    onSearchCardClick: (Card) -> Unit,
+    onToggleBookmark: (Card) -> Unit,
+    onPartClick: (deckId: String, partIndex: Int) -> Unit,
+    onToggleShuffle: (Deck) -> Unit,
+    onToggleAutoSpeak: (Deck) -> Unit,
+    onEditDeck: (Deck) -> Unit,
+    onDeleteDeck: (Deck) -> Unit,
+    onManageCardsClick: (deckId: String) -> Unit,
+    onAddDeckClick: () -> Unit,
+    onRandomQuestionsClick: () -> Unit,
+    onUnarchiveSubject: () -> Unit,
+    onSpeakText: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -104,7 +253,7 @@ fun DeckListScreen(
                     title = {
                         TextField(
                             value = searchQuery,
-                            onValueChange = { viewModel.onSearchQueryChanged(it) },
+                            onValueChange = onSearchQueryChanged,
                             placeholder = { Text("単語・意味・メモを検索...") },
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
@@ -119,8 +268,8 @@ fun DeckListScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = {
-                            isSearchActive = false
-                            viewModel.clearSearch()
+                            onSearchActiveChanged(false)
+                            onClearSearch()
                         }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -130,7 +279,7 @@ fun DeckListScreen(
                     },
                     actions = {
                         if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.clearSearch() }) {
+                            IconButton(onClick = onClearSearch) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "クリア",
@@ -151,7 +300,7 @@ fun DeckListScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { isSearchActive = true }) {
+                        IconButton(onClick = { onSearchActiveChanged(true) }) {
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "単語検索",
@@ -163,7 +312,7 @@ fun DeckListScreen(
         },
         floatingActionButton = {
             if (!isSearchActive && !isSubjectArchived) {
-                FloatingActionButton(onClick = { showAddDialog = true }) {
+                FloatingActionButton(onClick = onAddDeckClick) {
                     Icon(imageVector = Icons.Default.Add, contentDescription = "Add Deck")
                 }
             }
@@ -179,11 +328,11 @@ fun DeckListScreen(
                     searchQuery = searchQuery,
                     searchResults = searchResults,
                     isSearching = isSearching,
-                    onCardClick = { selectedSearchCard = it },
-                    onToggleBookmark = { viewModel.toggleBookmark(it) },
+                    onCardClick = onSearchCardClick,
+                    onToggleBookmark = onToggleBookmark,
                     onSpeakText = onSpeakText,
                 )
-            } else if (decksWithParts.isEmpty() && (bookmarkModel == null || bookmarkModel?.totalCount == 0) && allSubjectCards.isEmpty()) {
+            } else if (decksWithParts.isEmpty() && (bookmarkModel == null || bookmarkModel.totalCount == 0) && totalCards == 0) {
                 Column(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -245,15 +394,7 @@ fun DeckListScreen(
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Button(
-                                        onClick = {
-                                            viewModel.unarchiveSubject {
-                                                coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar("アーカイブを解除しました")
-                                                }
-                                            }
-                                        },
-                                    ) {
+                                    Button(onClick = onUnarchiveSubject) {
                                         Text("元に戻す")
                                     }
                                 }
@@ -261,21 +402,21 @@ fun DeckListScreen(
                         }
                     }
 
-                    if (!isSubjectArchived && bookmarkModel != null && bookmarkModel!!.totalCount > 0) {
+                    if (!isSubjectArchived && bookmarkModel != null && bookmarkModel.totalCount > 0) {
                         item(key = "bookmark_study_section") {
                             BookmarkDeckCard(
-                                model = bookmarkModel!!,
+                                model = bookmarkModel,
                                 onPartClick = onPartClick,
                             )
                         }
                     }
 
-                    if (!isSubjectArchived && allSubjectCards.isNotEmpty()) {
+                    if (!isSubjectArchived && totalCards > 0) {
                         item(key = "random_study_section") {
                             RandomQuestionsCard(
-                                totalCards = allSubjectCards.size,
+                                totalCards = totalCards,
                                 randomQuestionCount = randomQuestionCount,
-                                onClick = { showRandomQuestionsDialog = true },
+                                onClick = onRandomQuestionsClick,
                             )
                         }
                     }
@@ -283,91 +424,86 @@ fun DeckListScreen(
                     items(decksWithParts, key = { it.deck.id }) { item ->
                         DeckItemCard(
                             item = item,
-                            onPartClick = { deckId, partIndex ->
-                                if (isSubjectArchived) {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("アーカイブされた教科は演習できません。演習を行うには元に戻してください。")
-                                    }
-                                } else {
-                                    onPartClick(deckId, partIndex)
-                                }
-                            },
-                            onToggleShuffle = { viewModel.toggleShuffle(item.deck.id) },
-                            onToggleAutoSpeak = { viewModel.toggleAutoSpeak(item.deck.id) },
+                            onPartClick = onPartClick,
+                            onToggleShuffle = { onToggleShuffle(item.deck) },
+                            onToggleAutoSpeak = { onToggleAutoSpeak(item.deck) },
                             onManageCardsClick = { onManageCardsClick(item.deck.id) },
-                            onEditDeck = { deckToEdit = item.deck },
-                            onDeleteDeck = { deckToDelete = item.deck },
+                            onEditDeck = { onEditDeck(item.deck) },
+                            onDeleteDeck = { onDeleteDeck(item.deck) },
                         )
                     }
                 }
             }
-
-            if (selectedSearchCard != null) {
-                KeywordBottomSheet(
-                    initialCard = selectedSearchCard,
-                    allSubjectCards = allSubjectCards,
-                    onDismissRequest = { selectedSearchCard = null },
-                    onSpeak = onSpeakText,
-                    onToggleBookmark = { viewModel.toggleBookmark(it) },
-                    onSaveNotes = { cardId, question, supplement ->
-                        viewModel.updateCardNotes(cardId, question, supplement)
-                    },
-                )
-            }
         }
     }
+}
 
-    if (showAddDialog) {
-        AddDeckDialog(
-            onDismissRequest = { showAddDialog = false },
-            onConfirm = { name, splitSize, autoContinue, shuffleMode, reverseMode, autoSpeak, speechRate ->
-                viewModel.createDeck(
-                    name = name,
-                    splitSize = splitSize,
-                    autoContinue = autoContinue,
-                    shuffleMode = shuffleMode,
-                    reverseMode = reverseMode,
-                    autoSpeak = autoSpeak,
-                    speechRate = speechRate,
-                )
-                showAddDialog = false
-            },
+@ThemePreviews
+@Composable
+private fun DeckListContentPreview() {
+    AidomariTheme {
+        DeckListContent(
+            subjectName = "英語（サンプル）",
+            decksWithParts = listOf(PreviewSampleData.sampleDeckWithParts),
+            bookmarkModel = PreviewSampleData.sampleBookmarkDeck,
+            randomQuestionCount = 10,
+            totalCards = 5,
+            isSubjectArchived = false,
+            isSearchActive = false,
+            searchQuery = "",
+            searchResults = emptyList(),
+            isSearching = false,
+            onBack = {},
+            onSearchQueryChanged = {},
+            onSearchActiveChanged = {},
+            onClearSearch = {},
+            onSearchCardClick = {},
+            onToggleBookmark = {},
+            onPartClick = { _, _ -> },
+            onToggleShuffle = {},
+            onToggleAutoSpeak = {},
+            onEditDeck = {},
+            onDeleteDeck = {},
+            onManageCardsClick = {},
+            onAddDeckClick = {},
+            onRandomQuestionsClick = {},
+            onUnarchiveSubject = {},
+            onSpeakText = {},
         )
     }
+}
 
-    if (deckToEdit != null) {
-        EditDeckDialog(
-            deck = deckToEdit!!,
-            onDismissRequest = { deckToEdit = null },
-            onConfirm = { updated ->
-                viewModel.updateDeck(updated)
-                deckToEdit = null
-            },
-        )
-    }
-
-    if (deckToDelete != null) {
-        DeleteDeckConfirmDialog(
-            deck = deckToDelete!!,
-            onDismissRequest = { deckToDelete = null },
-            onConfirm = {
-                viewModel.deleteDeck(deckToDelete!!.id)
-                deckToDelete = null
-            },
-        )
-    }
-
-    if (showRandomQuestionsDialog && allSubjectCards.isNotEmpty()) {
-        RandomQuestionsDialog(
-            totalCards = allSubjectCards.size,
-            initialCount = randomQuestionCount,
-            onDismissRequest = { showRandomQuestionsDialog = false },
-            onStartStudy = { count ->
-                viewModel.setRandomQuestionCount(count)
-                showRandomQuestionsDialog = false
-                val randomDeckId = "random_${count}_${viewModel.subjectId}"
-                onPartClick(randomDeckId, 0)
-            },
+@Preview(name = "Empty State", showBackground = true)
+@Composable
+private fun DeckListContentEmptyPreview() {
+    AidomariTheme {
+        DeckListContent(
+            subjectName = "新規教科",
+            decksWithParts = emptyList(),
+            bookmarkModel = null,
+            randomQuestionCount = 10,
+            totalCards = 0,
+            isSubjectArchived = false,
+            isSearchActive = false,
+            searchQuery = "",
+            searchResults = emptyList(),
+            isSearching = false,
+            onBack = {},
+            onSearchQueryChanged = {},
+            onSearchActiveChanged = {},
+            onClearSearch = {},
+            onSearchCardClick = {},
+            onToggleBookmark = {},
+            onPartClick = { _, _ -> },
+            onToggleShuffle = {},
+            onToggleAutoSpeak = {},
+            onEditDeck = {},
+            onDeleteDeck = {},
+            onManageCardsClick = {},
+            onAddDeckClick = {},
+            onRandomQuestionsClick = {},
+            onUnarchiveSubject = {},
+            onSpeakText = {},
         )
     }
 }

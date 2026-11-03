@@ -62,6 +62,14 @@ abstract class AidomariDatabase : RoomDatabase() {
                 DATABASE_NAME,
             )
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addCallback(
+                    object : RoomDatabase.Callback() {
+                        override fun onCreate(db: SupportSQLiteDatabase) {
+                            super.onCreate(db)
+                            SampleData.seedDatabase(db)
+                        }
+                    },
+                )
                 .fallbackToDestructiveMigration()
                 .build()
     }

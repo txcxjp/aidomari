@@ -28,6 +28,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -186,4 +188,24 @@ fun StudyTopBar(
             }
         },
     )
+}
+
+@ThemePreviews
+@Composable
+private fun StudyTopBarPreview() {
+    AidomariTheme {
+        StudyTopBar(
+            title = "日常英会話・基本単語",
+            subtitle = "Part 1",
+            isBookmarked = true,
+            onBack = {},
+            onToggleBookmark = {},
+            onRestart = {},
+            autoSpeakEnabled = true,
+            onOpenTtsSettings = {},
+            onSearchClick = {},
+            onDeleteCard = {},
+            onEditNotes = {},
+        )
+    }
 }

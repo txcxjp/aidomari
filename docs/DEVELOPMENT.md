@@ -148,4 +148,22 @@ gitGraph
 3. **実DBの結合検証**:
    - 単に画面上の変化を確認するだけでなく、一連の操作後に本物の SQLite テーブル上でデータが欠損・意図しない連鎖削除を起こしていないか（整合性検証）までテスト内に含める。
 
+---
+
+## 7. Compose Preview 設計方針
+
+### 目的
+Android Studio 上でアプリを起動することなく UI の確認やデザイン参照が行えるよう、主要画面およびコンポーネントに Compose Preview を整備しています。
+
+### 設計・実装ガイドライン
+1. **ステートフル Screen とステートレス Content の分離**:
+   - ViewModel や Activity Result Launcher に依存する Screen から、表示状態とコールバックのみを受け取るステートレスな Content コンポーザブル（例: `SubjectListContent`, `DeckListContent`）を切り出す。
+2. **`@ThemePreviews` の活用**:
+   - `com.aidomari.app.ui.theme.ThemePreviews` アノテーションを使用することで、Light モードと Dark モードを Android Studio プレビュー上で並べて同時に確認可能。
+3. **`PreviewSampleData` の再利用**:
+   - `com.aidomari.app.ui.preview.PreviewSampleData` に共通のプレビュー用モデルインスタンスを集約し、各プレビューで一貫性のある現実的なサンプルデータを使用する。
+4. **初回起動用サンプルデータ（`SampleData`）**:
+   - アプリを新規インストールした初回起動時、`AidomariDatabase` のコールバックにより自動的に基本サンプル教科・デッキ・カード（ルビ・タグ・TTS・Markdown対応）が初期投入され、初回ユーザーがすぐに操作感を体験できるようにしている。
+
+
 

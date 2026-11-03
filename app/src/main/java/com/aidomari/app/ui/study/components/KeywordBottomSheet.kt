@@ -52,6 +52,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.core.keyword.KeywordEngine
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -432,5 +435,26 @@ fun KeywordSheetContent(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun KeywordSheetContentPreview() {
+    AidomariTheme {
+        androidx.compose.material3.Surface {
+            KeywordSheetContent(
+                currentCard = PreviewSampleData.sampleCard,
+                cardStackSize = 1,
+                allSubjectCards = PreviewSampleData.sampleCards,
+                onBackClick = {},
+                onCloseClick = {},
+                onKeywordClick = {},
+                onSpeak = {},
+                onToggleBookmark = {},
+                onEditNotesClick = {},
+                onDeleteClick = {},
+            )
+        }
     }
 }

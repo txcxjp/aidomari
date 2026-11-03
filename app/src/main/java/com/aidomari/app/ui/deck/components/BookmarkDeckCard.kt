@@ -32,6 +32,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.ui.deck.BookmarkDeckUiModel
+import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @Composable
 fun BookmarkDeckCard(
@@ -228,5 +231,17 @@ fun BookmarkDeckCard(
                 }
             }
         }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun BookmarkDeckCardPreview() {
+    AidomariTheme {
+        BookmarkDeckCard(
+            model = PreviewSampleData.sampleBookmarkDeck,
+            onPartClick = { _, _ -> },
+            modifier = Modifier.padding(16.dp),
+        )
     }
 }

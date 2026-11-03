@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @Composable
 fun RandomQuestionsCard(
@@ -123,5 +125,18 @@ fun RandomQuestionsCard(
                 }
             }
         }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun RandomQuestionsCardPreview() {
+    AidomariTheme {
+        RandomQuestionsCard(
+            totalCards = 50,
+            randomQuestionCount = 10,
+            onClick = {},
+            modifier = Modifier.padding(16.dp),
+        )
     }
 }

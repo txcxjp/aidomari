@@ -26,6 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -306,4 +309,27 @@ fun DeleteDeckConfirmDialog(
             }
         },
     )
+}
+
+@ThemePreviews
+@Composable
+private fun AddDeckDialogPreview() {
+    AidomariTheme {
+        AddDeckDialog(
+            onDismissRequest = {},
+            onConfirm = { _, _, _, _, _, _, _ -> },
+        )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun EditDeckDialogPreview() {
+    AidomariTheme {
+        EditDeckDialog(
+            deck = PreviewSampleData.sampleDeck,
+            onDismissRequest = {},
+            onConfirm = {},
+        )
+    }
 }

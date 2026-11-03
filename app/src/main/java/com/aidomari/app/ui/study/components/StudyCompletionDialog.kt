@@ -21,6 +21,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @Composable
 fun StudyCompletionDialog(
@@ -95,4 +97,19 @@ fun StudyCompletionDialog(
         },
         dismissButton = null,
     )
+}
+
+@ThemePreviews
+@Composable
+private fun StudyCompletionDialogPreview() {
+    AidomariTheme {
+        StudyCompletionDialog(
+            partName = "Part 1",
+            totalCards = 50,
+            hasNextPart = true,
+            onNextPart = {},
+            onRestartPart = {},
+            onBackToDecks = {},
+        )
+    }
 }

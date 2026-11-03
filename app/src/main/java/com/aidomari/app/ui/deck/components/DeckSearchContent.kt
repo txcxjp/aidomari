@@ -34,6 +34,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 import com.aidomari.app.domain.model.Card as WordCard
 
 @Composable
@@ -192,5 +195,20 @@ fun DeckSearchContent(
                 }
             }
         }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun DeckSearchContentPreview() {
+    AidomariTheme {
+        DeckSearchContent(
+            searchQuery = "recall",
+            searchResults = PreviewSampleData.sampleCards,
+            isSearching = false,
+            onCardClick = {},
+            onToggleBookmark = {},
+            onSpeakText = {},
+        )
     }
 }

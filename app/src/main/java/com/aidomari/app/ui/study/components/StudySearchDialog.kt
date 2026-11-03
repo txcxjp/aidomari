@@ -36,6 +36,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 import com.aidomari.app.domain.model.Card as DomainCard
 
 @Composable
@@ -230,5 +233,19 @@ fun StudySearchContent(
                 }
             }
         }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun StudySearchDialogPreview() {
+    AidomariTheme {
+        StudySearchDialog(
+            searchQuery = "recall",
+            searchResults = PreviewSampleData.sampleCards,
+            onQueryChange = {},
+            onCardClick = {},
+            onDismissRequest = {},
+        )
     }
 }

@@ -177,3 +177,15 @@ fun ThemeSettingsDialog(
         },
     )
 }
+
+@ThemePreviews
+@Composable
+private fun ThemeSettingsDialogPreview() {
+    AidomariTheme {
+        ThemeSettingsDialog(
+            currentConfig = ThemeConfig(mode = ThemeMode.SYSTEM, colorTheme = AppColorTheme.INDIGO),
+            onConfigChanged = {},
+            onDismissRequest = {},
+        )
+    }
+}
