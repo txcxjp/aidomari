@@ -122,7 +122,7 @@ com.aidomari.app/
             ├── FlippableCard.kt         // 3Dフリップ ＆ Tinderスワイプコンポーネント
             ├── CardFaceFront.kt         // 表面UI（問題・単語・音声再生ボタン）
             ├── CardFaceBack.kt          // 裏面UI（解答・補足メモ・判定ボタン）
-            ├── KeywordText.kt           // インラインキーワードリンク＆関連チップ
+            ├── KeywordText.kt           // インラインキーワードリンク
             ├── KeywordBottomSheet.kt    // 芋づる式多層キーワード詳細シート
             ├── RelatedItemsSection.kt   // 関連項目アコーディオン
             ├── StudySearchDialog.kt     // 演習中単語検索ダイアログ＆コンテンツ
