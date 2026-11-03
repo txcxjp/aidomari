@@ -466,7 +466,7 @@ flowchart LR
    - デッキカード一覧（`DeckItemCard`、習得度プログレス、Part一覧、自動継続/シャッフル/TTSトグル、単語管理メニュー）。
    - インライン単語検索（`DeckSearchContent`）。
 3. **`StudyScreen`**:
-   - 進捗ヘッダー（`StudyTopBar`、Part名、習得進捗、ブックマークトグル、TTS設定、単語検索、カード削除）。
+   - 進捗ヘッダー（`StudyTopBar`、Part名、習得進捗、ブックマークトグル、単語検索、その他メニュー（TTS/メモ/リスタート/カード削除））。
    - メインカードエリア（`FlippableCard`、タップ/スワイプ/音量キーによる進行）。
    - 関連項目モーダル（`KeywordBottomSheet`）。
    - 演習内単語検索（`StudySearchDialog`）。
