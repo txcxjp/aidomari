@@ -1,0 +1,98 @@
+package com.aidomari.app.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+// Indigo Theme
+val IndigoPrimaryLight = Color(0xFF2A4B7C)
+val IndigoOnPrimaryLight = Color(0xFFFFFFFF)
+val IndigoPrimaryContainerLight = Color(0xFFD7E3FF)
+val IndigoOnPrimaryContainerLight = Color(0xFF001B3E)
+val IndigoSecondaryLight = Color(0xFF545F71)
+val IndigoOnSecondaryLight = Color(0xFFFFFFFF)
+val IndigoSecondaryContainerLight = Color(0xFFD8E3F8)
+val IndigoOnSecondaryContainerLight = Color(0xFF111C2B)
+
+val IndigoPrimaryDark = Color(0xFFAAC7FF)
+val IndigoOnPrimaryDark = Color(0xFF003063)
+val IndigoPrimaryContainerDark = Color(0xFF0C457A)
+val IndigoOnPrimaryContainerDark = Color(0xFFD7E3FF)
+val IndigoSecondaryDark = Color(0xFFBCC7DB)
+val IndigoOnSecondaryDark = Color(0xFF263141)
+val IndigoSecondaryContainerDark = Color(0xFF3D4758)
+val IndigoOnSecondaryContainerDark = Color(0xFFD8E3F8)
+
+// Forest Theme
+val ForestPrimaryLight = Color(0xFF1E6B45)
+val ForestOnPrimaryLight = Color(0xFFFFFFFF)
+val ForestPrimaryContainerLight = Color(0xFFA5F2C2)
+val ForestOnPrimaryContainerLight = Color(0xFF002110)
+val ForestSecondaryLight = Color(0xFF4F6353)
+val ForestOnSecondaryLight = Color(0xFFFFFFFF)
+val ForestSecondaryContainerLight = Color(0xFFD1E8D4)
+val ForestOnSecondaryContainerLight = Color(0xFF0D1F13)
+
+val ForestPrimaryDark = Color(0xFF89D5A7)
+val ForestOnPrimaryDark = Color(0xFF003920)
+val ForestPrimaryContainerDark = Color(0xFF005230)
+val ForestOnPrimaryContainerDark = Color(0xFFA5F2C2)
+val ForestSecondaryDark = Color(0xFFB6CCB8)
+val ForestOnSecondaryDark = Color(0xFF223527)
+val ForestSecondaryContainerDark = Color(0xFF384B3C)
+val ForestOnSecondaryContainerDark = Color(0xFFD1E8D4)
+
+// Sakura Theme
+val SakuraPrimaryLight = Color(0xFF8C4A60)
+val SakuraOnPrimaryLight = Color(0xFFFFFFFF)
+val SakuraPrimaryContainerLight = Color(0xFFFFD9E2)
+val SakuraOnPrimaryContainerLight = Color(0xFF3A071D)
+val SakuraSecondaryLight = Color(0xFF74565F)
+val SakuraOnSecondaryLight = Color(0xFFFFFFFF)
+val SakuraSecondaryContainerLight = Color(0xFFFFD9E2)
+val SakuraOnSecondaryContainerLight = Color(0xFF2B151C)
+
+val SakuraPrimaryDark = Color(0xFFFFB0C8)
+val SakuraOnPrimaryDark = Color(0xFF541D32)
+val SakuraPrimaryContainerDark = Color(0xFF703348)
+val SakuraOnPrimaryContainerDark = Color(0xFFFFD9E2)
+val SakuraSecondaryDark = Color(0xFFE3BDC6)
+val SakuraOnSecondaryDark = Color(0xFF422931)
+val SakuraSecondaryContainerDark = Color(0xFF5B3F47)
+val SakuraOnSecondaryContainerDark = Color(0xFFFFD9E2)
+
+// Amber Theme
+val AmberPrimaryLight = Color(0xFF835400)
+val AmberOnPrimaryLight = Color(0xFFFFFFFF)
+val AmberPrimaryContainerLight = Color(0xFFFFDDAF)
+val AmberOnPrimaryContainerLight = Color(0xFF2A1800)
+val AmberSecondaryLight = Color(0xFF6F5B40)
+val AmberOnSecondaryLight = Color(0xFFFFFFFF)
+val AmberSecondaryContainerLight = Color(0xFFFAE0B9)
+val AmberOnSecondaryContainerLight = Color(0xFF271904)
+
+val AmberPrimaryDark = Color(0xFFFFBA37)
+val AmberOnPrimaryDark = Color(0xFF452B00)
+val AmberPrimaryContainerDark = Color(0xFF633F00)
+val AmberOnPrimaryContainerDark = Color(0xFFFFDDAF)
+val AmberSecondaryDark = Color(0xFFDCB79E)
+val AmberOnSecondaryDark = Color(0xFF3E2D16)
+val AmberSecondaryContainerDark = Color(0xFF56432B)
+val AmberOnSecondaryContainerDark = Color(0xFFFAE0B9)
+
+// Slate Theme
+val SlatePrimaryLight = Color(0xFF3D4753)
+val SlateOnPrimaryLight = Color(0xFFFFFFFF)
+val SlatePrimaryContainerLight = Color(0xFFDFE2EB)
+val SlateOnPrimaryContainerLight = Color(0xFF191C22)
+val SlateSecondaryLight = Color(0xFF595F69)
+val SlateOnSecondaryLight = Color(0xFFFFFFFF)
+val SlateSecondaryContainerLight = Color(0xFFDEE3ED)
+val SlateOnSecondaryContainerLight = Color(0xFF171C24)
+
+val SlatePrimaryDark = Color(0xFFBFC7D5)
+val SlateOnPrimaryDark = Color(0xFF27313C)
+val SlatePrimaryContainerDark = Color(0xFF3E4753)
+val SlateOnPrimaryContainerDark = Color(0xFFDBE3F1)
+val SlateSecondaryDark = Color(0xFFC2C7D1)
+val SlateOnSecondaryDark = Color(0xFF2C313A)
+val SlateSecondaryContainerDark = Color(0xFF424751)
+val SlateOnSecondaryContainerDark = Color(0xFFDEE3ED)
