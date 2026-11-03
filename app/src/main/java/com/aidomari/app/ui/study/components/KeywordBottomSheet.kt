@@ -19,10 +19,13 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -277,19 +280,6 @@ fun KeywordSheetContent(
                     }
                 }
 
-                if (onEditNotesClick != null) {
-                    IconButton(
-                        onClick = onEditNotesClick,
-                        modifier = Modifier.semantics { contentDescription = "Edit Notes" },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit Notes",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
                 IconButton(onClick = { onSpeak(currentCard.front) }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
@@ -298,16 +288,60 @@ fun KeywordSheetContent(
                     )
                 }
 
-                if (onDeleteClick != null) {
-                    IconButton(
-                        onClick = onDeleteClick,
-                        modifier = Modifier.semantics { contentDescription = "Delete Card" },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Card",
-                            tint = MaterialTheme.colorScheme.error,
-                        )
+                if (onEditNotesClick != null || onDeleteClick != null) {
+                    var showMoreMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(
+                            onClick = { showMoreMenu = true },
+                            modifier = Modifier.semantics { contentDescription = "More Options" },
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More Options",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false },
+                        ) {
+                            if (onEditNotesClick != null) {
+                                DropdownMenuItem(
+                                    text = { Text("メモ・疑問点を編集") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onEditNotesClick()
+                                    },
+                                )
+                            }
+                            if (onDeleteClick != null) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = "カードを削除",
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onDeleteClick()
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
             }

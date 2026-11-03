@@ -19,11 +19,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,7 +34,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -69,7 +66,6 @@ fun CardListScreen(
     var isSearchActive by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var cardToEdit by remember { mutableStateOf<Card?>(null) }
-    var cardToDelete by remember { mutableStateOf<Card?>(null) }
     var selectedKeywordCard by remember { mutableStateOf<Card?>(null) }
 
     val deckName = uiState.deck?.name ?: "単語帳"
@@ -290,21 +286,6 @@ fun CardListScreen(
                                                 modifier = Modifier.size(20.dp),
                                             )
                                         }
-
-                                        // Delete card button
-                                        IconButton(
-                                            onClick = { cardToDelete = card },
-                                            modifier = Modifier
-                                                .size(36.dp)
-                                                .testTag("DeleteCardButton_${card.id}"),
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "削除",
-                                                tint = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.size(20.dp),
-                                            )
-                                        }
                                     }
                                 }
 
@@ -388,36 +369,6 @@ fun CardListScreen(
         )
     }
 
-    // Delete confirmation dialog
-    if (cardToDelete != null) {
-        val target = cardToDelete!!
-        AlertDialog(
-            onDismissRequest = { cardToDelete = null },
-            modifier = Modifier.testTag("DeleteCardConfirmDialog"),
-            title = { Text(text = "単語カードの削除") },
-            text = { Text(text = "「${target.front}」を削除しますか？\nこの操作は取り消せません。") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteCard(target.id)
-                        cardToDelete = null
-                    },
-                    modifier = Modifier.testTag("ConfirmDeleteButton"),
-                ) {
-                    Text(text = "削除", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { cardToDelete = null },
-                    modifier = Modifier.testTag("CancelDeleteButton"),
-                ) {
-                    Text(text = "キャンセル")
-                }
-            },
-        )
-    }
-
     // Keyword Bottom Sheet for hyperlinked reading
     if (selectedKeywordCard != null) {
         KeywordBottomSheet(
@@ -425,6 +376,13 @@ fun CardListScreen(
             allSubjectCards = uiState.allSubjectCards,
             onDismissRequest = { selectedKeywordCard = null },
             onSpeak = onSpeakText,
+            onToggleBookmark = { viewModel.toggleBookmark(it) },
+            onSaveNotes = { cardId, question, supplement ->
+                viewModel.updateCardNotes(cardId, question, supplement)
+            },
+            onDeleteCard = { cardId ->
+                viewModel.deleteCard(cardId)
+            },
         )
     }
 }
