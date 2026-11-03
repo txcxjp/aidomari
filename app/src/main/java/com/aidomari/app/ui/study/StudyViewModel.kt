@@ -214,10 +214,14 @@ class StudyViewModel(
             val updatedSubjectCards = state.subjectCards.map {
                 if (it.id == card.id) updatedCard else it
             }
+            val updatedSearchResults = state.searchResults.map {
+                if (it.id == card.id) updatedCard else it
+            }
             state.copy(
                 currentCard = if (state.currentCard?.id == card.id) updatedCard else state.currentCard,
                 nextCard = if (state.nextCard?.id == card.id) updatedCard else state.nextCard,
                 subjectCards = updatedSubjectCards,
+                searchResults = updatedSearchResults,
             )
         }
 
@@ -241,10 +245,14 @@ class StudyViewModel(
             val updatedSubjectCards = state.subjectCards.map {
                 if (it.id == cardId) updatedCard else it
             }
+            val updatedSearchResults = state.searchResults.map {
+                if (it.id == cardId) updatedCard else it
+            }
             state.copy(
                 currentCard = if (state.currentCard?.id == cardId) updatedCard else state.currentCard,
                 nextCard = if (state.nextCard?.id == cardId) updatedCard else state.nextCard,
                 subjectCards = updatedSubjectCards,
+                searchResults = updatedSearchResults,
             )
         }
 

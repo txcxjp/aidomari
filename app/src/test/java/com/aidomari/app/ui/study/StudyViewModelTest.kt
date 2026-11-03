@@ -433,6 +433,41 @@ class StudyViewModelTest {
     }
 
     @Test
+    fun searchCards_toggleBookmark_updatesSearchResults() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        viewModel.searchCards("Apple")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.searchResults.size)
+        assertFalse(viewModel.uiState.value.searchResults.first().isBookmarked)
+
+        val cardToBookmark = viewModel.uiState.value.searchResults.first()
+        viewModel.toggleCardBookmark(cardToBookmark)
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.searchResults.size)
+        assertTrue(viewModel.uiState.value.searchResults.first().isBookmarked)
+    }
+
+    @Test
+    fun searchCards_updateCardNotes_updatesSearchResults() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        viewModel.searchCards("Apple")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.searchResults.size)
+
+        viewModel.updateCardNotes("c1", "リンゴとは？", "バラ科の植物")
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.searchResults.size)
+        assertEquals("リンゴとは？", viewModel.uiState.value.searchResults.first().userQuestion)
+        assertEquals("バラ科の植物", viewModel.uiState.value.searchResults.first().userSupplement)
+    }
+
+    @Test
     fun partCompletion_persistsCompletedPartIndexInSession() = runTest {
         viewModel.loadDeckAndPart("deck-1", 0)
         advanceUntilIdle()
