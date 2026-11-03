@@ -6,4 +6,5 @@ data class Subject(
     val ttsLanguage: String = "auto",
     val sortOrder: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
+    val isArchived: Boolean = false,
 )

@@ -144,6 +144,7 @@ class WordsRepositoryImpl(
         ttsLanguage = ttsLanguage,
         sortOrder = sortOrder,
         createdAt = createdAt,
+        isArchived = isArchived,
     )
 
     private fun Subject.toEntity() = SubjectEntity(
@@ -152,6 +153,7 @@ class WordsRepositoryImpl(
         ttsLanguage = ttsLanguage,
         sortOrder = sortOrder,
         createdAt = createdAt,
+        isArchived = isArchived,
     )
 
     private fun DeckEntity.toDomain() = Deck(

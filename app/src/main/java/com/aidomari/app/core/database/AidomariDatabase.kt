@@ -18,7 +18,7 @@ import com.aidomari.app.core.database.entity.SubjectEntity
         CardEntity::class,
         StudySessionEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class AidomariDatabase : RoomDatabase() {
@@ -41,6 +41,12 @@ abstract class AidomariDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE subjects ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         @Volatile
         private var instance: AidomariDatabase? = null
 
@@ -55,7 +61,7 @@ abstract class AidomariDatabase : RoomDatabase() {
                 AidomariDatabase::class.java,
                 DATABASE_NAME,
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .fallbackToDestructiveMigration()
                 .build()
     }

@@ -16,4 +16,6 @@ data class SubjectEntity(
     val sortOrder: Int = 0,
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "is_archived")
+    val isArchived: Boolean = false,
 )

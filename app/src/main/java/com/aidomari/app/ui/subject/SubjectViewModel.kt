@@ -9,6 +9,7 @@ import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -20,6 +21,15 @@ class SubjectViewModel(
 ) : ViewModel() {
 
     val subjects: StateFlow<List<Subject>> = repository.getAllSubjects()
+        .map { list -> list.filterNot { it.isArchived } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList(),
+        )
+
+    val archivedSubjects: StateFlow<List<Subject>> = repository.getAllSubjects()
+        .map { list -> list.filter { it.isArchived } }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -36,6 +46,20 @@ class SubjectViewModel(
                 sortOrder = subjects.value.size,
             )
             repository.saveSubject(newSubject)
+        }
+    }
+
+    fun archiveSubject(id: String) {
+        viewModelScope.launch {
+            val subject = repository.getSubjectById(id) ?: return@launch
+            repository.saveSubject(subject.copy(isArchived = true))
+        }
+    }
+
+    fun unarchiveSubject(id: String) {
+        viewModelScope.launch {
+            val subject = repository.getSubjectById(id) ?: return@launch
+            repository.saveSubject(subject.copy(isArchived = false))
         }
     }
 
