@@ -97,7 +97,7 @@ class SubjectListScreenTest {
 
         // Unarchive
         composeTestRule.onNodeWithTag("ArchivedSubjectMoreOptionsButton_sub-1").performClick()
-        composeTestRule.onNodeWithText("元に戻す").performClick()
+        composeTestRule.onNodeWithTag("UnarchiveMenuItem_sub-1").performClick()
         composeTestRule.waitForIdle()
 
         // Now archived view should be empty

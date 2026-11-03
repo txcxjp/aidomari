@@ -313,6 +313,7 @@ fun SubjectListScreen(
                                             ) {
                                                 DropdownMenuItem(
                                                     text = { Text("元に戻す") },
+                                                    modifier = Modifier.testTag("UnarchiveMenuItem_${subject.id}"),
                                                     leadingIcon = {
                                                         Icon(
                                                             imageVector = Icons.Default.Unarchive,
@@ -334,6 +335,7 @@ fun SubjectListScreen(
                                                             color = MaterialTheme.colorScheme.error,
                                                         )
                                                     },
+                                                    modifier = Modifier.testTag("DeleteSubjectMenuItem_${subject.id}"),
                                                     leadingIcon = {
                                                         Icon(
                                                             imageVector = Icons.Default.Delete,
