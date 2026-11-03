@@ -63,10 +63,10 @@ class WordsDataImporter(
     ): ImportSummary {
         if (array.isEmpty()) return ImportSummary(0, 0, 0)
 
-        val subject = getOrCreateSubject(targetSubjectId, "インポート教科")
         val firstBook = array.first().jsonObject
         val rawTitle = firstBook["title"]?.jsonPrimitive?.content ?: "名称未設定デッキ"
         val deckName = cleanDeckTitle(rawTitle)
+        val subject = getOrCreateSubject(targetSubjectId, deckName)
 
         val deckId = UUID.randomUUID().toString()
         val deck = Deck(
@@ -123,9 +123,9 @@ class WordsDataImporter(
 
         if (booksArray.isEmpty()) return ImportSummary(0, 0, 0)
 
-        val subject = getOrCreateSubject(targetSubjectId, "移行データ（Elm）")
         val firstBook = booksArray.first().jsonObject
         val title = extractElmBookTitle(firstBook["bookHead"])
+        val subject = getOrCreateSubject(targetSubjectId, title)
 
         val prefObj = booksArray.mapNotNull { it.jsonObject["preference"]?.jsonObject }.firstOrNull()
         val reverseMode = prefObj?.get("reverseMode")?.jsonPrimitive?.booleanOrNull ?: false

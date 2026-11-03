@@ -49,6 +49,19 @@ class SubjectViewModel(
         }
     }
 
+    fun updateSubject(id: String, name: String, ttsLanguage: String = "auto") {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            val subject = repository.getSubjectById(id) ?: return@launch
+            repository.saveSubject(
+                subject.copy(
+                    name = name.trim(),
+                    ttsLanguage = ttsLanguage,
+                ),
+            )
+        }
+    }
+
     fun archiveSubject(id: String) {
         viewModelScope.launch {
             val subject = repository.getSubjectById(id) ?: return@launch

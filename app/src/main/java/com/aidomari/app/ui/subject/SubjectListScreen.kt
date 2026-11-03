@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Unarchive
@@ -93,7 +94,9 @@ fun SubjectListScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var subjectToEdit by remember { mutableStateOf<Subject?>(null) }
     var subjectToDelete by remember { mutableStateOf<Subject?>(null) }
+    var importTargetSubjectId by remember { mutableStateOf<String?>(null) }
 
     BackHandler(enabled = isArchivedView) {
         isArchivedView = false
@@ -110,7 +113,7 @@ fun SubjectListScreen(
                         stream.bufferedReader().readText()
                     }
                     if (!jsonString.isNullOrBlank()) {
-                        viewModel.importData(jsonString) { result ->
+                        viewModel.importData(jsonString, targetSubjectId = importTargetSubjectId) { result ->
                             coroutineScope.launch {
                                 result.onSuccess { summary ->
                                     snackbarHostState.showSnackbar(
@@ -181,6 +184,9 @@ fun SubjectListScreen(
         onDeleteSubject = { subject ->
             subjectToDelete = subject
         },
+        onEditSubject = { subject ->
+            subjectToEdit = subject
+        },
         onFilePickerClick = {
             filePickerLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
         },
@@ -249,9 +255,79 @@ fun SubjectListScreen(
         )
     }
 
+    // Edit Subject Dialog
+    if (subjectToEdit != null) {
+        val target = subjectToEdit!!
+        var subjectName by remember(target) { mutableStateOf(target.name) }
+        var selectedLanguage by remember(target) { mutableStateOf(target.ttsLanguage) }
+
+        AlertDialog(
+            onDismissRequest = { subjectToEdit = null },
+            title = { Text(text = "教科の編集") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = subjectName,
+                        onValueChange = { subjectName = it },
+                        label = { Text(text = "教科名") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("EditSubjectNameTextField"),
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "読み上げ言語（TTS）:",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        listOf("en-US" to "英語", "ja-JP" to "日本語", "auto" to "自動").forEach { (code, label) ->
+                            OutlinedButton(
+                                onClick = { selectedLanguage = code },
+                                shape = RoundedCornerShape(8.dp),
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontWeight = if (selectedLanguage == code) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selectedLanguage == code) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (subjectName.isNotBlank()) {
+                            viewModel.updateSubject(target.id, subjectName, selectedLanguage)
+                            subjectToEdit = null
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("「$subjectName」に更新しました")
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("SaveEditSubjectButton"),
+                ) {
+                    Text(text = "保存")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { subjectToEdit = null }) {
+                    Text(text = "キャンセル")
+                }
+            },
+        )
+    }
+
     // Import Dialog
     if (showImportDialog) {
         var jsonText by remember { mutableStateOf("") }
+        var selectedTargetSubjectId by remember { mutableStateOf<String?>(null) }
+        var showSubjectDropdown by remember { mutableStateOf(false) }
 
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
@@ -266,11 +342,63 @@ fun SubjectListScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (subjects.isNotEmpty()) {
+                        Text(
+                            text = "インポート先教科:",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 4.dp),
+                        )
+                        val targetSubjectName = subjects.find { it.id == selectedTargetSubjectId }?.name
+                            ?: "＋ 新規教科として作成"
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = { showSubjectDropdown = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("ImportTargetSubjectSelector"),
+                                shape = RoundedCornerShape(8.dp),
+                            ) {
+                                Text(
+                                    text = targetSubjectName,
+                                    modifier = Modifier.weight(1f),
+                                    textAlign = TextAlign.Start,
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showSubjectDropdown,
+                                onDismissRequest = { showSubjectDropdown = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("＋ 新規教科として作成") },
+                                    onClick = {
+                                        selectedTargetSubjectId = null
+                                        importTargetSubjectId = null
+                                        showSubjectDropdown = false
+                                    },
+                                )
+                                subjects.forEach { sub ->
+                                    DropdownMenuItem(
+                                        text = { Text(sub.name) },
+                                        onClick = {
+                                            selectedTargetSubjectId = sub.id
+                                            importTargetSubjectId = sub.id
+                                            showSubjectDropdown = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
 
                     // Prominent File Selection Button
                     Button(
                         onClick = {
+                            importTargetSubjectId = selectedTargetSubjectId
                             filePickerLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -298,7 +426,7 @@ fun SubjectListScreen(
                         label = { Text(text = "JSON テキスト") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(150.dp),
+                            .height(140.dp),
                         maxLines = 8,
                     )
                 }
@@ -307,7 +435,7 @@ fun SubjectListScreen(
                 Button(
                     onClick = {
                         if (jsonText.isNotBlank()) {
-                            viewModel.importData(jsonText) { result ->
+                            viewModel.importData(jsonText, targetSubjectId = selectedTargetSubjectId) { result ->
                                 coroutineScope.launch {
                                     result.onSuccess { summary ->
                                         snackbarHostState.showSnackbar(
@@ -398,6 +526,7 @@ fun SubjectListContent(
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onFilePickerClick: (() -> Unit)? = null,
+    onEditSubject: (Subject) -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -741,6 +870,20 @@ fun SubjectListContent(
                                                 expanded = showMenu,
                                                 onDismissRequest = { showMenu = false },
                                             ) {
+                                                DropdownMenuItem(
+                                                    text = { Text("教科を編集") },
+                                                    modifier = Modifier.testTag("EditSubjectMenuItem_${subject.id}"),
+                                                    leadingIcon = {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Edit,
+                                                            contentDescription = null,
+                                                        )
+                                                    },
+                                                    onClick = {
+                                                        showMenu = false
+                                                        onEditSubject(subject)
+                                                    },
+                                                )
                                                 DropdownMenuItem(
                                                     text = { Text("教科をアーカイブ") },
                                                     leadingIcon = {

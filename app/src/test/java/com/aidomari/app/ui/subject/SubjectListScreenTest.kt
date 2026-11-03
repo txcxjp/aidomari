@@ -6,6 +6,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.StudySession
@@ -150,6 +152,57 @@ class SubjectListScreenTest {
         composeTestRule.onNodeWithText("テーマ・外観設定").assertIsDisplayed()
         composeTestRule.onNodeWithText("表示モード").assertIsDisplayed()
         composeTestRule.onNodeWithText("カラーテーマ").assertIsDisplayed()
+    }
+
+    @Test
+    fun editSubject_updatesSubjectNameSuccessfully() {
+        val subject = Subject(id = "sub-1", name = "物理基礎")
+        fakeRepository.seedSubjects(listOf(subject))
+
+        composeTestRule.setContent {
+            SubjectListScreen(
+                viewModel = viewModel,
+                onSubjectClick = { _, _ -> },
+            )
+        }
+
+        // Open 3-dot menu and click "教科を編集"
+        composeTestRule.onNodeWithTag("SubjectMoreOptionsButton_sub-1").performClick()
+        composeTestRule.onNodeWithTag("EditSubjectMenuItem_sub-1").performClick()
+        composeTestRule.waitForIdle()
+
+        // Edit dialog should be displayed
+        composeTestRule.onNodeWithText("教科の編集").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("EditSubjectNameTextField").performTextClearance()
+        composeTestRule.onNodeWithTag("EditSubjectNameTextField").performTextInput("物理")
+
+        // Save
+        composeTestRule.onNodeWithTag("SaveEditSubjectButton").performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify updated name is shown
+        composeTestRule.onNodeWithText("物理").assertIsDisplayed()
+    }
+
+    @Test
+    fun importDialog_showsTargetSubjectSelector_whenSubjectsExist() {
+        val subject = Subject(id = "sub-1", name = "英語")
+        fakeRepository.seedSubjects(listOf(subject))
+
+        composeTestRule.setContent {
+            SubjectListScreen(
+                viewModel = viewModel,
+                onSubjectClick = { _, _ -> },
+            )
+        }
+
+        // Click import button
+        composeTestRule.onNodeWithText("インポート").performClick()
+        composeTestRule.waitForIdle()
+
+        // Target subject selector should be displayed
+        composeTestRule.onNodeWithTag("ImportTargetSubjectSelector").assertIsDisplayed()
+        composeTestRule.onNodeWithText("＋ 新規教科として作成").assertIsDisplayed()
     }
 }
 

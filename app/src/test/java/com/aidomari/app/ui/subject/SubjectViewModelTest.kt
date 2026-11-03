@@ -121,6 +121,20 @@ class SubjectViewModelTest {
         assertEquals(0, viewModel.archivedSubjects.value.size)
     }
 
+    @Test
+    fun updateSubject_updatesNameAndTtsLanguage() = runTest {
+        viewModel.createSubject("英語", "en-US")
+        advanceUntilIdle()
+
+        val id = fakeRepository.subjectsList[0].id
+        viewModel.updateSubject(id, "英語（上級）", "ja-JP")
+        advanceUntilIdle()
+
+        val updated = fakeRepository.getSubjectById(id)
+        assertEquals("英語（上級）", updated?.name)
+        assertEquals("ja-JP", updated?.ttsLanguage)
+    }
+
     private class FakeSubjectRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()
