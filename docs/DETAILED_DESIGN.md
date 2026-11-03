@@ -1,7 +1,7 @@
 # Aidomari（相泊）詳細設計書
 
-**文書バージョン**: 1.0.0  
-**作成日**: 2026-11-01  
+**文書バージョン**: 1.2.0  
+**最終更新日**: 2026-11-03  
 **対象リポジトリ**: `https://github.com/txcxjp/aidomari`  
 **言語/フレームワーク**: Kotlin 2.0.21 / Jetpack Compose / Room 2.6.1 / Android SDK 35 (minSdk 26)
 
@@ -32,16 +32,19 @@ graph TD
         NavHost --> SubjectScreen[SubjectListScreen]
         NavHost --> DeckScreen[DeckListScreen]
         NavHost --> StudyScreen[StudyScreen]
+        NavHost --> CardListScreen[CardListScreen]
         
         SubjectScreen --> SubjectVM[SubjectViewModel]
         DeckScreen --> DeckVM[DeckViewModel]
         StudyScreen --> StudyVM[StudyViewModel]
+        CardListScreen --> CardListVM[CardListViewModel]
     end
 
     subgraph Core / Domain Layer
         SubjectVM --> WordsRepo[WordsRepository]
         DeckVM --> WordsRepo
         StudyVM --> WordsRepo
+        CardListVM --> WordsRepo
 
         StudyScreen --> VolumeKey[VolumeKeyHandler]
         StudyScreen --> FlippableCard[FlippableCard]
@@ -63,7 +66,7 @@ graph TD
 ### パッケージ構成
 ```
 com.aidomari.app/
-├── MainActivity.kt                      // エントリポイント、音量キーイベント捕捉
+├── MainActivity.kt                      // エントリポイント、ハードウェア音量キーイベント捕捉
 ├── AidomariApp.kt                       // Application クラス、DB/リポジトリの DI ホスト
 ├── core/
 │   ├── database/                        // Room DB, Entities, DAO, Repository実装
@@ -76,8 +79,9 @@ com.aidomari.app/
 │   │   └── WordsRepositoryImpl.kt
 │   ├── input/                           // ハードウェア入力管理
 │   │   └── VolumeKeyHandler.kt
-│   ├── importer/                        // 旧Words/CSV互換JSONインポーター
-│   │   └── WordsDataImporter.kt
+│   ├── importer/                        // 旧Words/CSV互換JSONインポーター・エクスポーター
+│   │   ├── WordsDataImporter.kt
+│   │   └── WordsDataExporter.kt
 │   ├── keyword/                         // 関連項目抽出・形態素マッチングエンジン
 │   │   └── KeywordEngine.kt
 │   └── tts/                             // Android TextToSpeech ラッパー
@@ -86,6 +90,7 @@ com.aidomari.app/
 │   ├── model/                           // ドメインエンティティ
 │   │   ├── Subject.kt
 │   │   ├── Deck.kt
+│   │   ├── DeckPart.kt
 │   │   ├── Card.kt
 │   │   └── StudySession.kt
 │   └── repository/                      // リポジトリインターフェース
@@ -96,10 +101,19 @@ com.aidomari.app/
     ├── subject/                         // 教科管理画面
     │   ├── SubjectListScreen.kt
     │   └── SubjectViewModel.kt
-    ├── deck/                            // デッキ・50枚分割Part一覧画面
+    ├── deck/                            // デッキ・Part一覧画面
     │   ├── DeckListScreen.kt
     │   ├── DeckViewModel.kt
-    │   └── DeckUiModels.kt
+    │   ├── DeckUiModels.kt
+    │   └── components/
+    │       ├── BookmarkDeckCard.kt      // 苦手単語（ブックマーク）集約カード
+    │       ├── RandomQuestionsCard.kt   // ランダム出題トリガーカード
+    │       ├── DeckItemCard.kt          // 単一デッキカード（進捗バー・Part一覧・メニュー）
+    │       ├── DeckSearchContent.kt     // インライン単語検索コンテンツ
+    │       └── DeckDialogs.kt           // デッキ作成・編集・削除・ランダム問題数ダイアログ群
+    ├── card/                            // 単語一覧・管理画面
+    │   ├── CardListScreen.kt
+    │   └── CardListViewModel.kt
     └── study/                           // コア学習画面
         ├── StudyScreen.kt
         ├── StudyViewModel.kt
@@ -109,8 +123,12 @@ com.aidomari.app/
             ├── CardFaceFront.kt         // 表面UI（問題・単語・音声再生ボタン）
             ├── CardFaceBack.kt          // 裏面UI（解答・補足メモ・判定ボタン）
             ├── KeywordText.kt           // インラインキーワードリンク＆関連チップ
-            ├── KeywordBottomSheet.kt    // 芋づる式スタック探索モーダル
-            ├── StudyProgressBar.kt     // 進捗バー＆復習待ち件数表示
+            ├── KeywordBottomSheet.kt    // 芋づる式多層キーワード詳細シート
+            ├── RelatedItemsSection.kt   // 関連項目アコーディオン
+            ├── StudySearchDialog.kt     // 演習中単語検索ダイアログ＆コンテンツ
+            ├── StudyTtsSettingsDialog.kt// 音声読み上げ設定ダイアログ
+            ├── CardEditNotesDialog.kt   // メモ・追記問題編集ダイアログ
+            ├── StudyProgressBar.kt      // 進捗バー＆復習待ち件数表示
             ├── StudyTopBar.kt           // 学習専用トップバー
             └── StudyCompletionDialog.kt // Part修了ダイアログ
 ```
@@ -143,6 +161,8 @@ erDiagram
         INTEGER autoContinue "Part修了時の自動継続フラグ(0/1)"
         INTEGER shuffleMode "シャッフル出題フラグ(0/1)"
         INTEGER reverseMode "裏面先出題フラグ(0/1)"
+        INTEGER autoSpeak "カード表示時の自動音声読み上げ(0/1)"
+        REAL speechRate "読み上げ速度(0.5〜2.0)"
         INTEGER sortOrder "表示順序"
         INTEGER createdAt "作成日時(エポックミリ秒)"
     }
@@ -165,6 +185,7 @@ erDiagram
         INTEGER currentCardIndex "Part内での進捗インデックス"
         TEXT queueCardIds "未消化カードID配列(JSON文字列)"
         TEXT retryCardIds "リトライ待ちカードID配列(JSON文字列)"
+        TEXT completedPartIndicesJson "完了済みPartインデックス配列(JSON文字列)"
         INTEGER isCompleted "完了フラグ(0/1)"
         INTEGER lastStudiedAt "最終学習日時(エポックミリ秒)"
     }
@@ -180,7 +201,7 @@ erDiagram
 - **リアクティブ監視**: `getAllSubjects()`, `getDecksBySubject()`, `getCardsByDeck()` は `Flow<List<T>>` を返却し、データ変更時に UI を自動更新。
 - **一括更新**: `insertCards(cards: List<CardEntity>)` による高速一括インポート（トランザクション保護）。
 - **ブックマーク更新**: `updateBookmark(cardId, isBookmarked)` により、カード全体を書き換えることなくフラグのみをピンポイント更新。
-- **セッション永続化**: `insertSession(session)`（`OnConflictStrategy.REPLACE`）により、学習進行ごとにアトミックに学習状態を保存。
+- **セッション永続化**: `insertSession(session)`（`OnConflictStrategy.REPLACE`）により、学習進行およびPart完了ごとにアトミックに学習状態を保存。
 
 ---
 
@@ -214,7 +235,7 @@ erDiagram
 ### 3.3 ファイル選択インポート ＆ JSONエクスポート設計
 - **ファイルピッカー連携 (Storage Access Framework)**:
   - Compose の `rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument())` を使用。
-  - MIMEタイプ `application/json`, `text/plain`, `*/*` をサポートし、端末ローカル（ダウンロードフォルダ等）や Google Drive から直接ファイルを選択可能。
+  - MIMEタイプ `application/json`, `text/plain`, `*/*` をサポートし、端末ローカルや Google Drive から直接ファイルを選択可能。
   - 選択後、`contentResolver.openInputStream(uri)` からストリームを非同期読込し、`WordsDataImporter` へ直結。
 - **データエクスポート (`WordsDataExporter`)**:
   - 全教科、デッキ、単語カード、ブックマーク状態を Aidomari Modern JSON 形式へシリアライズ。
@@ -270,6 +291,15 @@ stateDiagram-v2
     ShowDialog --> AutoAdvance: autoContinue == true ＆ hasNextPart
     AutoAdvance --> Init: loadDeckAndPart(deckId, partIndex + 1)
 ```
+
+### 4.3 習得度（Mastery Rate）および完了Part永続化
+- **完了Partの追跡**:
+  - 各 Part の全カードを消化完了した際、該当 `partIndex` を `completedPartIndices`（`Set<Int>`）に追加。
+  - セッション保存時、JSON 配列文字列（例: `"[0, 1]"`）として `study_sessions.completed_part_indices_json` に永続化。
+  - アプリ再起動後も、完了した Part には緑色の「✓」バッジが表示され続ける。
+- **習得率（Mastery Rate）の算出**:
+  $$\text{Mastery Rate} = \frac{\sum_{p \in \text{completedPartIndices}} \text{cardCount}(p)}{N} \times 100\%$$
+  デッキカードおよびブックマークカード上に、プログレスバーとパーセンテージ（例: `75% (150/200)`）としてリアルタイム描画。
 
 ---
 
@@ -328,9 +358,9 @@ Jetpack Compose の `Modifier.pointerInput` と `Modifier.graphicsLayer` を活�
 - **タップ即時フリップ**:
   ドラッグせずタップした場合は、`260ms` の高速トゥイーンアニメーションで即座に裏面（+180°）へフリップ。
 - **カード単位のキーイング (`key(card.id)`)**:
-  カードごとに Composable ノードを完全分離。次カード遷移時に前カードの裏面回転角が引き継がれて表面へ逆回転する現象を完全に防止し、新カードは常に初期姿勢（表面 0°）で描画。
+  カードごとに Composable ノードを完全分離。次カード遷移時に前カードの裏面回転角が引き継がれて表面へ逆回転する現象を防止し、新カードは常に初期姿勢（表面 0°）で描画。
 - **カードスタック構造（次カードの背面プレビュー）**:
-  前面カードの背面に `nextCard` を `scale = 0.94f`, `alpha = 0.85f`, `elevation = 2.dp` で待機描画。前面カード退場時、次カードが `scale = 0.94f ➔ 1.0f`（160ms）へスムーズにスケールアップして昇格。
+  前面カードの背面に `nextCard` を `scale = 0.94f`, `alpha = 0.85f`, `elevation = 2.dp` で待機描画。前面カード退場時、次カードがスムーズにスケールアップして昇格。
 - **カメラ距離**: `cameraDistance = 16f * density`（パースペクティブ歪みを防止し、自然な立体感を演出）。
 - **裏面テキスト反転防止**:
   回転角 $|\theta| > 90^\circ$ の瞬間、裏面 Composable に切り替わり、裏面コンテナ内部で `rotationY = 180f` を適用して文字の鏡像反転を相殺。
@@ -341,17 +371,17 @@ Jetpack Compose の `Modifier.pointerInput` と `Modifier.graphicsLayer` を活�
 - **カードの傾き**: $Z\text{軸回転角} = \left(\frac{\Delta x}{25}\right) \in [-15^\circ, +15^\circ]$
 - **判定閾値**: $\text{DRAG\_THRESHOLD} = 220\text{px}$
 - **アクション境界**:
-  - $\Delta x > +220\text{px}$: 画面右外へ高速アニメーション（画面幅連動 `offscreenTarget`）➔ `onDone()`
-  - $\Delta x < -220\text{px}$: 画面左外へ高速アニメーション（画面幅連動 `-offscreenTarget`）➔ `onRetry()`
+  - $\Delta x > +220\text{px}$: 画面右外へ高速アニメーション ➔ `onDone()`
+  - $\Delta x < -220\text{px}$: 画面左外へ高速アニメーション ➔ `onRetry()`
   - 不足時: バネのように中央へ復帰（`spring(dampingRatio = MediumBouncy)`）
 - **裏面タップのめくり戻し**:
   裏面背景をタップすると、カードが表面（0°）へ即座に回転して戻る。
 - **縦スクロールとの自然な調停**:
-  解説テキストの縦方向ドラッグ量（$\Delta y$）が先行した場合は水平スワイプ判定を譲渡し、解説文の縦スクロール（`verticalScroll`）を一切阻害しない。
+  解説テキストの縦方向ドラッグ量（$\Delta y$）が先行した場合は水平スワイプ判定を譲渡し、解説文の縦スクロール（`verticalScroll`）を阻害しない。
 - **退場時ジェスチャー無効化 (`isDismissing`)**:
   閾値を超えて画面外への退場アニメーション開始後はジェスチャーを遮断し、退場中の再ドラッグや操作の競合を防止。
 - **ビジュアルフィードバック**:
-  ドラッグ距離に比例したアルファ値（透明度）で、右ドラッグ時は「覚えた（緑）」、左ドラッグ時は「もう一度（赤）」のバッジがリアルタイムに浮き上がるインタラクションを実装。
+  ドラッグ距離に比例したアルファ値で、右ドラッグ時は「覚えた（緑）」、左ドラッグ時は「もう一度（赤）」のバッジがリアルタイムに浮き上がるインタラクションを実装。
 
 ---
 
@@ -379,10 +409,17 @@ flowchart TD
 
 ### 7.2 芋づる式スタック探索 (`KeywordBottomSheet`)
 学習の文脈を失わずに知識を深掘りできるよう、モーダルシート内に独立したナビゲーションスタックを実装：
-- `cardStack = remember(initialCard) { mutableStateListOf(initialCard) }`（初回描画時から選択単語を保持し、同期的に安全展開）
+- `cardStack = remember(initialCard) { mutableStateListOf(initialCard) }`
 - **階層遷移**: BottomSheet 内の解説文にあるキーワードをタップすると、現在のカードの上に新しいカードを `push`（`cardStack.add(nextCard)`）。単語切り替え時はスクロール位置を最上部に自動リセット（`scrollTo(0)`）。
-- **戻る操作**: ヘッダーの「← 戻る (N)」ボタンおよび端末の物理/システム戻るジェスチャー（`BackHandler(enabled = cardStack.size > 1)`）で直前のカードへ `pop`（`cardStack.removeAt(cardStack.lastIndex)`）。
-- **セッション非破壊**: 探索を何十回繰り返しても、シートを閉じれば背面の学習セッションは 1 ミリも狂わずにそのまま継続。
+- **戻る操作**: ヘッダーの「← 戻る (N)」ボタンおよび端末の物理/システム戻るジェスチャー（`BackHandler(enabled = cardStack.size > 1)`）で直前のカードへ `pop`。
+- **カードの編集・削除**: 詳細シート内から直接、追記問題・補足メモの編集（`onSaveNotes`）やカードの削除（`onDeleteCard`）を実行可能。
+
+### 7.3 演習中単語検索と多層モーダル復帰フロー
+演習中の疑問を即座に解消するため、演習画面内に単語検索ダイアログ（`StudySearchDialog`）を搭載：
+1. **検索実行**: TopBar の検索アイコンからダイアログを開き、見出し語・意味・追記問題・補足メモを横断検索。
+2. **詳細プレビュー**: 検索結果の単語をタップすると、検索ダイアログやクエリを破棄せず、`KeywordBottomSheet` を最前面に重ねて表示。
+3. **安全な復帰**: 詳細シートを閉じた際、入力した検索クエリおよび検索結果一覧へシームレスに復帰。ユーザーは他の検索候補を続けて確認可能。
+4. **検索終了**: 検索ダイアログの「✕」ボタンまたは領域外タップでのみ明示的に検索状態をクリアして演習カードへ復帰。
 
 ---
 
@@ -390,7 +427,6 @@ flowchart TD
 
 ### 8.1 `TtsManager` 仕様
 Android 標準の `android.speech.tts.TextToSpeech` をカプセル化：
-- **初期化**: `OnInitListener` により非同期初期化を安全に完了後、利用可能フラグを更新。
 - **言語自動解決 (`resolveLocale`)**:
   - `"en-US"`, `"en"` ➔ `Locale.US`
   - `"ja-JP"`, `"ja"` ➔ `Locale.JAPAN`
@@ -398,7 +434,8 @@ Android 標準の `android.speech.tts.TextToSpeech` をカプセル化：
   - `"ko-KR"` ➔ `Locale.KOREA`
   - `"auto"`, `""` ➔ 端末デフォルトの `Locale.getDefault()`
 - **発声制御**: `TextToSpeech.QUEUE_FLUSH` により、連続タップ時も前の音声をキャンセルして最新の単語を即座に発音。
-- **リソース解放**: `Activity.onDestroy()` に連動して `shutdown()` を呼び出し、メモリリークを防止。
+- **読み上げ速度（Speech Rate）**: デッキごとに `0.5x`〜`2.0x` の速度調整を保持・永続化。
+- **自動発声（Auto Speak）**: カード表面表示時（裏面先出題モード時は裏面フリップ時）に自動的に単語を発音。演習画面の TTS 設定ダイアログ（`StudyTtsSettingsDialog`）からリアルタイムに切り替え可能。
 
 ---
 
@@ -408,27 +445,35 @@ Android 標準の `android.speech.tts.TextToSpeech` をカプセル化：
 
 ```mermaid
 flowchart LR
-    Subjects["subjects\n(教科一覧画面)"] -->|"onSubjectClick\n(subjectId, name)"| Decks["decks/{subjectId}/{subjectName}\n(デッキ一覧・Part一覧画面)"]
+    Subjects["subjects\n(教科一覧画面)"] -->|"onSubjectClick\n(subjectId, name)"| Decks["decks/{subjectId}/{subjectName}\n(デッキ一覧画面)"]
     Decks -->|"onPartClick\n(deckId, partIndex)"| Study["study/{deckId}/{partIndex}\n(コア学習画面)"]
+    Decks -->|"onManageCardsClick\n(deckId)"| Cards["cards/{deckId}\n(単語一覧・編集画面)"]
     Study -->|"onNavigateBack\n(popBackStack)"| Decks
     Study -->|"autoContinue / 次のPart\n(popUpTo inclusive)"| Study
+    Cards -->|"onBack\n(popBackStack)"| Decks
     Decks -->|"onBack\n(popBackStack)"| Subjects
 ```
 
 ### 9.2 画面ごとの責任分担
-1. **`SubjectListScreen`**:
+1. **`SubjectListScreen`**（TopAppBar: 「相泊」）:
    - 教科カード（教科名、設定TTS言語バッジ、削除アクション）。
    - 新規教科作成ダイアログ（名称入力、TTS言語選択ラジオ）。
-   - 過去データインポートダイアログ（JSONテキスト貼り付け ➔ `WordsDataImporter` 実行 ➔ 結果スナックバー表示）。
+   - 過去データインポートダイアログ（JSONテキスト貼り付けおよび SAF ファイル選択インポート）。
+   - 全データエクスポート（JSON バックアップ作成）。
 2. **`DeckListScreen`**:
-   - デッキサマリー（総単語数、シャッフル、自動継続バッジ）。
-   - 50枚分割 Part リスト表示（未着手 / 進行中 `再開 (32/50)` / 完了 `✓` バッジ）。
-   - 新規デッキ作成ダイアログ（分割枚数、自動継続、シャッフルのトグル設定）。
+   - 苦手単語（ブックマーク）集約カード（`BookmarkDeckCard`）。
+   - 全単語ランダム出題カード（`RandomQuestionsCard`）。
+   - デッキカード一覧（`DeckItemCard`、習得度プログレス、Part一覧、自動継続/シャッフル/TTSトグル、単語管理メニュー）。
+   - インライン単語検索（`DeckSearchContent`）。
 3. **`StudyScreen`**:
-   - 進捗ヘッダー（`completedCount / totalInPart`、復習待ち件数 `retryCount`、ブックマークトグル）。
+   - 進捗ヘッダー（`StudyTopBar`、Part名、習得進捗、ブックマークトグル、TTS設定、単語検索、カード削除）。
    - メインカードエリア（`FlippableCard`、タップ/スワイプ/音量キーによる進行）。
    - 関連項目モーダル（`KeywordBottomSheet`）。
+   - 演習内単語検索（`StudySearchDialog`）。
    - 修了ダイアログ（`StudyCompletionDialog`、次Partへの自動/手動進行）。
+4. **`CardListScreen`**:
+   - デッキ内の全単語カード一覧表示。
+   - 単語ごとの表面・裏面・追記問題・補足メモの個別編集およびカード削除。
 
 ---
 
@@ -442,14 +487,14 @@ flowchart LR
    - `lintDebug`: Android 公式 Lint 解析とレポート生成。
 2. **Job 2: Unit Tests**
    - `./gradlew testDebugUnitTest --continue`
-   - JUnit4, Robolectric (SQLite / Room In-Memory 検証), Kotlin Coroutines Test による非同期フロー検証。
+   - JUnit4, Robolectric (SDK 34), Compose UI Test, Kotlin Coroutines Test による非同期フローおよび UI コンポーネント検証。
 3. **Job 3: Build Debug APK**
    - `./gradlew assembleDebug`
-   - **CI自動バージョン発番**: `GITHUB_RUN_NUMBER` 環境変数を `versionCode`（単調増加整数）および `versionName`（`1.0.0.<run_number>`）に動的バインド。ローカル時は `1.0.0-dev`。
-   - **固定デバッグ署名 (`app/debug.keystore`)**: CI ランナー間で共通の署名キーストアを使用し、ビルドごとに署名鍵が変わって端末で上書きインストール（インプレースアップデート）に失敗する現象を防止。
-   - ビルド完了後、署名済みデバッグ APK（`aidomari-debug-apk`）を GitHub Artifacts へ自動アップロード。教科一覧画面のヘッダーに現在のバージョン番号を表示。
+   - **CI自動バージョン発番**: `GITHUB_RUN_NUMBER` 環境変数を `versionCode`（単調増加整数）および `versionName`（`1.0.0.<run_number>`）に動的バインド。
+   - **固定デバッグ署名 (`app/debug.keystore`)**: CI ランナー間で共通の署名キーストアを使用し、端末上でのインプレース更新を保証。
+   - ビルド完了後、署名済みデバッグ APK（`aidomari-debug-apk`）を GitHub Artifacts へ自動アップロード。
 
-### 10.2 ユニットテスト一覧
+### 10.2 ユニットテスト一覧（全27テストクラス）
 
 | テストクラス | 対象モジュール | 検証内容 |
 |---|---|---|
@@ -457,8 +502,26 @@ flowchart LR
 | `DeckTest` | `domain.model` | カード総数に応じた 50 枚分割（Part 1〜N）の境界値計算 |
 | `WordsDataImporterTest` | `core.importer` | CSV形式、Elm V1/V2 形式、新形式 JSON のパースおよび DB 登録整合性 |
 | `WordsDataExporterTest` | `core.importer` | 全データの JSON エクスポート生成およびラウンドトリップ再インポート検証 |
-| `StudyViewModelTest` | `ui.study` | フリップ、正解/リトライキュー遷移、音量キー操作、自動継続フラグ、セッション永続化 |
 | `KeywordEngineTest` | `core.keyword` | 最長一致マッチング、大文字小文字無視、自身ID除外、出現順抽出 |
 | `TtsManagerTest` | `core.tts` | 言語タグ（en-US, ja-JP 等）から Android Locale への解決 |
-| `SubjectViewModelTest` | `ui.subject` | 教科の作成・削除・インポートハンドリング |
-| `DeckViewModelTest` | `ui.deck` | デッキ作成、カード枚数・Part分割・セッション進捗の合成モデル生成 |
+| `SubjectViewModelTest` | `ui.subject` | 教科の作成・削除・インポート・エクスポートハンドリング |
+| `SubjectListScreenTest` | `ui.subject` | 「相泊」タイトル表示、教科一覧、インポート/エクスポート UI 表示 |
+| `DeckViewModelTest` | `ui.deck` | デッキ作成・編集・削除、Part分割・セッション進捗の合成モデル生成 |
+| `DeckMasteryProgressTest` | `ui.deck` | 完了Partに基づく習得率計算と表示の正確性検証 |
+| `DeckSearchScreenTest` | `ui.deck` | デッキ画面におけるインライン単語検索動作検証 |
+| `RandomQuestionsDialogTest`| `ui.deck` | ランダム出題ダイアログの問題数バリデーション検証 |
+| `BookmarkDeckCardTest` | `ui.deck.components` | ブックマーク集約カードの枚数・Part分割レンダリング |
+| `DeckItemCardTest` | `ui.deck.components` | デッキカードのプログレスバー、Partボタン、管理メニュー展開 |
+| `DeckSearchContentTest` | `ui.deck.components` | 検索クエリ入力、結果件数、カード選択コールバック |
+| `DeckDialogsTest` | `ui.deck.components` | デッキ作成・編集・削除ダイアログの表示と入力コールバック |
+| `CardListViewModelTest` | `ui.card` | 単語一覧読み込み、個別編集保存、カード削除 |
+| `CardListScreenTest` | `ui.card` | 単語一覧 UI、編集ダイアログ、削除確認ダイアログの挙動 |
+| `StudyViewModelTest` | `ui.study` | フリップ、正解/リトライキュー遷移、音量キー、セッション・完了Part永続化、検索同期 |
+| `StudyScreenTest` | `ui.study` | 学習進行、自動継続、単語削除、演習中検索と詳細シートからの復帰フロー |
+| `StudySearchDialogTest` | `ui.study.components`| 演習中単語検索ダイアログのクエリ入力、空状態、候補選択 |
+| `StudyTtsSettingsDialogTest`| `ui.study.components`| 自動読み上げトグル、読み上げ速度スライダーの操作と保存 |
+| `CardEditNotesDialogTest` | `ui.study.components`| 追記問題・補足メモの入力と保存コールバック |
+| `KeywordBottomSheetTest` | `ui.study.components`| 芋づる式多層キーワード探索、戻るナビゲーション、メモ編集・削除 |
+| `CardFaceReverseTest` | `ui.study.components`| 裏面先出題モード時の表面・裏面コンポーネント表示制御 |
+| `RelatedItemsSectionTest` | `ui.study.components`| 関連項目アコーディオンの展開・格納およびキーワード選択 |
+| `ExampleUnitTest` | `com.aidomari.app` | デフォルト JVM 環境動作確認テスト |

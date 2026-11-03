@@ -3,9 +3,9 @@
 ## 1. コンセプトと設計哲学
 
 > **設計哲学**:「あらゆる機能は、初めから存在したらどうなっていたかを念頭に開発を進める」  
-> 後付けのパッチ当てではなく、複数教科対応、自動分割、関連項目ハイパーリンク、音量キーめくり、セッション永続化を最初から包含した、整合性の高いアーキテクチャ。
+> 後付けのパッチ当てではなく、複数教科対応、自動分割、関連項目ハイパーリンク、音量キーめくり、セッション永続化、習得率管理を最初から包含した、整合性の高いアーキテクチャ。
 
-### コードネーム「Aidomari（相泊）」の由来
+### アプリケーション名「相泊（Aidomari）」の由来
 - **知床の最果て（道路の終点）**: 既存の単語帳のレールを越え、自らの手で知のフロンティアを切り拓く。
 - **アイヌ語 `ay-tomari`（矢の泊地）**: 音量キーで「矢」のように素早く捌いた知識が、しっかりと頭に「停泊（定着）」する。
 - **漢字「相（互いに）」＋「泊（留まる）」**: 単語同士が「相（あい）繋がり合う」**関連項目エンジン**と、いつでも前回の続きから「泊まった場所から再開」できる**セッション永続化**。
@@ -22,7 +22,7 @@ erDiagram
 
     SUBJECT {
         string id PK
-        string name "教科名（例: 英語、世界史）"
+        string name "教科名（例: 英語、基本情報技術者試験）"
         string ttsLanguage "TTS言語設定 (en-US, ja-JP, none)"
         int sortOrder
         long createdAt
@@ -34,8 +34,10 @@ erDiagram
         string name "単語帳名（例: システム英単語）"
         int splitSize "自動分割単位（デフォルト: 50）"
         boolean autoContinue "Part修了時に次のPartへ自動継続"
-        boolean shuffleMode "シャッフル有無"
-        boolean reverseMode "問題・答えの反転（裏から開始）"
+        boolean shuffleMode "シャッフル出題"
+        boolean reverseMode "問題・答えの反転（裏面から出題）"
+        boolean autoSpeak "カード表示時の自動音声読み上げ"
+        float speechRate "音声読み上げ速度 (0.5〜2.0)"
         long createdAt
     }
 
@@ -56,6 +58,8 @@ erDiagram
         int currentCardIndex "Part内での現在のカード位置"
         string queueCardIds "学習待ちカードIDリスト(JSON)"
         string retryCardIds "間違えて再挑戦するカードIDリスト(JSON)"
+        string completedPartIndices "完了済みPartインデックス配列(JSON)"
+        boolean isCompleted "セッション完了フラグ"
         long lastStudiedAt "最終学習日時"
     }
 ```
@@ -91,7 +95,7 @@ stateDiagram-v2
 
 ---
 
-## 4. コア機能：関連項目（Keyword）エンジン
+## 4. コア機能：関連項目（Keyword）エンジン ＆ 演習内単語検索
 
 1. **インライン・キーワードリンク**:
    - カード裏面の解説テキスト内に、同一教科内の他カードの「見出し語（front）」と一致する単語が存在する場合、自動的にクリッカブルリンク（青下線）化。
@@ -101,12 +105,37 @@ stateDiagram-v2
    - リンクや関連項目タップで **Modal BottomSheet** が開き、現在の学習画面を離れずに単語解説をポップアップ表示。
    - ポップアップ内からさらに別キーワードへジャンプ可能（スタック構造）。
    - 閉じると即座に元の学習画面へシームレスに復帰。
+4. **演習内単語検索（Study Search）と状態保護**:
+   - 演習中いつでも TopBar の検索アイコンから教科内の全単語を全文検索可能。
+   - 検索結果をタップして単語詳細モーダルを開いた後、詳細を閉じても検索クエリと検索結果一覧をそのまま保持し、一覧画面へ復帰。
+   - 検索ダイアログの「✕」または領域外タップでのみ明示的に検索を終了。
 
 ---
 
-## 5. 旧データ互換仕様
+## 5. UIコンポーネント・アーキテクチャ
 
-旧 Words アプリのエクスポートデータ（3形式）を自動判定してインポート：
+関心の分離（Separation of Concerns）とテスト容易性を最大化するため、巨大な Screen Composable を独立したサブコンポーネント群に構造化：
+
+- **デッキ一覧画面 (`com.aidomari.app.ui.deck.components`)**:
+  - `BookmarkDeckCard`: 苦手単語（ブックマーク）集約カードおよびパート分割表示
+  - `RandomQuestionsCard`: 全単語からのランダム出題トリガーカード
+  - `DeckItemCard`: 単一デッキの進捗・習得率プログレス・Part一覧・管理メニューカード
+  - `DeckSearchContent`: インライン単語検索コンテンツ
+  - `DeckDialogs`: デッキ新規作成・編集・削除確認・ランダム問題数設定ダイアログ群
+- **演習画面 (`com.aidomari.app.ui.study.components`)**:
+  - `FlippableCard`: 指の動きに追従する 3D Y軸フリップ＆Tinderスワイプコンポーネント
+  - `CardFaceFront` / `CardFaceBack`: 表面・裏面描画コンポーネント
+  - `KeywordBottomSheet`: 芋づる式多層キーワード詳細シート
+  - `StudySearchDialog`: 演習中の単語検索モーダルダイアログ
+  - `StudyTtsSettingsDialog`: 自動読み上げトグル＆速度設定ダイアログ
+  - `CardEditNotesDialog`: ユーザー追記問題・補足メモ編集ダイアログ
+  - `StudyCompletionDialog`: Part修了・次Part遷移ダイアログ
+
+---
+
+## 6. 旧データ互換仕様
+
+旧 Words アプリ（Elm 0.19.1）のエクスポートデータ（3形式）を自動判定してインポート：
 1. **現行V2モデル (`Decoders.elm` 形式)**: `modelState`, `books`, `preference` を含む完全ステートJSON。
 2. **旧V1モデル (`DecodersV1.elm` 形式)**: `numOfPreference` がない過去のバックアップJSON。
 3. **CSV変換JSON (`words-csv-to-json` 形式)**: `[ { "title": "...", "content": [ { "front": "...", "back": "..." } ] } ]` のシンプル配列。
