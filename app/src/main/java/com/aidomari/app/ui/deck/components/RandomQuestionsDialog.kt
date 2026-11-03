@@ -32,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @Composable
 fun RandomQuestionsDialog(
@@ -140,3 +142,17 @@ fun RandomQuestionsDialog(
         },
     )
 }
+
+@ThemePreviews
+@Composable
+private fun RandomQuestionsDialogPreview() {
+    AidomariTheme {
+        RandomQuestionsDialog(
+            totalCards = 100,
+            initialCount = 20,
+            onDismissRequest = {},
+            onStartStudy = {},
+        )
+    }
+}
+

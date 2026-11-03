@@ -28,6 +28,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.domain.model.Card as DomainCard
+import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @Composable
 fun CardFaceFront(
@@ -116,3 +119,17 @@ fun CardFaceFront(
         )
     }
 }
+
+@ThemePreviews
+@Composable
+private fun CardFaceFrontPreview() {
+    AidomariTheme {
+        CardFaceFront(
+            card = PreviewSampleData.sampleCard,
+            onSpeak = {},
+            isReverse = false,
+            onEditClick = {},
+        )
+    }
+}
+

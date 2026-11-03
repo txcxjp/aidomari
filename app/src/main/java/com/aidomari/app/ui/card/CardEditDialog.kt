@@ -20,6 +20,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @Composable
 fun CardEditDialog(
@@ -123,3 +126,16 @@ fun CardEditDialog(
         },
     )
 }
+
+@ThemePreviews
+@Composable
+private fun CardEditDialogPreview() {
+    AidomariTheme {
+        CardEditDialog(
+            card = PreviewSampleData.sampleCard,
+            onDismissRequest = {},
+            onSave = { _, _, _, _ -> },
+        )
+    }
+}
+

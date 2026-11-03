@@ -48,12 +48,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.model.Card as DomainCard
+import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.study.components.KeywordBottomSheet
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CardListScreen(
     viewModel: CardListViewModel,
@@ -65,9 +68,81 @@ fun CardListScreen(
 
     var isSearchActive by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
-    var cardToEdit by remember { mutableStateOf<Card?>(null) }
-    var selectedKeywordCard by remember { mutableStateOf<Card?>(null) }
+    var cardToEdit by remember { mutableStateOf<DomainCard?>(null) }
+    var selectedKeywordCard by remember { mutableStateOf<DomainCard?>(null) }
 
+    CardListContent(
+        uiState = uiState,
+        isSearchActive = isSearchActive,
+        onBack = onBack,
+        onSearchActiveChanged = { isSearchActive = it },
+        onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
+        onAddCardClick = { showAddDialog = true },
+        onCardClick = { selectedKeywordCard = it },
+        onToggleBookmark = { viewModel.toggleBookmark(it) },
+        onEditCardClick = { cardToEdit = it },
+        onSpeakText = onSpeakText,
+        modifier = modifier,
+    )
+
+    // Add Card Dialog
+    if (showAddDialog) {
+        CardEditDialog(
+            card = null,
+            onDismissRequest = { showAddDialog = false },
+            onSave = { front, back, question, supplement ->
+                viewModel.saveCard(null, front, back, question, supplement)
+                showAddDialog = false
+            },
+        )
+    }
+
+    // Edit Card Dialog
+    if (cardToEdit != null) {
+        val targetCard = cardToEdit!!
+        CardEditDialog(
+            card = targetCard,
+            onDismissRequest = { cardToEdit = null },
+            onSave = { front, back, question, supplement ->
+                viewModel.saveCard(targetCard.id, front, back, question, supplement)
+                cardToEdit = null
+            },
+        )
+    }
+
+    // Keyword Bottom Sheet for hyperlinked reading
+    if (selectedKeywordCard != null) {
+        KeywordBottomSheet(
+            initialCard = selectedKeywordCard!!,
+            allSubjectCards = uiState.allSubjectCards,
+            onDismissRequest = { selectedKeywordCard = null },
+            onSpeak = onSpeakText,
+            onToggleBookmark = { viewModel.toggleBookmark(it) },
+            onSaveNotes = { cardId, question, supplement ->
+                viewModel.updateCardNotes(cardId, question, supplement)
+            },
+            onDeleteCard = { cardId ->
+                viewModel.deleteCard(cardId)
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CardListContent(
+    uiState: CardListUiState,
+    isSearchActive: Boolean,
+    onBack: () -> Unit,
+    onSearchActiveChanged: (Boolean) -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
+    onAddCardClick: () -> Unit,
+    onCardClick: (DomainCard) -> Unit,
+    onToggleBookmark: (DomainCard) -> Unit,
+    onEditCardClick: (DomainCard) -> Unit,
+    onSpeakText: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val deckName = uiState.deck?.name ?: "単語帳"
 
     Scaffold(
@@ -78,7 +153,7 @@ fun CardListScreen(
                     title = {
                         TextField(
                             value = uiState.searchQuery,
-                            onValueChange = { viewModel.onSearchQueryChanged(it) },
+                            onValueChange = onSearchQueryChanged,
                             placeholder = { Text("単語・意味・メモを検索...") },
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
@@ -95,8 +170,8 @@ fun CardListScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = {
-                            isSearchActive = false
-                            viewModel.onSearchQueryChanged("")
+                            onSearchActiveChanged(false)
+                            onSearchQueryChanged("")
                         }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -106,7 +181,7 @@ fun CardListScreen(
                     },
                     actions = {
                         if (uiState.searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                            IconButton(onClick = { onSearchQueryChanged("") }) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "クリア",
@@ -144,7 +219,7 @@ fun CardListScreen(
                     },
                     actions = {
                         IconButton(
-                            onClick = { isSearchActive = true },
+                            onClick = { onSearchActiveChanged(true) },
                             modifier = Modifier.testTag("SearchCardsButton"),
                         ) {
                             Icon(
@@ -158,7 +233,7 @@ fun CardListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddDialog = true },
+                onClick = onAddCardClick,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.testTag("AddCardFab"),
@@ -213,7 +288,7 @@ fun CardListScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("CardItem_${card.id}")
-                                .clickable { selectedKeywordCard = card },
+                                .clickable { onCardClick(card) },
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
@@ -242,7 +317,7 @@ fun CardListScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         // Bookmark icon button
                                         IconButton(
-                                            onClick = { viewModel.toggleBookmark(card) },
+                                            onClick = { onToggleBookmark(card) },
                                             modifier = Modifier
                                                 .size(36.dp)
                                                 .testTag("BookmarkButton_${card.id}"),
@@ -274,7 +349,7 @@ fun CardListScreen(
 
                                         // Edit card button
                                         IconButton(
-                                            onClick = { cardToEdit = card },
+                                            onClick = { onEditCardClick(card) },
                                             modifier = Modifier
                                                 .size(36.dp)
                                                 .testTag("EditCardButton_${card.id}"),
@@ -304,7 +379,7 @@ fun CardListScreen(
                                     ) {
                                         if (card.userQuestion.isNotBlank()) {
                                             SuggestionChip(
-                                                onClick = { cardToEdit = card },
+                                                onClick = { onEditCardClick(card) },
                                                 label = {
                                                     Text(
                                                         text = "Q: ${card.userQuestion}",
@@ -320,7 +395,7 @@ fun CardListScreen(
                                         }
                                         if (card.userSupplement.isNotBlank()) {
                                             SuggestionChip(
-                                                onClick = { cardToEdit = card },
+                                                onClick = { onEditCardClick(card) },
                                                 label = {
                                                     Text(
                                                         text = "メモ: ${card.userSupplement}",
@@ -343,46 +418,42 @@ fun CardListScreen(
             }
         }
     }
+}
 
-    // Add Card Dialog
-    if (showAddDialog) {
-        CardEditDialog(
-            card = null,
-            onDismissRequest = { showAddDialog = false },
-            onSave = { front, back, question, supplement ->
-                viewModel.saveCard(null, front, back, question, supplement)
-                showAddDialog = false
-            },
+@ThemePreviews
+@Composable
+private fun CardListContentPreview() {
+    AidomariTheme {
+        CardListContent(
+            uiState = PreviewSampleData.sampleCardListUiState,
+            isSearchActive = false,
+            onBack = {},
+            onSearchActiveChanged = {},
+            onSearchQueryChanged = {},
+            onAddCardClick = {},
+            onCardClick = {},
+            onToggleBookmark = {},
+            onEditCardClick = {},
+            onSpeakText = {},
         )
     }
+}
 
-    // Edit Card Dialog
-    if (cardToEdit != null) {
-        val targetCard = cardToEdit!!
-        CardEditDialog(
-            card = targetCard,
-            onDismissRequest = { cardToEdit = null },
-            onSave = { front, back, question, supplement ->
-                viewModel.saveCard(targetCard.id, front, back, question, supplement)
-                cardToEdit = null
-            },
-        )
-    }
-
-    // Keyword Bottom Sheet for hyperlinked reading
-    if (selectedKeywordCard != null) {
-        KeywordBottomSheet(
-            initialCard = selectedKeywordCard!!,
-            allSubjectCards = uiState.allSubjectCards,
-            onDismissRequest = { selectedKeywordCard = null },
-            onSpeak = onSpeakText,
-            onToggleBookmark = { viewModel.toggleBookmark(it) },
-            onSaveNotes = { cardId, question, supplement ->
-                viewModel.updateCardNotes(cardId, question, supplement)
-            },
-            onDeleteCard = { cardId ->
-                viewModel.deleteCard(cardId)
-            },
+@Preview(name = "Empty State", showBackground = true)
+@Composable
+private fun CardListContentEmptyPreview() {
+    AidomariTheme {
+        CardListContent(
+            uiState = PreviewSampleData.sampleCardListUiState.copy(cards = emptyList(), filteredCards = emptyList()),
+            isSearchActive = false,
+            onBack = {},
+            onSearchActiveChanged = {},
+            onSearchQueryChanged = {},
+            onAddCardClick = {},
+            onCardClick = {},
+            onToggleBookmark = {},
+            onEditCardClick = {},
+            onSpeakText = {},
         )
     }
 }

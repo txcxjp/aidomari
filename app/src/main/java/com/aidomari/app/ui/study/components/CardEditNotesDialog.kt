@@ -23,6 +23,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @Composable
 fun CardEditNotesDialog(
@@ -109,3 +112,16 @@ fun CardEditNotesDialog(
         },
     )
 }
+
+@ThemePreviews
+@Composable
+private fun CardEditNotesDialogPreview() {
+    AidomariTheme {
+        CardEditNotesDialog(
+            card = PreviewSampleData.sampleCard,
+            onDismissRequest = {},
+            onSave = { _, _ -> },
+        )
+    }
+}
+

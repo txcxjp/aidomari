@@ -37,6 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.aidomari.app.domain.model.Card as DomainCard
+import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @Composable
 fun StudySearchDialog(
@@ -232,3 +235,18 @@ fun StudySearchContent(
         }
     }
 }
+
+@ThemePreviews
+@Composable
+private fun StudySearchDialogPreview() {
+    AidomariTheme {
+        StudySearchDialog(
+            searchQuery = "recall",
+            searchResults = PreviewSampleData.sampleCards,
+            onQueryChange = {},
+            onCardClick = {},
+            onDismissRequest = {},
+        )
+    }
+}
+

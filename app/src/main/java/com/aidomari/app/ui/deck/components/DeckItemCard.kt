@@ -50,6 +50,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.ui.deck.DeckWithPartsUiModel
+import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -419,3 +422,21 @@ fun DeckItemCard(
         }
     }
 }
+
+@ThemePreviews
+@Composable
+private fun DeckItemCardPreview() {
+    AidomariTheme {
+        DeckItemCard(
+            item = PreviewSampleData.sampleDeckWithParts,
+            onPartClick = { _, _ -> },
+            onToggleShuffle = {},
+            onToggleAutoSpeak = {},
+            onManageCardsClick = {},
+            onEditDeck = {},
+            onDeleteDeck = {},
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+

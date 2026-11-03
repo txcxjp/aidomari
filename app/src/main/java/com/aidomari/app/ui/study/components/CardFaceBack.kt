@@ -38,6 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.core.keyword.KeywordEngine
 import com.aidomari.app.domain.model.Card as DomainCard
+import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @Composable
 fun CardFaceBack(
@@ -211,3 +214,21 @@ fun CardFaceBack(
         }
     }
 }
+
+@ThemePreviews
+@Composable
+private fun CardFaceBackPreview() {
+    AidomariTheme {
+        CardFaceBack(
+            card = PreviewSampleData.sampleCard,
+            onDone = {},
+            onRetry = {},
+            candidateCards = PreviewSampleData.sampleCards,
+            onKeywordClick = {},
+            isReverse = false,
+            onSpeak = {},
+            onEditClick = {},
+        )
+    }
+}
+

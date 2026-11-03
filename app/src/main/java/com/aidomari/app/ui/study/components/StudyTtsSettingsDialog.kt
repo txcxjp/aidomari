@@ -31,6 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.ThemePreviews
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -140,3 +142,18 @@ fun StudyTtsSettingsDialog(
         },
     )
 }
+
+@ThemePreviews
+@Composable
+private fun StudyTtsSettingsDialogPreview() {
+    AidomariTheme {
+        StudyTtsSettingsDialog(
+            autoSpeak = true,
+            speechRate = 1.0f,
+            onDismissRequest = {},
+            onSave = { _, _ -> },
+            onTestSpeak = {},
+        )
+    }
+}
+
