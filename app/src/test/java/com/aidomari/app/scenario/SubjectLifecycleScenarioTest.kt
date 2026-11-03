@@ -3,6 +3,8 @@ package com.aidomari.app.scenario
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -97,10 +99,12 @@ class SubjectLifecycleScenarioTest {
         composeTestRule.onNodeWithTag("SubjectMoreOptionsButton_sub-1").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("教科をアーカイブ").performClick()
-        composeTestRule.waitForIdle()
 
-        // 7. Verify Active list no longer shows the subject, and archived link appears
-        composeTestRule.onNodeWithText("教科が登録されていません").assertIsDisplayed()
+        // 7. Wait for DB update to reflect in UI: Active list shows "アクティブな教科がありません"
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithTag("ArchivedEmptyViewButton").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText("アクティブな教科がありません").assertIsDisplayed()
         composeTestRule.onNodeWithTag("ArchivedEmptyViewButton").assertIsDisplayed()
 
         // 8. Navigate to Archived View
@@ -112,7 +116,9 @@ class SubjectLifecycleScenarioTest {
 
         // 9. Open Archived Subject -> CRITICAL TEST: Deck must NOT be deleted by CASCADE!
         composeTestRule.onNodeWithText("実戦英語").performClick()
-        composeTestRule.waitForIdle()
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithTag("ArchivedSubjectBanner").fetchSemanticsNodes().isNotEmpty()
+        }
 
         // Verify Archived banner is shown
         composeTestRule.onNodeWithTag("ArchivedSubjectBanner").assertIsDisplayed()
@@ -123,14 +129,15 @@ class SubjectLifecycleScenarioTest {
 
         // 10. Unarchive from the banner button
         composeTestRule.onNodeWithText("元に戻す").performClick()
-        composeTestRule.waitForIdle()
-
-        // Verify Archived banner disappears
-        composeTestRule.onNodeWithTag("ArchivedSubjectBanner").assertDoesNotExist()
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithTag("ArchivedSubjectBanner").fetchSemanticsNodes().isEmpty()
+        }
 
         // 11. Navigate back to Home and verify Subject is back in active view
         composeTestRule.onNodeWithContentDescription("Back").performClick()
-        composeTestRule.waitForIdle()
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithText("実戦英語").fetchSemanticsNodes().isNotEmpty()
+        }
 
         composeTestRule.onNodeWithText("相泊").assertIsDisplayed()
         composeTestRule.onNodeWithText("実戦英語").assertIsDisplayed()
@@ -148,6 +155,4 @@ class SubjectLifecycleScenarioTest {
 }
 
 // Helper synchronous query for final verification in test
-private suspend fun AidomariDao.getDecksBySubjectSync(subjectId: String): List<DeckEntity> {
-    return getDecksBySubject(subjectId).first()
-}
+private suspend fun AidomariDao.getDecksBySubjectSync(subjectId: String): List<DeckEntity> = getDecksBySubject(subjectId).first()
