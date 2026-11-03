@@ -50,6 +50,6 @@ data class DeckPart(
     val endIndex: Int,
     val count: Int,
 ) {
-    val displayRange: String get() = "${startIndex + 1}〜$endIndex"
-    val displayName: String get() = "Part $partNumber ($displayRange)"
+    val displayRange: String get() = if (count <= 0) "0枚" else "${startIndex + 1}〜$endIndex"
+    val displayName: String get() = if (count <= 0) "Part $partNumber (0枚)" else "Part $partNumber ($displayRange)"
 }

@@ -12,6 +12,8 @@ class DeckTest {
 
         assertEquals(1, parts.size)
         assertEquals(0, parts[0].count)
+        assertEquals("0枚", parts[0].displayRange)
+        assertEquals("Part 1 (0枚)", parts[0].displayName)
     }
 
     @Test
