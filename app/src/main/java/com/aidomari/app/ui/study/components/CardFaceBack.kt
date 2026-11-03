@@ -74,6 +74,20 @@ fun CardFaceBack(
             )
         }
 
+        // Speaker icon at top end to replay back face audio
+        if (onSpeak != null) {
+            IconButton(
+                onClick = onSpeak,
+                modifier = Modifier.align(Alignment.TopEnd),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = "Speak",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
         // Center scrollable content
         Column(
             modifier = Modifier
@@ -86,29 +100,14 @@ fun CardFaceBack(
         ) {
             if (isReverse) {
                 // In reverse mode, answer is the target word (card.front)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Text(
-                        text = card.front,
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 30.sp,
-                        ),
-                        textAlign = TextAlign.Center,
-                    )
-                    if (onSpeak != null) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        IconButton(onClick = onSpeak) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                                contentDescription = "Speak",
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-                }
+                Text(
+                    text = card.front,
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 30.sp,
+                    ),
+                    textAlign = TextAlign.Center,
+                )
                 Spacer(modifier = Modifier.height(10.dp))
                 // Also display meaning and keyword links
                 KeywordText(

@@ -40,11 +40,12 @@ open class TtsManager(
         if (speechRate != null) {
             setSpeechRate(speechRate)
         }
-        if (!isInitialized || text.isBlank()) return
+        val cleanText = TtsTextSanitizer.sanitize(text)
+        if (!isInitialized || cleanText.isBlank()) return
 
-        val targetLocale = resolveLocale(languageTag)
+        val targetLocale = resolveLocale(languageTag, cleanText)
         tts?.language = targetLocale
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "utterance_${System.currentTimeMillis()}")
+        tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, "utterance_${System.currentTimeMillis()}")
     }
 
     fun stop() {
@@ -59,8 +60,14 @@ open class TtsManager(
     }
 
     companion object {
-        fun resolveLocale(languageTag: String): Locale =
-            when (languageTag.lowercase()) {
+        fun resolveLocale(languageTag: String, sampleText: String = ""): Locale {
+            val resolvedTag = if (languageTag.equals("auto", ignoreCase = true) || languageTag.isBlank()) {
+                detectLanguage(sampleText)
+            } else {
+                languageTag
+            }
+
+            return when (resolvedTag.lowercase()) {
                 "en", "en-us", "us" -> Locale.US
                 "en-gb", "uk" -> Locale.UK
                 "ja", "ja-jp" -> Locale.JAPAN
@@ -72,11 +79,30 @@ open class TtsManager(
                 "auto", "" -> Locale.getDefault()
                 else -> {
                     try {
-                        Locale.forLanguageTag(languageTag)
+                        Locale.forLanguageTag(resolvedTag)
                     } catch (_: Exception) {
                         Locale.getDefault()
                     }
                 }
             }
+        }
+
+        fun detectLanguage(text: String): String {
+            if (text.isBlank()) return "auto"
+            val hasJapanese = text.any { ch ->
+                ch in '\u3040'..'\u309F' || // Hiragana
+                ch in '\u30A0'..'\u30FF' || // Katakana
+                ch in '\u4E00'..'\u9FFF'    // CJK Unified Ideographs
+            }
+            if (hasJapanese) return "ja-JP"
+
+            val hasKorean = text.any { ch in '\uAC00'..'\uD7AF' || ch in '\u1100'..'\u11FF' }
+            if (hasKorean) return "ko-KR"
+
+            val hasLatin = text.any { ch in 'a'..'z' || ch in 'A'..'Z' }
+            if (hasLatin) return "en-US"
+
+            return "auto"
+        }
     }
 }

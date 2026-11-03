@@ -50,18 +50,20 @@ class CardFaceReverseTest {
     }
 
     @Test
-    fun cardFaceFront_reverseMode_displaysMeaningWithoutFrontSpeaker() {
+    fun cardFaceFront_reverseMode_displaysMeaningWithFrontSpeaker() {
+        var spoken = false
         composeTestRule.setContent {
             CardFaceFront(
                 card = testCard,
-                onSpeak = {},
+                onSpeak = { spoken = true },
                 isReverse = true,
             )
         }
 
         composeTestRule.onNodeWithText("視点・観点").assertIsDisplayed()
         composeTestRule.onNodeWithText("How do you use it?").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Speak").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Speak").assertIsDisplayed().performClick()
+        assertTrue(spoken)
     }
 
     @Test
@@ -91,6 +93,24 @@ class CardFaceReverseTest {
 
         composeTestRule.onNodeWithText("もう一度").assertIsDisplayed().performClick()
         assertTrue(retryClicked)
+    }
+
+    @Test
+    fun cardFaceBack_normalMode_displaysSpeaker() {
+        var spoken = false
+        composeTestRule.setContent {
+            CardFaceBack(
+                card = testCard,
+                onDone = {},
+                onRetry = {},
+                isReverse = false,
+                onSpeak = { spoken = true },
+            )
+        }
+
+        composeTestRule.onNodeWithText("視点・観点").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Speak").assertIsDisplayed().performClick()
+        assertTrue(spoken)
     }
 
     @Test
