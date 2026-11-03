@@ -4,6 +4,7 @@ import android.app.Application
 import com.aidomari.app.core.database.AidomariDatabase
 import com.aidomari.app.core.database.WordsRepositoryImpl
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.ui.theme.ThemePreferences
 
 class AidomariApp : Application() {
 
@@ -13,6 +14,10 @@ class AidomariApp : Application() {
 
     val repository: WordsRepository by lazy {
         WordsRepositoryImpl(database.aidomariDao())
+    }
+
+    val themePreferences: ThemePreferences by lazy {
+        ThemePreferences(this)
     }
 
     override fun onCreate() {

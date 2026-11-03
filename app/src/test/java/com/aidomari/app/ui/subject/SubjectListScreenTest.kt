@@ -133,6 +133,24 @@ class SubjectListScreenTest {
         composeTestRule.onNodeWithText("アーカイブ済み教科").assertIsDisplayed()
         composeTestRule.onNodeWithText("物理基礎").assertIsDisplayed()
     }
+
+    @Test
+    fun themeSettingsButton_opensThemeSettingsDialog() {
+        composeTestRule.setContent {
+            SubjectListScreen(
+                viewModel = viewModel,
+                onSubjectClick = { _, _ -> },
+            )
+        }
+
+        composeTestRule.onNodeWithTag("ThemeSettingsButton").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("ThemeSettingsButton").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("テーマ・外観設定").assertIsDisplayed()
+        composeTestRule.onNodeWithText("表示モード").assertIsDisplayed()
+        composeTestRule.onNodeWithText("カラーテーマ").assertIsDisplayed()
+    }
 }
 
 private class FakeSubjectScreenRepository : WordsRepository {

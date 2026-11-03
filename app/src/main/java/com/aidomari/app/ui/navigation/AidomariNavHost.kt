@@ -19,6 +19,7 @@ import com.aidomari.app.ui.study.StudyScreen
 import com.aidomari.app.ui.study.StudyViewModel
 import com.aidomari.app.ui.subject.SubjectListScreen
 import com.aidomari.app.ui.subject.SubjectViewModel
+import com.aidomari.app.ui.theme.ThemePreferences
 
 @Composable
 fun AidomariNavHost(
@@ -26,6 +27,7 @@ fun AidomariNavHost(
     ttsManager: TtsManager,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
+    themePreferences: ThemePreferences? = null,
 ) {
     NavHost(
         navController = navController,
@@ -36,6 +38,7 @@ fun AidomariNavHost(
             val subjectViewModel = remember { SubjectViewModel(repository) }
             SubjectListScreen(
                 viewModel = subjectViewModel,
+                themePreferences = themePreferences,
                 onSubjectClick = { subjectId, subjectName ->
                     navController.navigate("decks/$subjectId/$subjectName")
                 },

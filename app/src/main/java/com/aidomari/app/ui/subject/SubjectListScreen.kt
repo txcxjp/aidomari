@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -66,6 +67,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.domain.model.Subject
+import com.aidomari.app.ui.theme.ThemePreferences
+import com.aidomari.app.ui.theme.ThemeSettingsDialog
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,6 +77,7 @@ fun SubjectListScreen(
     viewModel: SubjectViewModel,
     onSubjectClick: (subjectId: String, subjectName: String) -> Unit,
     modifier: Modifier = Modifier,
+    themePreferences: ThemePreferences? = null,
 ) {
     val context = LocalContext.current
     val subjects by viewModel.subjects.collectAsState()
@@ -84,6 +88,7 @@ fun SubjectListScreen(
     var isArchivedView by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
     var subjectToDelete by remember { mutableStateOf<Subject?>(null) }
 
     BackHandler(enabled = isArchivedView) {
@@ -192,6 +197,15 @@ fun SubjectListScreen(
                             TextButton(onClick = { exportFileLauncher.launch("aidomari_backup.json") }) {
                                 Text(text = "エクスポート")
                             }
+                        }
+                        IconButton(
+                            onClick = { showThemeDialog = true },
+                            modifier = Modifier.testTag("ThemeSettingsButton"),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Palette,
+                                contentDescription = "テーマ設定",
+                            )
                         }
                     },
                 )
@@ -737,6 +751,17 @@ fun SubjectListScreen(
                     Text(text = "キャンセル")
                 }
             },
+        )
+    }
+
+    // Theme Settings Dialog
+    if (showThemeDialog) {
+        val actualPrefs = themePreferences ?: remember { ThemePreferences(context) }
+        val currentConfig by actualPrefs.themeConfig.collectAsState()
+        ThemeSettingsDialog(
+            currentConfig = currentConfig,
+            onConfigChanged = { actualPrefs.setThemeConfig(it) },
+            onDismissRequest = { showThemeDialog = false },
         )
     }
 }
