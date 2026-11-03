@@ -23,6 +23,25 @@ class TtsManagerTest {
     }
 
     @Test
+    fun detectLanguage_identifiesJapaneseLatinAndKorean() {
+        assertEquals("ja-JP", TtsManager.detectLanguage("りんご"))
+        assertEquals("ja-JP", TtsManager.detectLanguage("日本語テキスト"))
+        assertEquals("ja-JP", TtsManager.detectLanguage("リンゴ (apple)"))
+        assertEquals("en-US", TtsManager.detectLanguage("apple"))
+        assertEquals("en-US", TtsManager.detectLanguage("Hello World 123!"))
+        assertEquals("ko-KR", TtsManager.detectLanguage("안녕하세요"))
+        assertEquals("auto", TtsManager.detectLanguage(""))
+    }
+
+    @Test
+    fun resolveLocale_withAutoLanguage_infersLocaleFromSampleText() {
+        assertEquals(Locale.JAPAN, TtsManager.resolveLocale("auto", "りんご - 果物"))
+        assertEquals(Locale.US, TtsManager.resolveLocale("auto", "apple"))
+        // Explicit tag always takes priority over auto detection
+        assertEquals(Locale.US, TtsManager.resolveLocale("en-US", "りんご"))
+    }
+
+    @Test
     fun setSpeechRate_clampsValueWithinRange() {
         val manager = TtsManager(context = null, initTts = false)
         assertEquals(1.0f, manager.getSpeechRate(), 0.001f)

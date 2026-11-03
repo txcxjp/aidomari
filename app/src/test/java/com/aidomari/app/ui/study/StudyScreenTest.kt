@@ -296,6 +296,94 @@ class StudyScreenTest {
         assertFalse(fakeRepository.cards.any { it.id == "d1" })
     }
 
+    @Test
+    fun studyScreen_autoSpeak_normalMode_speaksFrontOnDisplay_and_backOnFlip() {
+        val normalDeck = Deck(
+            id = "deck-normal-speak",
+            subjectId = "sub-1",
+            name = "Normal Speak Deck",
+            splitSize = 10,
+            autoSpeak = true,
+            reverseMode = false,
+        )
+        val normalCards = listOf(
+            Card(id = "ns1", deckId = "deck-normal-speak", front = "apple", back = "りんご", orderIndex = 0),
+        )
+        fakeRepository.decks.add(normalDeck)
+        fakeRepository.cards.addAll(normalCards)
+
+        val spokenTexts = mutableListOf<String>()
+
+        composeTestRule.setContent {
+            StudyScreen(
+                deckId = "deck-normal-speak",
+                partIndex = 0,
+                viewModel = viewModel,
+                onNavigateBack = {},
+                onNavigateToPart = {},
+                onSpeakText = { spokenTexts.add(it) },
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Card is displayed (オモテ面) -> speaks front
+        assertEquals(listOf("apple"), spokenTexts)
+
+        // Flip card to ウラ面
+        composeTestRule.runOnUiThread {
+            viewModel.flipCard()
+        }
+        composeTestRule.waitForIdle()
+
+        // Card flipped (ウラ面) -> speaks back
+        assertEquals(listOf("apple", "りんご"), spokenTexts)
+    }
+
+    @Test
+    fun studyScreen_autoSpeak_reverseMode_speaksBackOnDisplay_and_frontOnFlip() {
+        val reverseDeck = Deck(
+            id = "deck-reverse-speak",
+            subjectId = "sub-1",
+            name = "Reverse Speak Deck",
+            splitSize = 10,
+            autoSpeak = true,
+            reverseMode = true,
+        )
+        val reverseCards = listOf(
+            Card(id = "rs1", deckId = "deck-reverse-speak", front = "journey", back = "旅、旅行", orderIndex = 0),
+        )
+        fakeRepository.decks.add(reverseDeck)
+        fakeRepository.cards.addAll(reverseCards)
+
+        val spokenTexts = mutableListOf<String>()
+
+        composeTestRule.setContent {
+            StudyScreen(
+                deckId = "deck-reverse-speak",
+                partIndex = 0,
+                viewModel = viewModel,
+                onNavigateBack = {},
+                onNavigateToPart = {},
+                onSpeakText = { spokenTexts.add(it) },
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Reverse mode: Card is displayed (オモテ面: 設問) -> speaks back (Japanese meaning)
+        assertEquals(listOf("旅、旅行"), spokenTexts)
+
+        // Flip card to ウラ面 (解答)
+        composeTestRule.runOnUiThread {
+            viewModel.flipCard()
+        }
+        composeTestRule.waitForIdle()
+
+        // Card flipped (ウラ面: 解答) -> speaks front (target English word)
+        assertEquals(listOf("旅、旅行", "journey"), spokenTexts)
+    }
+
     private class FakeStudyWordsRepository : WordsRepository {
         val subjects = mutableListOf<Subject>()
         val decks = mutableListOf<Deck>()

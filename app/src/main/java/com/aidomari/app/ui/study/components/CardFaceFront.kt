@@ -55,18 +55,16 @@ fun CardFaceFront(
             )
         }
 
-        // Speaker icon at top end (only in normal mode; in reverse mode, speaker is on back face)
-        if (!isReverse) {
-            IconButton(
-                onClick = onSpeak,
-                modifier = Modifier.align(Alignment.TopEnd),
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = "Speak",
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
+        // Speaker icon at top end to replay front face audio
+        IconButton(
+            onClick = onSpeak,
+            modifier = Modifier.align(Alignment.TopEnd),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                contentDescription = "Speak",
+                tint = MaterialTheme.colorScheme.primary,
+            )
         }
 
         // Center content: prompt word/meaning and question

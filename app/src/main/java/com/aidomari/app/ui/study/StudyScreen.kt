@@ -64,17 +64,19 @@ fun StudyScreen(
     val currentCard = uiState.currentCard
     val currentCardId = currentCard?.id
 
-    // Auto-speak front word on normal mode card display
+    // Auto-speak on card display (オモテ面: 設問)
     LaunchedEffect(currentCardId, autoSpeak) {
-        if (autoSpeak && currentCard != null && !isReverse) {
-            onSpeakText(currentCard.front)
+        if (autoSpeak && currentCard != null) {
+            val frontText = if (isReverse) currentCard.back else currentCard.front
+            onSpeakText(frontText)
         }
     }
 
-    // Auto-speak front word on reverse mode when card is flipped to back
+    // Auto-speak on card flip (ウラ面: 解答)
     LaunchedEffect(uiState.isFlipped, autoSpeak) {
-        if (autoSpeak && currentCard != null && isReverse && uiState.isFlipped) {
-            onSpeakText(currentCard.front)
+        if (autoSpeak && currentCard != null && uiState.isFlipped) {
+            val backText = if (isReverse) currentCard.front else currentCard.back
+            onSpeakText(backText)
         }
     }
 
@@ -341,7 +343,10 @@ fun StudyContent(
                                     frontContent = {
                                         CardFaceFront(
                                             card = card,
-                                            onSpeak = { onSpeakText(card.front) },
+                                            onSpeak = {
+                                                val frontText = if (isReverse) card.back else card.front
+                                                onSpeakText(frontText)
+                                            },
                                             isReverse = isReverse,
                                             onEditClick = onEditNotes,
                                         )
@@ -354,7 +359,10 @@ fun StudyContent(
                                             onDone = onMarkDone,
                                             onRetry = onMarkRetry,
                                             isReverse = isReverse,
-                                            onSpeak = { onSpeakText(card.front) },
+                                            onSpeak = {
+                                                val backText = if (isReverse) card.front else card.back
+                                                onSpeakText(backText)
+                                            },
                                             onEditClick = onEditNotes,
                                         )
                                     },
