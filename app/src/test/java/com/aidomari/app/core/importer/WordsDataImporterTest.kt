@@ -90,7 +90,7 @@ class WordsDataImporterTest {
         assertEquals(1, summary.cardsCount)
 
         val deck = fakeRepository.decks.first()
-        assertEquals("ターゲット1900 (Part 1)", deck.name)
+        assertEquals("ターゲット1900", deck.name)
         assertTrue(deck.shuffleMode)
         assertTrue(deck.autoContinue)
 
@@ -100,6 +100,108 @@ class WordsDataImporterTest {
         assertEquals("メモ問題", card.userQuestion)
         assertEquals("補足メモ", card.userSupplement)
         assertTrue(card.isBookmarked) // bookmark_id > 0
+    }
+
+    @Test
+    fun importElmModel_multipleBooks_mergedIntoSingleDeck() = runBlocking {
+        val json = """
+            {
+              "modelState": "Menu",
+              "menuModel": {
+                "books": [
+                  {
+                    "bookHead": { "title": "ターゲット1900", "part": 1 },
+                    "preference": {
+                      "numOfPreference": 10,
+                      "shuffleMode": true,
+                      "autoContinue": true
+                    },
+                    "content": [
+                      { "word": "concern", "meaning": "関係・関心" },
+                      { "word": "deliver", "meaning": "配達する" }
+                    ]
+                  },
+                  {
+                    "bookHead": { "title": "ターゲット1900", "part": 2 },
+                    "content": [
+                      { "word": "establish", "meaning": "設立する" },
+                      { "word": "feature", "meaning": "特徴" }
+                    ]
+                  }
+                ]
+              }
+            }
+        """.trimIndent()
+
+        val result = importer.importJson(json)
+        assertTrue(result.isSuccess)
+
+        val summary = result.getOrThrow()
+        // 2 books must be merged into 1 single deck
+        assertEquals(1, summary.decksCount)
+        assertEquals(4, summary.cardsCount)
+
+        assertEquals(1, fakeRepository.decks.size)
+        val deck = fakeRepository.decks.first()
+        assertEquals("ターゲット1900", deck.name)
+        assertEquals(10, deck.splitSize)
+        assertTrue(deck.shuffleMode)
+        assertTrue(deck.autoContinue)
+
+        // All 4 cards must belong to the same deck with contiguous orderIndex
+        assertEquals(4, fakeRepository.cards.size)
+        assertTrue(fakeRepository.cards.all { it.deckId == deck.id })
+        assertEquals(
+            listOf("concern", "deliver", "establish", "feature"),
+            fakeRepository.cards.map { it.front },
+        )
+        assertEquals(
+            listOf("関係・関心", "配達する", "設立する", "特徴"),
+            fakeRepository.cards.map { it.back },
+        )
+        assertEquals(listOf(0, 1, 2, 3), fakeRepository.cards.map { it.orderIndex })
+    }
+
+    @Test
+    fun importCsvToJson_multipleChunks_mergedIntoSingleDeck() = runBlocking {
+        val json = """
+            [
+              {
+                "title": "基本英単語 (1)",
+                "content": [
+                  { "front": "apple", "back": "りんご" },
+                  { "front": "banana", "back": "バナナ" }
+                ]
+              },
+              {
+                "title": "基本英単語 (2)",
+                "content": [
+                  { "front": "cherry", "back": "さくらんぼ" },
+                  { "front": "date", "back": "デーツ" }
+                ]
+              }
+            ]
+        """.trimIndent()
+
+        val result = importer.importJson(json)
+        assertTrue(result.isSuccess)
+
+        val summary = result.getOrThrow()
+        assertEquals(1, summary.decksCount)
+        assertEquals(4, summary.cardsCount)
+
+        assertEquals(1, fakeRepository.decks.size)
+        val deck = fakeRepository.decks.first()
+        assertEquals("基本英単語", deck.name)
+        assertEquals(10, deck.splitSize)
+
+        assertEquals(4, fakeRepository.cards.size)
+        assertTrue(fakeRepository.cards.all { it.deckId == deck.id })
+        assertEquals(
+            listOf("apple", "banana", "cherry", "date"),
+            fakeRepository.cards.map { it.front },
+        )
+        assertEquals(listOf(0, 1, 2, 3), fakeRepository.cards.map { it.orderIndex })
     }
 
     @Test

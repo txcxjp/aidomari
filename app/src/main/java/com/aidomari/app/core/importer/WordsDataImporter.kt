@@ -61,54 +61,53 @@ class WordsDataImporter(
         array: JsonArray,
         targetSubjectId: String?,
     ): ImportSummary {
-        val subject = getOrCreateSubject(targetSubjectId, "インポート教科")
-        var decksImported = 0
-        var cardsImported = 0
+        if (array.isEmpty()) return ImportSummary(0, 0, 0)
 
+        val subject = getOrCreateSubject(targetSubjectId, "インポート教科")
+        val firstBook = array.first().jsonObject
+        val rawTitle = firstBook["title"]?.jsonPrimitive?.content ?: "名称未設定デッキ"
+        val deckName = cleanDeckTitle(rawTitle)
+
+        val deckId = UUID.randomUUID().toString()
+        val deck = Deck(
+            id = deckId,
+            subjectId = subject.id,
+            name = deckName,
+            splitSize = 10,
+            autoContinue = false,
+            sortOrder = 0,
+        )
+        repository.saveDeck(deck)
+
+        val allCards = mutableListOf<Card>()
         for (item in array) {
             val bookObj = item.jsonObject
-            val title = bookObj["title"]?.jsonPrimitive?.content ?: "名称未設定デッキ"
-            val contentArray = bookObj["content"]?.jsonArray ?: JsonArray(emptyList())
-
-            val deckId = UUID.randomUUID().toString()
-            val deck = Deck(
-                id = deckId,
-                subjectId = subject.id,
-                name = title,
-                splitSize = 50,
-                autoContinue = false,
-                sortOrder = decksImported,
-            )
-            repository.saveDeck(deck)
-            decksImported++
-
-            val cards = mutableListOf<Card>()
-            contentArray.forEachIndexed { index, cardElem ->
+            val contentArray = bookObj["content"]?.jsonArray ?: continue
+            contentArray.forEach { cardElem ->
                 val cardObj = cardElem.jsonObject
                 val front = cardObj["front"]?.jsonPrimitive?.content ?: ""
                 val back = cardObj["back"]?.jsonPrimitive?.content ?: ""
                 if (front.isNotBlank() || back.isNotBlank()) {
-                    cards.add(
+                    allCards.add(
                         Card(
                             id = UUID.randomUUID().toString(),
                             deckId = deckId,
                             front = front,
                             back = back,
-                            orderIndex = index,
+                            orderIndex = allCards.size,
                         ),
                     )
                 }
             }
-            if (cards.isNotEmpty()) {
-                repository.saveCards(cards)
-                cardsImported += cards.size
-            }
+        }
+        if (allCards.isNotEmpty()) {
+            repository.saveCards(allCards)
         }
 
         return ImportSummary(
             subjectsCount = if (targetSubjectId == null) 1 else 0,
-            decksCount = decksImported,
-            cardsCount = cardsImported,
+            decksCount = 1,
+            cardsCount = allCards.size,
         )
     }
 
@@ -116,50 +115,46 @@ class WordsDataImporter(
         rootObj: JsonObject,
         targetSubjectId: String?,
     ): ImportSummary {
-        val subject = getOrCreateSubject(targetSubjectId, "移行データ（Elm）")
-        var decksImported = 0
-        var cardsImported = 0
-
-        // Extract books array from menuModel or root
         val booksArray = rootObj["books"]?.jsonArray
             ?: rootObj["menuModel"]?.jsonObject?.get("books")?.jsonArray
             ?: rootObj["preferenceModel"]?.jsonObject?.get("menuModel")?.jsonObject?.get("books")?.jsonArray
             ?: rootObj["playingModel"]?.jsonObject?.get("menuModel")?.jsonObject?.get("books")?.jsonArray
             ?: JsonArray(emptyList())
 
+        if (booksArray.isEmpty()) return ImportSummary(0, 0, 0)
+
+        val subject = getOrCreateSubject(targetSubjectId, "移行データ（Elm）")
+        val firstBook = booksArray.first().jsonObject
+        val title = extractElmBookTitle(firstBook["bookHead"])
+
+        val prefObj = booksArray.mapNotNull { it.jsonObject["preference"]?.jsonObject }.firstOrNull()
+        val reverseMode = prefObj?.get("reverseMode")?.jsonPrimitive?.booleanOrNull ?: false
+        val shuffleMode = prefObj?.get("shuffleMode")?.jsonPrimitive?.booleanOrNull ?: false
+        val autoContinue = prefObj?.get("autoContinue")?.jsonPrimitive?.booleanOrNull ?: false
+        val autoSpeak = prefObj?.get("autoSpeak")?.jsonPrimitive?.booleanOrNull ?: false
+        val speechRate = prefObj?.get("speechRate")?.jsonPrimitive?.content?.toFloatOrNull() ?: 1.0f
+        val splitSize = prefObj?.get("numOfPreference")?.jsonPrimitive?.intOrNull ?: 10
+
+        val deckId = UUID.randomUUID().toString()
+        val deck = Deck(
+            id = deckId,
+            subjectId = subject.id,
+            name = title,
+            splitSize = splitSize,
+            autoContinue = autoContinue,
+            shuffleMode = shuffleMode,
+            reverseMode = reverseMode,
+            autoSpeak = autoSpeak,
+            speechRate = speechRate,
+            sortOrder = 0,
+        )
+        repository.saveDeck(deck)
+
+        val allCards = mutableListOf<Card>()
         for (bookElem in booksArray) {
             val bookObj = bookElem.jsonObject
-
-            // Title extraction from bookHead
-            val title = extractElmBookTitle(bookObj["bookHead"])
-            val prefObj = bookObj["preference"]?.jsonObject
-            val reverseMode = prefObj?.get("reverseMode")?.jsonPrimitive?.booleanOrNull ?: false
-            val shuffleMode = prefObj?.get("shuffleMode")?.jsonPrimitive?.booleanOrNull ?: false
-            val autoContinue = prefObj?.get("autoContinue")?.jsonPrimitive?.booleanOrNull ?: false
-            val autoSpeak = prefObj?.get("autoSpeak")?.jsonPrimitive?.booleanOrNull ?: false
-            val speechRate = prefObj?.get("speechRate")?.jsonPrimitive?.content?.toFloatOrNull() ?: 1.0f
-            val splitSize = prefObj?.get("numOfPreference")?.jsonPrimitive?.intOrNull ?: 50
-
-            val deckId = UUID.randomUUID().toString()
-            val deck = Deck(
-                id = deckId,
-                subjectId = subject.id,
-                name = title,
-                splitSize = splitSize,
-                autoContinue = autoContinue,
-                shuffleMode = shuffleMode,
-                reverseMode = reverseMode,
-                autoSpeak = autoSpeak,
-                speechRate = speechRate,
-                sortOrder = decksImported,
-            )
-            repository.saveDeck(deck)
-            decksImported++
-
-            val contentArray = bookObj["content"]?.jsonArray ?: JsonArray(emptyList())
-            val cards = mutableListOf<Card>()
-
-            contentArray.forEachIndexed { index, cardElem ->
+            val contentArray = bookObj["content"]?.jsonArray ?: continue
+            contentArray.forEach { cardElem ->
                 val cardObj = cardElem.jsonObject
                 // Elm uses "word" and "meaning"
                 val front = cardObj["word"]?.jsonPrimitive?.content
@@ -173,7 +168,7 @@ class WordsDataImporter(
                 val bookmarkId = cardObj["bookmark_id"]?.jsonPrimitive?.intOrNull ?: 0
 
                 if (front.isNotBlank() || back.isNotBlank()) {
-                    cards.add(
+                    allCards.add(
                         Card(
                             id = UUID.randomUUID().toString(),
                             deckId = deckId,
@@ -182,22 +177,21 @@ class WordsDataImporter(
                             userQuestion = userQuestion,
                             userSupplement = userSupplement,
                             isBookmarked = bookmarkId > 0,
-                            orderIndex = index,
+                            orderIndex = allCards.size,
                         ),
                     )
                 }
             }
+        }
 
-            if (cards.isNotEmpty()) {
-                repository.saveCards(cards)
-                cardsImported += cards.size
-            }
+        if (allCards.isNotEmpty()) {
+            repository.saveCards(allCards)
         }
 
         return ImportSummary(
             subjectsCount = if (targetSubjectId == null) 1 else 0,
-            decksCount = decksImported,
-            cardsCount = cardsImported,
+            decksCount = 1,
+            cardsCount = allCards.size,
         )
     }
 
@@ -306,17 +300,20 @@ class WordsDataImporter(
         return when (bookHeadElem) {
             is JsonObject -> {
                 val title = bookHeadElem["title"]?.jsonPrimitive?.content
-                val part = bookHeadElem["part"]?.jsonPrimitive?.intOrNull
-                if (title != null && part != null) {
-                    "$title (Part $part)"
-                } else {
-                    title ?: "単語帳"
-                }
+                cleanDeckTitle(title ?: "単語帳")
             }
             else -> {
                 val text = bookHeadElem.jsonPrimitive.content
-                if (text == "Bookmark") "ブックマーク帳" else text
+                if (text == "Bookmark") "ブックマーク帳" else cleanDeckTitle(text)
             }
         }
+    }
+
+    private fun cleanDeckTitle(title: String): String {
+        return title
+            .replace(Regex("""\s*[\(\[（]\s*(?:Part\s*)?\d+\s*[\)\]）]\s*$""", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("""\s+Part\s*\d+\s*$""", RegexOption.IGNORE_CASE), "")
+            .trim()
+            .ifBlank { title }
     }
 }
