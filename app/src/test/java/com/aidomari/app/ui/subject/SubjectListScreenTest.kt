@@ -48,29 +48,39 @@ class SubjectListScreenTest {
 }
 
 private class FakeSubjectScreenRepository : WordsRepository {
+    private val subjectsList = mutableListOf<Subject>()
     private val subjectsFlow = MutableStateFlow<List<Subject>>(emptyList())
 
     override fun getAllSubjects(): Flow<List<Subject>> = subjectsFlow
-    override suspend fun getSubjectById(id: String): Subject? = null
-    override suspend fun saveSubject(subject: Subject) {}
-    override suspend fun deleteSubject(id: String) {}
+    override suspend fun getSubjectById(id: String): Subject? = subjectsList.find { it.id == id }
+    override suspend fun saveSubject(subject: Subject) {
+        subjectsList.add(subject)
+        subjectsFlow.value = subjectsList.toList()
+    }
+    override suspend fun deleteSubject(id: String) {
+        subjectsList.removeIf { it.id == id }
+        subjectsFlow.value = subjectsList.toList()
+    }
 
     override fun getDecksBySubject(subjectId: String): Flow<List<Deck>> = MutableStateFlow(emptyList())
-    override suspend fun getDeckById(id: String): Deck? = null
+    override suspend fun getDeckById(deckId: String): Deck? = null
     override suspend fun saveDeck(deck: Deck) {}
-    override suspend fun deleteDeck(id: String) {}
+    override suspend fun deleteDeck(deckId: String) {}
 
     override fun getCardsByDeck(deckId: String): Flow<List<Card>> = MutableStateFlow(emptyList())
-    override fun getCardsBySubject(subjectId: String): Flow<List<Card>> = MutableStateFlow(emptyList())
-    override fun getBookmarkedCards(subjectId: String): Flow<List<Card>> = MutableStateFlow(emptyList())
-    override suspend fun getCardById(id: String): Card? = null
+    override suspend fun getCardsByDeckSync(deckId: String): List<Card> = emptyList()
+    override suspend fun getCardById(cardId: String): Card? = null
     override suspend fun saveCard(card: Card) {}
-    override suspend fun insertCards(cards: List<Card>) {}
-    override suspend fun deleteCard(id: String) {}
-    override suspend fun updateBookmark(id: String, isBookmarked: Boolean) {}
+    override suspend fun saveCards(cards: List<Card>) {}
+    override suspend fun deleteCard(cardId: String) {}
+    override suspend fun setBookmark(cardId: String, isBookmarked: Boolean) {}
+    override fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>> = MutableStateFlow(emptyList())
+    override suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card> = emptyList()
+    override suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card? = null
+    override suspend fun getAllCardsInSubject(subjectId: String): List<Card> = emptyList()
 
     override suspend fun getSession(deckId: String): StudySession? = null
+    override fun getSessionFlow(deckId: String): Flow<StudySession?> = MutableStateFlow(null)
     override suspend fun saveSession(session: StudySession) {}
-    override suspend fun clearSession(deckId: String) {}
-    override fun getSessionsBySubject(subjectId: String): Flow<List<StudySession>> = MutableStateFlow(emptyList())
+    override suspend fun deleteSession(deckId: String) {}
 }
