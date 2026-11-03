@@ -38,10 +38,30 @@ class DeckViewModel(
     private val _randomQuestionCount = MutableStateFlow(10)
     val randomQuestionCount: StateFlow<Int> = _randomQuestionCount.asStateFlow()
 
+    private val _isSubjectArchived = MutableStateFlow(false)
+    val isSubjectArchived: StateFlow<Boolean> = _isSubjectArchived.asStateFlow()
+
     init {
+        loadSubjectInfo()
         loadDecks()
         observeBookmarks()
         loadAllSubjectCards()
+    }
+
+    fun loadSubjectInfo() {
+        viewModelScope.launch {
+            val subject = repository.getSubjectById(subjectId)
+            _isSubjectArchived.value = subject?.isArchived == true
+        }
+    }
+
+    fun unarchiveSubject(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            val subject = repository.getSubjectById(subjectId) ?: return@launch
+            repository.saveSubject(subject.copy(isArchived = false))
+            _isSubjectArchived.value = false
+            onComplete()
+        }
     }
 
     fun loadAllSubjectCards() {

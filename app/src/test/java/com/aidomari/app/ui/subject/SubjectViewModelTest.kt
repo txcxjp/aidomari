@@ -95,6 +95,32 @@ class SubjectViewModelTest {
         assertTrue(json.contains("テスト教科"))
     }
 
+    @Test
+    fun archiveAndUnarchiveSubject_separatesActiveAndArchivedLists() = runTest {
+        viewModel.createSubject("英語", "en-US")
+        viewModel.createSubject("数学", "ja-JP")
+        advanceUntilIdle()
+
+        val englishId = fakeRepository.subjectsList.find { it.name == "英語" }!!.id
+        val mathId = fakeRepository.subjectsList.find { it.name == "数学" }!!.id
+
+        // Archive English
+        viewModel.archiveSubject(englishId)
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.subjects.value.size)
+        assertEquals("数学", viewModel.subjects.value[0].name)
+        assertEquals(1, viewModel.archivedSubjects.value.size)
+        assertEquals("英語", viewModel.archivedSubjects.value[0].name)
+
+        // Unarchive English
+        viewModel.unarchiveSubject(englishId)
+        advanceUntilIdle()
+
+        assertEquals(2, viewModel.subjects.value.size)
+        assertEquals(0, viewModel.archivedSubjects.value.size)
+    }
+
     private class FakeSubjectRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()
@@ -104,6 +130,7 @@ class SubjectViewModelTest {
         override fun getAllSubjects(): Flow<List<Subject>> = subjectsFlow
         override suspend fun getSubjectById(id: String): Subject? = subjectsList.find { it.id == id }
         override suspend fun saveSubject(subject: Subject) {
+            subjectsList.removeIf { it.id == subject.id }
             subjectsList.add(subject)
             subjectsFlow.value = subjectsList.toList()
         }

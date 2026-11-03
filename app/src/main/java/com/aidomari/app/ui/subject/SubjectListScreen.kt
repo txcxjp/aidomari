@@ -1,6 +1,7 @@
 package com.aidomari.app.ui.subject
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -13,17 +14,25 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -34,6 +43,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,6 +58,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -64,12 +77,18 @@ fun SubjectListScreen(
 ) {
     val context = LocalContext.current
     val subjects by viewModel.subjects.collectAsState()
+    val archivedSubjects by viewModel.archivedSubjects.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    var isArchivedView by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var subjectToDelete by remember { mutableStateOf<Subject?>(null) }
+
+    BackHandler(enabled = isArchivedView) {
+        isArchivedView = false
+    }
 
     // File picker launcher for JSON import (Storage Access Framework)
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -125,40 +144,69 @@ fun SubjectListScreen(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
+            if (isArchivedView) {
+                TopAppBar(
+                    title = {
                         Text(
-                            text = "相泊",
+                            text = "アーカイブ済み教科",
                             fontWeight = FontWeight.Bold,
                         )
-                        Text(
-                            text = "v${com.aidomari.app.BuildConfig.VERSION_NAME}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                actions = {
-                    TextButton(onClick = { showImportDialog = true }) {
-                        Text(text = "インポート")
-                    }
-                    if (subjects.isNotEmpty()) {
-                        TextButton(onClick = { exportFileLauncher.launch("aidomari_backup.json") }) {
-                            Text(text = "エクスポート")
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { isArchivedView = false }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                            )
                         }
-                    }
-                },
-            )
+                    },
+                )
+            } else {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = "相泊",
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = "v${com.aidomari.app.BuildConfig.VERSION_NAME}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                    actions = {
+                        if (archivedSubjects.isNotEmpty()) {
+                            TextButton(
+                                onClick = { isArchivedView = true },
+                                modifier = Modifier.testTag("TopBarArchivedButton"),
+                            ) {
+                                Text(text = "アーカイブ (${archivedSubjects.size})")
+                            }
+                        }
+                        TextButton(onClick = { showImportDialog = true }) {
+                            Text(text = "インポート")
+                        }
+                        if (subjects.isNotEmpty() || archivedSubjects.isNotEmpty()) {
+                            TextButton(onClick = { exportFileLauncher.launch("aidomari_backup.json") }) {
+                                Text(text = "エクスポート")
+                            }
+                        }
+                    },
+                )
+            }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddDialog = true },
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Subject",
-                )
+            if (!isArchivedView) {
+                FloatingActionButton(
+                    onClick = { showAddDialog = true },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Subject",
+                    )
+                }
             }
         },
     ) { innerPadding ->
@@ -167,95 +215,343 @@ fun SubjectListScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            if (subjects.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        text = "教科が登録されていません",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "端末内の単語帳ファイル（.json / .txt）を選択するか、\n右下の ＋ ボタンから教科を作成してください。",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = {
-                                filePickerLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
-                            },
-                        ) {
-                            Text(text = "ファイルを選択してインポート")
+            if (isArchivedView) {
+                // Archived Subjects List
+                if (archivedSubjects.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = "アーカイブされた教科はありません",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(archivedSubjects, key = { it.id }) { subject ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSubjectClick(subject.id, subject.name) },
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = subject.name,
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 20.sp,
+                                            ),
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                            ) {
+                                                Text(
+                                                    text = "アーカイブ済み",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                )
+                                            }
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = MaterialTheme.colorScheme.surface,
+                                            ) {
+                                                Text(
+                                                    text = "TTS音声: ${subject.ttsLanguage}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        var showMenu by remember { mutableStateOf(false) }
+                                        Box {
+                                            IconButton(
+                                                onClick = { showMenu = true },
+                                                modifier = Modifier
+                                                    .testTag("ArchivedSubjectMoreOptionsButton_${subject.id}")
+                                                    .semantics { contentDescription = "Archived Subject More Options" },
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.MoreVert,
+                                                    contentDescription = "Archived Subject More Options",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                            DropdownMenu(
+                                                expanded = showMenu,
+                                                onDismissRequest = { showMenu = false },
+                                            ) {
+                                                DropdownMenuItem(
+                                                    text = { Text("元に戻す") },
+                                                    modifier = Modifier.testTag("UnarchiveMenuItem_${subject.id}"),
+                                                    leadingIcon = {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Unarchive,
+                                                            contentDescription = null,
+                                                        )
+                                                    },
+                                                    onClick = {
+                                                        showMenu = false
+                                                        viewModel.unarchiveSubject(subject.id)
+                                                        coroutineScope.launch {
+                                                            snackbarHostState.showSnackbar("「${subject.name}」を元に戻しました")
+                                                        }
+                                                    },
+                                                )
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Text(
+                                                            text = "教科を完全に削除",
+                                                            color = MaterialTheme.colorScheme.error,
+                                                        )
+                                                    },
+                                                    modifier = Modifier.testTag("DeleteSubjectMenuItem_${subject.id}"),
+                                                    leadingIcon = {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Delete,
+                                                            contentDescription = null,
+                                                            tint = MaterialTheme.colorScheme.error,
+                                                        )
+                                                    },
+                                                    onClick = {
+                                                        showMenu = false
+                                                        subjectToDelete = subject
+                                                    },
+                                                )
+                                            }
+                                        }
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    items(subjects, key = { it.id }) { subject ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSubjectClick(subject.id, subject.name) },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            ),
-                        ) {
-                            Row(
+                // Active Subjects List
+                if (subjects.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        if (archivedSubjects.isNotEmpty()) {
+                            Text(
+                                text = "アクティブな教科がありません",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = { isArchivedView = true },
+                                modifier = Modifier.testTag("ArchivedEmptyViewButton"),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Archive,
+                                    contentDescription = null,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = "アーカイブされた教科を見る (${archivedSubjects.size}件)")
+                            }
+                        } else {
+                            Text(
+                                text = "教科が登録されていません",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "端末内の単語帳ファイル（.json / .txt）を選択するか、\n右下の ＋ ボタンから教科を作成してください。",
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = {
+                                        filePickerLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                                    },
+                                ) {
+                                    Text(text = "ファイルを選択してインポート")
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(subjects, key = { it.id }) { subject ->
+                            Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
+                                    .clickable { onSubjectClick(subject.id, subject.name) },
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = subject.name,
-                                        style = MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 20.sp,
-                                        ),
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = MaterialTheme.colorScheme.surface,
-                                    ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "TTS音声: ${subject.ttsLanguage}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                            text = subject.name,
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 20.sp,
+                                            ),
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.surface,
+                                        ) {
+                                            Text(
+                                                text = "TTS音声: ${subject.ttsLanguage}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                            )
+                                        }
+                                    }
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        var showMenu by remember { mutableStateOf(false) }
+                                        Box {
+                                            IconButton(
+                                                onClick = { showMenu = true },
+                                                modifier = Modifier
+                                                    .testTag("SubjectMoreOptionsButton_${subject.id}")
+                                                    .semantics { contentDescription = "Subject More Options" },
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.MoreVert,
+                                                    contentDescription = "Subject More Options",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                            DropdownMenu(
+                                                expanded = showMenu,
+                                                onDismissRequest = { showMenu = false },
+                                            ) {
+                                                DropdownMenuItem(
+                                                    text = { Text("教科をアーカイブ") },
+                                                    leadingIcon = {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Archive,
+                                                            contentDescription = null,
+                                                        )
+                                                    },
+                                                    onClick = {
+                                                        showMenu = false
+                                                        viewModel.archiveSubject(subject.id)
+                                                        coroutineScope.launch {
+                                                            val result = snackbarHostState.showSnackbar(
+                                                                message = "「${subject.name}」をアーカイブしました",
+                                                                actionLabel = "元に戻す",
+                                                            )
+                                                            if (result == SnackbarResult.ActionPerformed) {
+                                                                viewModel.unarchiveSubject(subject.id)
+                                                            }
+                                                        }
+                                                    },
+                                                )
+                                            }
+                                        }
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
+                            }
+                        }
 
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(onClick = { subjectToDelete = subject }) {
+                        if (archivedSubjects.isNotEmpty()) {
+                            item(key = "archived_section_link") {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { isArchivedView = true }
+                                        .testTag("ArchivedSubjectsLink"),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                    ),
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(14.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Archive,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            Text(
+                                                text = "アーカイブされた教科 (${archivedSubjects.size}件)",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                            )
+                                        }
                                         Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Delete Subject",
-                                            tint = MaterialTheme.colorScheme.error,
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
                                 }
                             }
                         }
@@ -353,31 +649,37 @@ fun SubjectListScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                     ) {
-                        Text(text = "📂 端末内のファイルを選択 (.json, .txt)")
+                        Text(
+                            text = "ファイルを選択してインポート",
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
+
                     Text(
-                        text = "― または直接テキストを貼り付け ―",
+                        text = "または JSON テキストを直接貼り付け",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
                     )
+
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = jsonText,
                         onValueChange = { jsonText = it },
-                        placeholder = { Text(text = "[ { \"title\": \"デッキ名\", \"content\": [...] } ]") },
+                        label = { Text(text = "JSON テキスト") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(140.dp),
+                            .height(150.dp),
+                        maxLines = 8,
                     )
                 }
             },
             confirmButton = {
-                if (jsonText.isNotBlank()) {
-                    Button(
-                        onClick = {
+                Button(
+                    onClick = {
+                        if (jsonText.isNotBlank()) {
                             viewModel.importData(jsonText) { result ->
                                 coroutineScope.launch {
                                     result.onSuccess { summary ->
@@ -390,10 +692,11 @@ fun SubjectListScreen(
                                     }
                                 }
                             }
-                        },
-                    ) {
-                        Text(text = "テキストからインポート")
-                    }
+                        }
+                    },
+                    enabled = jsonText.isNotBlank(),
+                ) {
+                    Text(text = "テキストから取り込み")
                 }
             },
             dismissButton = {
@@ -404,23 +707,29 @@ fun SubjectListScreen(
         )
     }
 
-    // Delete confirmation dialog
+    // Delete confirmation dialog (only accessible from Archived view)
     if (subjectToDelete != null) {
         val target = subjectToDelete!!
         AlertDialog(
             onDismissRequest = { subjectToDelete = null },
-            title = { Text(text = "教科の削除") },
+            title = { Text(text = "教科を完全に削除") },
             text = {
-                Text(text = "「${target.name}」および所属するすべてのデッキ・単語カードを削除しますか？この操作は取り消せません。")
+                Text(text = "「${target.name}」および所属するすべてのデッキ・単語カードを完全に削除しますか？\nこの操作は取り消せません。")
             },
             confirmButton = {
                 Button(
                     onClick = {
                         viewModel.deleteSubject(target.id)
                         subjectToDelete = null
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("「${target.name}」を完全に削除しました")
+                        }
                     },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                    ),
                 ) {
-                    Text(text = "削除する")
+                    Text(text = "完全に削除する")
                 }
             },
             dismissButton = {

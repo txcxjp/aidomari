@@ -360,6 +360,27 @@ class DeckViewModelTest {
         assertEquals(true, deckModel.parts[0].isCompleted)
     }
 
+    @Test
+    fun loadSubjectInfo_andUnarchiveSubject_updatesState() = runTest {
+        val subject = Subject(id = "sub-1", name = "Test Subject", isArchived = true)
+        fakeRepository.subjectsList.add(subject)
+
+        viewModel.loadSubjectInfo()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.isSubjectArchived.value)
+
+        var unarchivedCallbackInvoked = false
+        viewModel.unarchiveSubject {
+            unarchivedCallbackInvoked = true
+        }
+        advanceUntilIdle()
+
+        assertTrue(unarchivedCallbackInvoked)
+        assertEquals(false, viewModel.isSubjectArchived.value)
+        assertEquals(false, fakeRepository.subjectsList[0].isArchived)
+    }
+
     private class FakeDeckRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()
@@ -372,8 +393,10 @@ class DeckViewModelTest {
         }
 
         override fun getAllSubjects(): Flow<List<Subject>> = MutableStateFlow(subjectsList)
-        override suspend fun getSubjectById(id: String): Subject? = null
+        override suspend fun getSubjectById(id: String): Subject? = subjectsList.find { it.id == id }
         override suspend fun saveSubject(subject: Subject) {
+            subjectsList.removeIf { it.id == subject.id }
+            subjectsList.add(subject)
         }
         override suspend fun deleteSubject(id: String) {
         }

@@ -5,24 +5,32 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -32,10 +40,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.domain.model.Card
@@ -49,6 +59,7 @@ import com.aidomari.app.ui.deck.components.EditDeckDialog
 import com.aidomari.app.ui.deck.components.RandomQuestionsCard
 import com.aidomari.app.ui.deck.components.RandomQuestionsDialog
 import com.aidomari.app.ui.study.components.KeywordBottomSheet
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +79,9 @@ fun DeckListScreen(
     val isSearching by viewModel.isSearching.collectAsState()
     val allSubjectCards by viewModel.allSubjectCards.collectAsState()
     val randomQuestionCount by viewModel.randomQuestionCount.collectAsState()
+    val isSubjectArchived by viewModel.isSubjectArchived.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     var isSearchActive by remember { mutableStateOf(false) }
     var selectedSearchCard by remember { mutableStateOf<Card?>(null) }
@@ -83,6 +97,7 @@ fun DeckListScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (isSearchActive) {
                 TopAppBar(
@@ -147,7 +162,7 @@ fun DeckListScreen(
             }
         },
         floatingActionButton = {
-            if (!isSearchActive) {
+            if (!isSearchActive && !isSubjectArchived) {
                 FloatingActionButton(onClick = { showAddDialog = true }) {
                     Icon(imageVector = Icons.Default.Add, contentDescription = "Add Deck")
                 }
@@ -198,7 +213,55 @@ fun DeckListScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    if (bookmarkModel != null && bookmarkModel!!.totalCount > 0) {
+                    if (isSubjectArchived) {
+                        item(key = "archived_subject_banner") {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("ArchivedSubjectBanner"),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                ),
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "アーカイブされた教科",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "この教科はアーカイブされています。演習は行えませんが、単語カードの閲覧・管理が可能です。",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Button(
+                                        onClick = {
+                                            viewModel.unarchiveSubject {
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar("アーカイブを解除しました")
+                                                }
+                                            }
+                                        },
+                                    ) {
+                                        Text("元に戻す")
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (!isSubjectArchived && bookmarkModel != null && bookmarkModel!!.totalCount > 0) {
                         item(key = "bookmark_study_section") {
                             BookmarkDeckCard(
                                 model = bookmarkModel!!,
@@ -207,7 +270,7 @@ fun DeckListScreen(
                         }
                     }
 
-                    if (allSubjectCards.isNotEmpty()) {
+                    if (!isSubjectArchived && allSubjectCards.isNotEmpty()) {
                         item(key = "random_study_section") {
                             RandomQuestionsCard(
                                 totalCards = allSubjectCards.size,
@@ -220,7 +283,15 @@ fun DeckListScreen(
                     items(decksWithParts, key = { it.deck.id }) { item ->
                         DeckItemCard(
                             item = item,
-                            onPartClick = onPartClick,
+                            onPartClick = { deckId, partIndex ->
+                                if (isSubjectArchived) {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("アーカイブされた教科は演習できません。演習を行うには元に戻してください。")
+                                    }
+                                } else {
+                                    onPartClick(deckId, partIndex)
+                                }
+                            },
                             onToggleShuffle = { viewModel.toggleShuffle(item.deck.id) },
                             onToggleAutoSpeak = { viewModel.toggleAutoSpeak(item.deck.id) },
                             onManageCardsClick = { onManageCardsClick(item.deck.id) },
