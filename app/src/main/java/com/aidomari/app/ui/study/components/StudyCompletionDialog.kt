@@ -113,4 +113,3 @@ private fun StudyCompletionDialogPreview() {
         )
     }
 }
-

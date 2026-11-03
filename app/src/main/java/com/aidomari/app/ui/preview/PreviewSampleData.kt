@@ -14,13 +14,7 @@ object PreviewSampleData {
     val sampleCards = SampleData.sampleCards
     val sampleCard = sampleCards.first()
 
-    val sampleDeckPart = DeckPart(
-        deckId = sampleDeck.id,
-        partIndex = 0,
-        startIndex = 0,
-        endIndex = 5,
-        count = 5,
-    )
+    val sampleDeckPart = sampleDeck.calculateParts(5).first()
 
     val sampleDeckPartWithSession = DeckPartWithSession(
         part = sampleDeckPart,
@@ -38,8 +32,8 @@ object PreviewSampleData {
         parts = listOf(
             DeckPartWithSession(
                 part = DeckPart(
-                    deckId = "bookmark-deck",
                     partIndex = 0,
+                    partNumber = 1,
                     startIndex = 0,
                     endIndex = 1,
                     count = 1,

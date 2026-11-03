@@ -440,12 +440,15 @@ fun KeywordSheetContent(
 
 @ThemePreviews
 @Composable
-private fun CardDetailContentPreview() {
+private fun KeywordSheetContentPreview() {
     AidomariTheme {
         androidx.compose.material3.Surface {
-            CardDetailContent(
+            KeywordSheetContent(
                 currentCard = PreviewSampleData.sampleCard,
+                cardStackSize = 1,
                 allSubjectCards = PreviewSampleData.sampleCards,
+                onBackClick = {},
+                onCloseClick = {},
                 onKeywordClick = {},
                 onSpeak = {},
                 onToggleBookmark = {},
@@ -455,4 +458,3 @@ private fun CardDetailContentPreview() {
         }
     }
 }
-
