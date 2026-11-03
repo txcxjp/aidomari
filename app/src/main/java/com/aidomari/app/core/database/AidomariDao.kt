@@ -2,11 +2,10 @@ package com.aidomari.app.core.database
 
 import androidx.room.Dao
 import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.Upsert
 import com.aidomari.app.core.database.entity.CardEntity
 import com.aidomari.app.core.database.entity.DeckEntity
 import com.aidomari.app.core.database.entity.DeckWithCards
@@ -29,10 +28,10 @@ interface AidomariDao {
     @Query("SELECT * FROM subjects WHERE id = :subjectId")
     fun getSubjectWithDecks(subjectId: String): Flow<SubjectWithDecks?>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertSubject(subject: SubjectEntity): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertSubjects(subjects: List<SubjectEntity>)
 
     @Update
@@ -59,10 +58,10 @@ interface AidomariDao {
     @Query("SELECT * FROM decks WHERE id = :deckId")
     suspend fun getDeckWithCardsSync(deckId: String): DeckWithCards?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertDeck(deck: DeckEntity): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertDecks(decks: List<DeckEntity>)
 
     @Update
@@ -81,10 +80,10 @@ interface AidomariDao {
     @Query("SELECT * FROM cards WHERE id = :id")
     suspend fun getCardById(id: String): CardEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertCard(card: CardEntity): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertCards(cards: List<CardEntity>)
 
     @Update
@@ -147,7 +146,7 @@ interface AidomariDao {
     @Query("SELECT * FROM study_sessions WHERE deck_id = :deckId")
     fun getSessionFlow(deckId: String): Flow<StudySessionEntity?>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertOrUpdateSession(session: StudySessionEntity)
 
     @Query("DELETE FROM study_sessions WHERE deck_id = :deckId")

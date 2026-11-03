@@ -74,6 +74,56 @@ class AidomariDaoTest {
     }
 
     @Test
+    fun updateSubject_doesNotCascadeDeleteDecksAndCards() = runBlocking {
+        val subject = SubjectEntity(id = "sub-1", name = "英語")
+        dao.insertSubject(subject)
+
+        val deck = DeckEntity(id = "deck-1", subjectId = "sub-1", name = "単語帳A", splitSize = 50)
+        dao.insertDeck(deck)
+
+        val card1 = CardEntity(id = "card-1", deckId = "deck-1", front = "apple", back = "りんご")
+        val card2 = CardEntity(id = "card-2", deckId = "deck-1", front = "book", back = "本")
+        dao.insertCards(listOf(card1, card2))
+
+        // Update subject (e.g. archiving subject) using insertSubject (@Upsert)
+        dao.insertSubject(subject.copy(isArchived = true))
+
+        val updatedSubject = dao.getSubjectById("sub-1")
+        assertNotNull(updatedSubject)
+        assertTrue(updatedSubject?.isArchived == true)
+
+        // Verify decks and cards are NOT deleted
+        val remainingDecks = dao.getDecksBySubject("sub-1").first()
+        val remainingCards = dao.getCardsByDeckSync("deck-1")
+        assertEquals(1, remainingDecks.size)
+        assertEquals(2, remainingCards.size)
+    }
+
+    @Test
+    fun updateDeck_doesNotCascadeDeleteCards() = runBlocking {
+        val subject = SubjectEntity(id = "sub-1", name = "英語")
+        dao.insertSubject(subject)
+
+        val deck = DeckEntity(id = "deck-1", subjectId = "sub-1", name = "単語帳A", splitSize = 50)
+        dao.insertDeck(deck)
+
+        val card1 = CardEntity(id = "card-1", deckId = "deck-1", front = "apple", back = "りんご")
+        val card2 = CardEntity(id = "card-2", deckId = "deck-1", front = "book", back = "本")
+        dao.insertCards(listOf(card1, card2))
+
+        // Update deck name using insertDeck (@Upsert)
+        dao.insertDeck(deck.copy(name = "単語帳A（改）"))
+
+        val updatedDeck = dao.getDeckById("deck-1")
+        assertNotNull(updatedDeck)
+        assertEquals("単語帳A（改）", updatedDeck?.name)
+
+        // Verify cards are NOT deleted
+        val remainingCards = dao.getCardsByDeckSync("deck-1")
+        assertEquals(2, remainingCards.size)
+    }
+
+    @Test
     fun getDecksBySubject_excludesBookmarkDecks() = runBlocking {
         val subject = SubjectEntity(id = "sub-1", name = "英語")
         dao.insertSubject(subject)
