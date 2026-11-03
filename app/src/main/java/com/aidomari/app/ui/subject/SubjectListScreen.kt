@@ -129,7 +129,7 @@ fun SubjectListScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Aidomari（相泊）",
+                            text = "相泊",
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
