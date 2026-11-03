@@ -127,12 +127,28 @@ class CardListViewModel(
         }
     }
 
+    fun updateCardNotes(cardId: String, userQuestion: String, userSupplement: String) {
+        val targetCard = _uiState.value.allSubjectCards.find { it.id == cardId }
+            ?: _uiState.value.cards.find { it.id == cardId }
+            ?: return
+        val updatedCard = targetCard.copy(
+            userQuestion = userQuestion.trim(),
+            userSupplement = userSupplement.trim(),
+        )
+        updateCardInState(updatedCard)
+        viewModelScope.launch {
+            repository.saveCard(updatedCard)
+        }
+    }
+
     fun deleteCard(cardId: String) {
         val updatedCards = _uiState.value.cards.filterNot { it.id == cardId }
+        val updatedAllSubject = _uiState.value.allSubjectCards.filterNot { it.id == cardId }
         _uiState.update { state ->
             state.copy(
                 cards = updatedCards,
                 filteredCards = filterCards(updatedCards, state.searchQuery),
+                allSubjectCards = updatedAllSubject,
             )
         }
         viewModelScope.launch {

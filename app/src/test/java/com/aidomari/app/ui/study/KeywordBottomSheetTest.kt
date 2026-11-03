@@ -103,7 +103,7 @@ class KeywordBottomSheetTest {
     }
 
     @Test
-    fun keywordSheetContent_editNotesClick_hiddenWhenCallbackNull() {
+    fun keywordSheetContent_moreOptions_hiddenWhenCallbacksNull() {
         composeTestRule.setContent {
             KeywordSheetContent(
                 currentCard = cardApple,
@@ -114,14 +114,15 @@ class KeywordBottomSheetTest {
                 onKeywordClick = {},
                 onSpeak = {},
                 onEditNotesClick = null,
+                onDeleteClick = null,
             )
         }
 
-        composeTestRule.onNodeWithContentDescription("Edit Notes").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("More Options").assertDoesNotExist()
     }
 
     @Test
-    fun keywordSheetContent_editNotesClick_invokesCallback() {
+    fun keywordSheetContent_editNotesClick_invokesCallbackFromMoreMenu() {
         var editClicked = false
 
         composeTestRule.setContent {
@@ -137,7 +138,8 @@ class KeywordBottomSheetTest {
             )
         }
 
-        composeTestRule.onNodeWithContentDescription("Edit Notes").performClick()
+        composeTestRule.onNodeWithContentDescription("More Options").performClick()
+        composeTestRule.onNodeWithText("メモ・疑問点を編集").performClick()
         assertTrue(editClicked)
     }
 
@@ -252,7 +254,7 @@ class KeywordBottomSheetTest {
     }
 
     @Test
-    fun keywordSheetContent_deleteClick_triggersCallback() {
+    fun keywordSheetContent_deleteClick_triggersCallbackFromMoreMenu() {
         var deleteClicked = false
 
         composeTestRule.setContent {
@@ -268,12 +270,13 @@ class KeywordBottomSheetTest {
             )
         }
 
-        composeTestRule.onNodeWithContentDescription("Delete Card").assertIsDisplayed().performClick()
+        composeTestRule.onNodeWithContentDescription("More Options").performClick()
+        composeTestRule.onNodeWithText("カードを削除").performClick()
         assertTrue(deleteClicked)
     }
 
     @Test
-    fun keywordSheetContent_deleteButtonHidden_whenCallbackNull() {
+    fun keywordSheetContent_deleteOptionHidden_whenDeleteCallbackNull() {
         composeTestRule.setContent {
             KeywordSheetContent(
                 currentCard = cardApple,
@@ -283,10 +286,13 @@ class KeywordBottomSheetTest {
                 onCloseClick = {},
                 onKeywordClick = {},
                 onSpeak = {},
+                onEditNotesClick = {},
                 onDeleteClick = null,
             )
         }
 
-        composeTestRule.onNodeWithContentDescription("Delete Card").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("More Options").performClick()
+        composeTestRule.onNodeWithText("カードを削除").assertDoesNotExist()
+        composeTestRule.onNodeWithText("メモ・疑問点を編集").assertIsDisplayed()
     }
 }
