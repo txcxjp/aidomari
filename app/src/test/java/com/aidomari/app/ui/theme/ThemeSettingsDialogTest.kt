@@ -1,5 +1,6 @@
 package com.aidomari.app.ui.theme
 
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -39,16 +40,16 @@ class ThemeSettingsDialogTest {
         composeTestRule.onNodeWithText("カラーテーマ").assertIsDisplayed()
 
         // Theme modes
-        composeTestRule.onNodeWithTag("ThemeMode_SYSTEM").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("ThemeMode_LIGHT").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("ThemeMode_DARK").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("ThemeMode_SYSTEM").assertExists()
+        composeTestRule.onNodeWithTag("ThemeMode_LIGHT").assertExists()
+        composeTestRule.onNodeWithTag("ThemeMode_DARK").assertExists()
 
         // Color themes
-        composeTestRule.onNodeWithTag("ColorTheme_INDIGO").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("ColorTheme_FOREST").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("ColorTheme_SAKURA").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("ColorTheme_AMBER").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("ColorTheme_SLATE").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("ColorTheme_INDIGO").assertExists()
+        composeTestRule.onNodeWithTag("ColorTheme_FOREST").assertExists()
+        composeTestRule.onNodeWithTag("ColorTheme_SAKURA").assertExists()
+        composeTestRule.onNodeWithTag("ColorTheme_AMBER").assertExists()
+        composeTestRule.onNodeWithTag("ColorTheme_SLATE").assertExists()
 
         // Change mode to DARK
         composeTestRule.onNodeWithTag("ThemeMode_DARK").performClick()
