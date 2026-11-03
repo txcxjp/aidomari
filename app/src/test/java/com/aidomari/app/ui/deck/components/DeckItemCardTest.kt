@@ -79,12 +79,18 @@ class DeckItemCardTest {
         composeTestRule.onNodeWithTag("ManageCardsButton_deck-1").performClick()
         assertTrue(manageCardsClicked)
 
-        // Edit deck button
-        composeTestRule.onNodeWithContentDescription("Edit Deck").performClick()
+        // Direct Edit and Delete buttons should not be exposed
+        composeTestRule.onNodeWithContentDescription("Edit Deck").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Delete Deck").assertDoesNotExist()
+
+        // Edit deck via 3-dot menu
+        composeTestRule.onNodeWithContentDescription("Deck More Options").performClick()
+        composeTestRule.onNodeWithText("デッキを編集").performClick()
         assertTrue(editDeckClicked)
 
-        // Delete deck button
-        composeTestRule.onNodeWithContentDescription("Delete Deck").performClick()
+        // Delete deck via 3-dot menu
+        composeTestRule.onNodeWithContentDescription("Deck More Options").performClick()
+        composeTestRule.onNodeWithText("デッキを削除").performClick()
         assertTrue(deleteDeckClicked)
 
         // Click part
