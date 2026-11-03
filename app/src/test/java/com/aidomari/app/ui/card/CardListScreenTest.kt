@@ -135,7 +135,7 @@ class CardListScreenTest {
     }
 
     @Test
-    fun deleteCard_viaKeywordBottomSheet_deletesCardSuccessfully() {
+    fun cardRow_doesNotHaveDirectDeleteButton_andTapOpensKeywordBottomSheet() {
         composeTestRule.setContent {
             CardListScreen(
                 viewModel = viewModel,
@@ -150,17 +150,9 @@ class CardListScreenTest {
         composeTestRule.onNodeWithText("Abundant").performClick()
         composeTestRule.waitForIdle()
 
-        // Open More Options in KeywordBottomSheet and click "カードを削除"
-        composeTestRule.onNodeWithContentDescription("More Options").performClick()
-        composeTestRule.onNodeWithText("カードを削除").performClick()
-
-        // Confirm Delete inside KeywordBottomSheet's confirmation dialog
-        composeTestRule.onNodeWithText("削除").performClick()
-        composeTestRule.waitForIdle()
-
-        // Verify card is removed and empty message displayed
-        composeTestRule.onNodeWithText("カードがまだ登録されていません").assertIsDisplayed()
-        assertTrue(fakeRepository.cards.isEmpty())
+        // Verify KeywordBottomSheet is opened with card front and action controls
+        composeTestRule.onNodeWithContentDescription("More Options").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Close").assertIsDisplayed()
     }
 
     @Test

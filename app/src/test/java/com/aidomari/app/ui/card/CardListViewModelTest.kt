@@ -186,6 +186,26 @@ class CardListViewModelTest {
         assertFalse(fakeRepository.cards.any { it.id == "c1" })
     }
 
+    @Test
+    fun updateCardNotes_updatesNotesInStateAndRepository() = runTest {
+        advanceUntilIdle()
+
+        viewModel.updateCardNotes(
+            cardId = "c1",
+            userQuestion = "更新された疑問点",
+            userSupplement = "更新されたメモ",
+        )
+        advanceUntilIdle()
+
+        val updatedCard = viewModel.uiState.value.cards.find { it.id == "c1" }
+        assertEquals("更新された疑問点", updatedCard?.userQuestion)
+        assertEquals("更新されたメモ", updatedCard?.userSupplement)
+
+        val repoCard = fakeRepository.cards.find { it.id == "c1" }
+        assertEquals("更新された疑問点", repoCard?.userQuestion)
+        assertEquals("更新されたメモ", repoCard?.userSupplement)
+    }
+
     private class FakeCardRepository(
         private val deck: Deck,
         initialCards: List<Card> = emptyList(),
