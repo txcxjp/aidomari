@@ -87,21 +87,20 @@ open class TtsManager(
             }
         }
 
+        private fun isJapanese(ch: Char): Boolean =
+            ch in '\u3040'..'\u309F' || ch in '\u30A0'..'\u30FF' || ch in '\u4E00'..'\u9FFF'
+
+        private fun isKorean(ch: Char): Boolean =
+            ch in '\uAC00'..'\uD7AF' || ch in '\u1100'..'\u11FF'
+
+        private fun isLatin(ch: Char): Boolean =
+            ch in 'a'..'z' || ch in 'A'..'Z'
+
         fun detectLanguage(text: String): String {
             if (text.isBlank()) return "auto"
-            val hasJapanese = text.any { ch ->
-                ch in '\u3040'..'\u309F' || // Hiragana
-                ch in '\u30A0'..'\u30FF' || // Katakana
-                ch in '\u4E00'..'\u9FFF'    // CJK Unified Ideographs
-            }
-            if (hasJapanese) return "ja-JP"
-
-            val hasKorean = text.any { ch in '\uAC00'..'\uD7AF' || ch in '\u1100'..'\u11FF' }
-            if (hasKorean) return "ko-KR"
-
-            val hasLatin = text.any { ch in 'a'..'z' || ch in 'A'..'Z' }
-            if (hasLatin) return "en-US"
-
+            if (text.any(::isJapanese)) return "ja-JP"
+            if (text.any(::isKorean)) return "ko-KR"
+            if (text.any(::isLatin)) return "en-US"
             return "auto"
         }
     }
