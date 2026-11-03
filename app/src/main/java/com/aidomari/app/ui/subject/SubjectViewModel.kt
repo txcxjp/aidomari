@@ -24,7 +24,7 @@ class SubjectViewModel(
         .map { list -> list.filterNot { it.isArchived } }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = emptyList(),
         )
 
@@ -32,7 +32,7 @@ class SubjectViewModel(
         .map { list -> list.filter { it.isArchived } }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = emptyList(),
         )
 

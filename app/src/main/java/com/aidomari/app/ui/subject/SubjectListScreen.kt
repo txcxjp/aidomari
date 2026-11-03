@@ -377,6 +377,7 @@ fun SubjectListScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             Button(
                                 onClick = { isArchivedView = true },
+                                modifier = Modifier.testTag("ArchivedEmptyViewButton"),
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Archive,

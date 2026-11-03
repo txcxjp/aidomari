@@ -13,8 +13,6 @@ import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -88,8 +86,8 @@ class SubjectListScreenTest {
         composeTestRule.onNodeWithText("教科をアーカイブ").performClick()
         composeTestRule.waitForIdle()
 
-        // Should see archived section link
-        composeTestRule.onNodeWithTag("ArchivedSubjectsLink").performClick()
+        // Should see archived section link via TopBar button
+        composeTestRule.onNodeWithTag("TopBarArchivedButton").performClick()
         composeTestRule.waitForIdle()
 
         // In archived view
@@ -104,6 +102,36 @@ class SubjectListScreenTest {
 
         // Now archived view should be empty
         composeTestRule.onNodeWithText("アーカイブされた教科はありません").assertIsDisplayed()
+    }
+
+    @Test
+    fun archiveSubject_withOtherActiveSubjects_showsArchivedSubjectsLinkAtBottom() {
+        val subject1 = Subject(id = "sub-1", name = "物理基礎")
+        val subject2 = Subject(id = "sub-2", name = "化学基礎")
+        fakeRepository.seedSubjects(listOf(subject1, subject2))
+
+        composeTestRule.setContent {
+            SubjectListScreen(
+                viewModel = viewModel,
+                onSubjectClick = { _, _ -> },
+            )
+        }
+
+        // Archive sub-1
+        composeTestRule.onNodeWithTag("SubjectMoreOptionsButton_sub-1").performClick()
+        composeTestRule.onNodeWithText("教科をアーカイブ").performClick()
+        composeTestRule.waitForIdle()
+
+        // sub-2 is still active
+        composeTestRule.onNodeWithText("化学基礎").assertIsDisplayed()
+
+        // Archived link is shown at bottom
+        composeTestRule.onNodeWithTag("ArchivedSubjectsLink").performClick()
+        composeTestRule.waitForIdle()
+
+        // In archived view
+        composeTestRule.onNodeWithText("アーカイブ済み教科").assertIsDisplayed()
+        composeTestRule.onNodeWithText("物理基礎").assertIsDisplayed()
     }
 }
 
