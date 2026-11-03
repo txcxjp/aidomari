@@ -309,11 +309,9 @@ class WordsDataImporter(
         }
     }
 
-    private fun cleanDeckTitle(title: String): String {
-        return title
-            .replace(Regex("""\s*[\(\[（]\s*(?:Part\s*)?\d+\s*[\)\]）]\s*$""", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("""\s+Part\s*\d+\s*$""", RegexOption.IGNORE_CASE), "")
-            .trim()
-            .ifBlank { title }
-    }
+    private fun cleanDeckTitle(title: String): String = title
+        .replace(Regex("""\s*[\(\[（]\s*(?:Part\s*)?\d+\s*[\)\]）]\s*$""", RegexOption.IGNORE_CASE), "")
+        .replace(Regex("""\s+Part\s*\d+\s*$""", RegexOption.IGNORE_CASE), "")
+        .trim()
+        .ifBlank { title }
 }
