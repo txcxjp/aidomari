@@ -296,7 +296,7 @@ fun StudyScreen(
                         showTtsSettingsDialog = false
                     },
                     onTestSpeak = {
-                        onSpeakText(uiState.currentCard?.front ?: "Aidomari")
+                        onSpeakText(uiState.currentCard?.front ?: "相泊")
                     },
                 )
             }
