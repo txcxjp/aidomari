@@ -42,6 +42,13 @@ class KeywordBottomSheetTest {
         back = "Seed-bearing structure in flowering plants",
     )
 
+    private val cardCider = Card(
+        id = "c3",
+        deckId = "deck-1",
+        front = "Cider",
+        back = "Juice made from crushed apples",
+    )
+
     @Test
     fun keywordBottomSheet_displaysInitialCardContent_withoutPrematureDismissal() {
         var dismissed = false
@@ -142,7 +149,7 @@ class KeywordBottomSheetTest {
             KeywordSheetContent(
                 currentCard = cardApple,
                 cardStackSize = 1,
-                allSubjectCards = listOf(cardApple, cardFruit),
+                allSubjectCards = listOf(cardApple, cardFruit, cardCider),
                 onBackClick = {},
                 onCloseClick = {},
                 onKeywordClick = { card -> clickedCard = card },
@@ -153,17 +160,17 @@ class KeywordBottomSheetTest {
         // Verify redundant "関連キーワード" label is not rendered
         composeTestRule.onNodeWithText("関連キーワード").assertDoesNotExist()
 
-        // Expand "関連項目 (1)" and tap "fruit" to navigate
+        // Expand "関連項目 (1)" (which references Apple from Cider) and tap "Cider" to navigate
         composeTestRule.onNodeWithText("関連項目 (1)")
             .performScrollTo()
             .performClick()
 
-        composeTestRule.onNode(hasText("fruit") and hasClickAction())
+        composeTestRule.onNode(hasText("Cider") and hasClickAction())
             .performScrollTo()
             .performClick()
 
-        assertEquals("c2", clickedCard?.id)
-        assertEquals("fruit", clickedCard?.front)
+        assertEquals("c3", clickedCard?.id)
+        assertEquals("Cider", clickedCard?.front)
     }
 
     @Test

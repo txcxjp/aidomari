@@ -69,4 +69,3 @@ fun KeywordText(
         modifier = modifier.fillMaxWidth(),
     )
 }
-
