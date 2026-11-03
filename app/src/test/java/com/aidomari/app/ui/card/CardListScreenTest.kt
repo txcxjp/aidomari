@@ -147,7 +147,8 @@ class CardListScreenTest {
         composeTestRule.onNodeWithTag("DeleteCardButton_card-1").assertDoesNotExist()
 
         // Tap card row to open KeywordBottomSheet
-        composeTestRule.onNodeWithText("abundant").performClick()
+        composeTestRule.onNodeWithText("Abundant").performClick()
+        composeTestRule.waitForIdle()
 
         // Open More Options in KeywordBottomSheet and click "カードを削除"
         composeTestRule.onNodeWithContentDescription("More Options").performClick()
@@ -155,6 +156,7 @@ class CardListScreenTest {
 
         // Confirm Delete inside KeywordBottomSheet's confirmation dialog
         composeTestRule.onNodeWithText("削除").performClick()
+        composeTestRule.waitForIdle()
 
         // Verify card is removed and empty message displayed
         composeTestRule.onNodeWithText("カードがまだ登録されていません").assertIsDisplayed()
