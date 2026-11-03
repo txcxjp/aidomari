@@ -150,7 +150,14 @@ class KeywordBottomSheetTest {
             )
         }
 
-        // Scroll to and tap recursive keyword chip "fruit" in Apple's meaning
+        // Verify redundant "関連キーワード" label is not rendered
+        composeTestRule.onNodeWithText("関連キーワード").assertDoesNotExist()
+
+        // Expand "関連項目 (1)" and tap "fruit" to navigate
+        composeTestRule.onNodeWithText("関連項目 (1)")
+            .performScrollTo()
+            .performClick()
+
         composeTestRule.onNode(hasText("fruit") and hasClickAction())
             .performScrollTo()
             .performClick()
