@@ -60,7 +60,7 @@ class SampleDataTest {
         assertFalse(subject.isArchived)
 
         // Query decks for subject
-        val decks = dao.getDecksBySubjectSync(subject.id)
+        val decks = dao.getDecksBySubject(subject.id).first()
         assertEquals(1, decks.size)
 
         val deck = decks.first()
