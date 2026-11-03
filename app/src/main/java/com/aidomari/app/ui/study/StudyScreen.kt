@@ -257,22 +257,6 @@ fun StudyScreen(
                 }
             }
 
-            if (bottomSheetCard != null) {
-                KeywordBottomSheet(
-                    initialCard = bottomSheetCard,
-                    allSubjectCards = uiState.subjectCards,
-                    onDismissRequest = { bottomSheetCard = null },
-                    onSpeak = onSpeakText,
-                    onToggleBookmark = { viewModel.toggleCardBookmark(it) },
-                    onSaveNotes = { cardId, question, supplement ->
-                        viewModel.updateCardNotes(cardId, question, supplement)
-                    },
-                    onDeleteCard = { cardId ->
-                        viewModel.deleteCard(cardId)
-                    },
-                )
-            }
-
             if (showEditNotesDialog && uiState.currentCard != null) {
                 val currentCard = uiState.currentCard!!
                 CardEditNotesDialog(
@@ -307,13 +291,27 @@ fun StudyScreen(
                     searchResults = uiState.searchResults,
                     onQueryChange = { viewModel.searchCards(it) },
                     onCardClick = { card ->
-                        viewModel.clearSearch()
-                        showSearchDialog = false
                         bottomSheetCard = card
                     },
                     onDismissRequest = {
                         viewModel.clearSearch()
                         showSearchDialog = false
+                    },
+                )
+            }
+
+            if (bottomSheetCard != null) {
+                KeywordBottomSheet(
+                    initialCard = bottomSheetCard,
+                    allSubjectCards = uiState.subjectCards,
+                    onDismissRequest = { bottomSheetCard = null },
+                    onSpeak = onSpeakText,
+                    onToggleBookmark = { viewModel.toggleCardBookmark(it) },
+                    onSaveNotes = { cardId, question, supplement ->
+                        viewModel.updateCardNotes(cardId, question, supplement)
+                    },
+                    onDeleteCard = { cardId ->
+                        viewModel.deleteCard(cardId)
                     },
                 )
             }

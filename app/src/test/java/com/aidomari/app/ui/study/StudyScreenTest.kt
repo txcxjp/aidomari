@@ -192,6 +192,60 @@ class StudyScreenTest {
     }
 
     @Test
+    fun studyScreen_searchSelectCard_showsDetails_andReturningPreservesSearch() {
+        fakeRepository.decks.add(deckWithAutoContinue)
+        fakeRepository.cards.addAll(cards)
+
+        composeTestRule.setContent {
+            StudyScreen(
+                deckId = "deck-auto",
+                partIndex = 0,
+                viewModel = viewModel,
+                onNavigateBack = {},
+                onNavigateToPart = {},
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // 1. Open search dialog
+        composeTestRule.onNodeWithContentDescription("Search Words").performClick()
+        composeTestRule.onNodeWithText("単語検索").assertIsDisplayed()
+
+        // 2. Perform search
+        composeTestRule.runOnUiThread {
+            viewModel.searchCards("Card")
+        }
+        composeTestRule.waitForIdle()
+
+        // 3. Search results are displayed
+        composeTestRule.onNodeWithText("2件の単語が見つかりました").assertIsDisplayed()
+
+        // 4. Click search result "Card 2"
+        composeTestRule.onNodeWithText("Card 2").performClick()
+        composeTestRule.waitForIdle()
+
+        // 5. Keyword details bottom sheet is displayed (contains Close button)
+        composeTestRule.onNodeWithContentDescription("Close").assertIsDisplayed()
+
+        // 6. Dismiss the detail sheet by clicking Close
+        composeTestRule.onNodeWithContentDescription("Close").performClick()
+        composeTestRule.waitForIdle()
+
+        // 7. Verify search dialog is still displayed with results preserved!
+        composeTestRule.onNodeWithText("単語検索").assertIsDisplayed()
+        composeTestRule.onNodeWithText("2件の単語が見つかりました").assertIsDisplayed()
+
+        // 8. Dismiss search dialog by clicking Close Search
+        composeTestRule.onNodeWithContentDescription("Close Search").performClick()
+        composeTestRule.waitForIdle()
+
+        // 9. Search dialog is closed and search state is cleared
+        composeTestRule.onNodeWithText("単語検索").assertDoesNotExist()
+        assertEquals("", viewModel.uiState.value.searchQuery)
+    }
+
+    @Test
     fun studyScreen_deleteCardAction_showsConfirmationDialog_and_deletes() {
         val manualDeck = Deck(
             id = "deck-test-del",
