@@ -82,30 +82,6 @@ fun StudyTopBar(
                 }
             }
 
-            if (onOpenTtsSettings != null) {
-                IconButton(onClick = onOpenTtsSettings) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                        contentDescription = if (autoSpeakEnabled) "TTS Auto-Speak ON" else "TTS Auto-Speak OFF",
-                        tint = if (autoSpeakEnabled) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        },
-                    )
-                }
-            }
-
-            if (onEditNotes != null) {
-                IconButton(onClick = onEditNotes) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit Card Notes",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
             IconButton(onClick = onToggleBookmark) {
                 Icon(
                     imageVector = if (isBookmarked) {
@@ -122,26 +98,70 @@ fun StudyTopBar(
                 )
             }
 
-            IconButton(onClick = onRestart) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Restart Part",
-                )
-            }
-
-            if (onDeleteCard != null) {
-                var showMenu by remember { mutableStateOf(false) }
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More Options",
+            var showMenu by remember { mutableStateOf(false) }
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More Options",
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                ) {
+                    if (onOpenTtsSettings != null) {
+                        DropdownMenuItem(
+                            text = { Text("音声読み上げ設定") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = null,
+                                    tint = if (autoSpeakEnabled) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                onOpenTtsSettings()
+                            },
                         )
                     }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                    ) {
+
+                    if (onEditNotes != null) {
+                        DropdownMenuItem(
+                            text = { Text("メモ・疑問点を編集") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                onEditNotes()
+                            },
+                        )
+                    }
+
+                    DropdownMenuItem(
+                        text = { Text("最初からやり直す") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onRestart()
+                        },
+                    )
+
+                    if (onDeleteCard != null) {
                         DropdownMenuItem(
                             text = {
                                 Text(
