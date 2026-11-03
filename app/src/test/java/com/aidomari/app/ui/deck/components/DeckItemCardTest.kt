@@ -92,4 +92,45 @@ class DeckItemCardTest {
         assertEquals("deck-1", clickedDeckId)
         assertEquals(0, clickedPartIndex)
     }
+
+    @Test
+    fun deckItemCard_displaysReverseModeAndAutoSpeakBadges_correctly() {
+        val deck = Deck(
+            id = "deck-rev",
+            subjectId = "sub-1",
+            name = "テストブック (Part 1)",
+            splitSize = 50,
+            autoContinue = false,
+            shuffleMode = true,
+            reverseMode = true,
+            autoSpeak = true,
+            speechRate = 1.0f,
+        )
+        val parts = deck.calculateParts(totalCards = 0)
+        val partWithSession = DeckPartWithSession(part = parts.first(), session = null)
+        val item = DeckWithPartsUiModel(
+            deck = deck,
+            parts = listOf(partWithSession),
+            totalCardCount = 0,
+        )
+
+        composeTestRule.setContent {
+            DeckItemCard(
+                item = item,
+                onPartClick = { _, _ -> },
+                onToggleShuffle = { },
+                onToggleAutoSpeak = { },
+                onManageCardsClick = { },
+                onEditDeck = { },
+                onDeleteDeck = { },
+            )
+        }
+
+        composeTestRule.onNodeWithText("テストブック (Part 1)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("0 単語").assertIsDisplayed()
+        composeTestRule.onNodeWithText("シャッフル").assertIsDisplayed()
+        composeTestRule.onNodeWithText("裏面スタート").assertIsDisplayed()
+        composeTestRule.onNodeWithText("自動音声 (1.0x)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Part 1 (0枚)").assertIsDisplayed()
+    }
 }
