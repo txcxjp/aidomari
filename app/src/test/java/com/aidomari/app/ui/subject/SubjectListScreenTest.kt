@@ -204,6 +204,24 @@ class SubjectListScreenTest {
         composeTestRule.onNodeWithTag("ImportTargetSubjectSelector").assertIsDisplayed()
         composeTestRule.onNodeWithText("＋ 新規教科として作成").assertIsDisplayed()
     }
+
+    @Test
+    fun lockScreenSettingsButton_opensLockScreenSettingsDialog() {
+        composeTestRule.setContent {
+            SubjectListScreen(
+                viewModel = viewModel,
+                onSubjectClick = { _, _ -> },
+            )
+        }
+
+        composeTestRule.onNodeWithTag("LockScreenSettingsButton").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("LockScreenSettingsButton").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("ロック画面学習の設定").assertIsDisplayed()
+        composeTestRule.onNodeWithText("ロック画面学習を有効にする").assertIsDisplayed()
+        composeTestRule.onNodeWithText("出題対象:").assertIsDisplayed()
+    }
 }
 
 private class FakeSubjectScreenRepository : WordsRepository {
