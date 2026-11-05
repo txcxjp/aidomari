@@ -135,7 +135,9 @@ class LockScreenStudyViewModelTest {
 
         override fun getAllSubjects(): Flow<List<Subject>> = MutableStateFlow(subjects)
         override suspend fun getSubjectById(id: String): Subject? = subjects.find { it.id == id }
-        override suspend fun saveSubject(subject: Subject) { subjects.add(subject) }
+        override suspend fun saveSubject(subject: Subject) {
+            subjects.add(subject)
+        }
         override suspend fun deleteSubject(id: String) {}
 
         override fun getDecksBySubject(subjectId: String): Flow<List<Deck>> = MutableStateFlow(decks)
@@ -157,12 +159,10 @@ class LockScreenStudyViewModelTest {
         override suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card? = null
         override suspend fun getAllCardsInSubject(subjectId: String): List<Card> = cards
 
-        override suspend fun getRandomCard(bookmarkOnly: Boolean): Card? {
-            return if (bookmarkOnly) {
-                cards.find { it.isBookmarked }
-            } else {
-                cards.firstOrNull()
-            }
+        override suspend fun getRandomCard(bookmarkOnly: Boolean): Card? = if (bookmarkOnly) {
+            cards.find { it.isBookmarked }
+        } else {
+            cards.firstOrNull()
         }
 
         override suspend fun getSession(deckId: String) = null
