@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Unarchive
@@ -68,7 +69,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aidomari.app.core.lockscreen.LockScreenPreferences
 import com.aidomari.app.domain.model.Subject
+import com.aidomari.app.ui.lockscreen.LockScreenSettingsDialog
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.theme.AidomariTheme
 import com.aidomari.app.ui.theme.ThemePreferences
@@ -83,6 +86,7 @@ fun SubjectListScreen(
     onSubjectClick: (subjectId: String, subjectName: String) -> Unit,
     modifier: Modifier = Modifier,
     themePreferences: ThemePreferences? = null,
+    lockScreenPreferences: LockScreenPreferences? = null,
 ) {
     val context = LocalContext.current
     val subjects by viewModel.subjects.collectAsState()
@@ -94,6 +98,7 @@ fun SubjectListScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showLockScreenDialog by remember { mutableStateOf(false) }
     var subjectToEdit by remember { mutableStateOf<Subject?>(null) }
     var subjectToDelete by remember { mutableStateOf<Subject?>(null) }
     var importTargetSubjectId by remember { mutableStateOf<String?>(null) }
@@ -163,6 +168,7 @@ fun SubjectListScreen(
         onImportClick = { showImportDialog = true },
         onExportClick = { exportFileLauncher.launch("aidomari_backup.json") },
         onThemeClick = { showThemeDialog = true },
+        onLockScreenClick = { showLockScreenDialog = true },
         onArchiveSubject = { subject ->
             viewModel.archiveSubject(subject.id)
             coroutineScope.launch {
@@ -505,6 +511,24 @@ fun SubjectListScreen(
             onDismissRequest = { showThemeDialog = false },
         )
     }
+
+    // Lock Screen Study Settings Dialog
+    if (showLockScreenDialog) {
+        val actualLockPrefs = lockScreenPreferences
+            ?: remember {
+                (context.applicationContext as? com.aidomari.app.AidomariApp)?.lockScreenPreferences
+                    ?: LockScreenPreferences(context)
+            }
+        val currentLockConfig by actualLockPrefs.config.collectAsState()
+        LockScreenSettingsDialog(
+            config = currentLockConfig,
+            onConfigChanged = {
+                actualLockPrefs.setEnabled(it.isEnabled)
+                actualLockPrefs.setTarget(it.target)
+            },
+            onDismissRequest = { showLockScreenDialog = false },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -527,6 +551,7 @@ fun SubjectListContent(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onFilePickerClick: (() -> Unit)? = null,
     onEditSubject: (Subject) -> Unit = {},
+    onLockScreenClick: () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -580,6 +605,15 @@ fun SubjectListContent(
                             TextButton(onClick = onExportClick) {
                                 Text(text = "エクスポート")
                             }
+                        }
+                        IconButton(
+                            onClick = onLockScreenClick,
+                            modifier = Modifier.testTag("LockScreenSettingsButton"),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "ロック画面学習設定",
+                            )
                         }
                         IconButton(
                             onClick = onThemeClick,

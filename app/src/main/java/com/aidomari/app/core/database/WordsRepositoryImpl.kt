@@ -123,6 +123,15 @@ class WordsRepositoryImpl(
     override suspend fun getAllCardsInSubject(subjectId: String): List<Card> =
         dao.getAllCardsInSubject(subjectId).map { it.toDomain() }
 
+    override suspend fun getRandomCard(bookmarkOnly: Boolean): Card? {
+        val entity = if (bookmarkOnly) {
+            dao.getRandomBookmarkedCard()
+        } else {
+            dao.getRandomCard()
+        }
+        return entity?.toDomain()
+    }
+
     override suspend fun getSession(deckId: String): StudySession? =
         dao.getSession(deckId)?.toDomain()
 

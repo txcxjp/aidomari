@@ -62,6 +62,7 @@ interface WordsRepository {
     suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card>
     suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card?
     suspend fun getAllCardsInSubject(subjectId: String): List<Card>
+    suspend fun getRandomCard(bookmarkOnly: Boolean = false): Card? = null
 
     // Session (続きから再開)
     suspend fun getSession(deckId: String): StudySession?
