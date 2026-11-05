@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.aidomari.app.core.input.VolumeKeyHandler
+import com.aidomari.app.core.lockscreen.LockScreenStudyService
 import com.aidomari.app.core.tts.TtsManager
 import com.aidomari.app.ui.navigation.AidomariNavHost
 import com.aidomari.app.ui.theme.AidomariTheme
@@ -22,6 +23,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val app = application as AidomariApp
+        if (app.lockScreenPreferences.config.value.isEnabled) {
+            LockScreenStudyService.start(this)
+        }
         ttsManager = TtsManager(this)
         val themePreferences = app.themePreferences
 
