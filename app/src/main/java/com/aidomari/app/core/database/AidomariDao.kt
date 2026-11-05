@@ -139,10 +139,26 @@ interface AidomariDao {
     )
     suspend fun getAllCardsInSubject(subjectId: String): List<CardEntity>
 
-    @Query("SELECT * FROM cards ORDER BY RANDOM() LIMIT 1")
+    @Query(
+        """
+        SELECT cards.* FROM cards
+        INNER JOIN decks ON cards.deck_id = decks.id
+        INNER JOIN subjects ON decks.subject_id = subjects.id
+        WHERE subjects.is_archived = 0
+        ORDER BY RANDOM() LIMIT 1
+        """,
+    )
     suspend fun getRandomCard(): CardEntity?
 
-    @Query("SELECT * FROM cards WHERE is_bookmarked = 1 ORDER BY RANDOM() LIMIT 1")
+    @Query(
+        """
+        SELECT cards.* FROM cards
+        INNER JOIN decks ON cards.deck_id = decks.id
+        INNER JOIN subjects ON decks.subject_id = subjects.id
+        WHERE subjects.is_archived = 0 AND cards.is_bookmarked = 1
+        ORDER BY RANDOM() LIMIT 1
+        """,
+    )
     suspend fun getRandomBookmarkedCard(): CardEntity?
 
     // --- StudySession Operations (続きから再開・進捗永続化) ---
