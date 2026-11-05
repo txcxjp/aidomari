@@ -17,6 +17,8 @@ data class LockScreenUiState(
     val isLoading: Boolean = true,
     val card: Card? = null,
     val isFlipped: Boolean = false,
+    val isReverse: Boolean = false,
+    val speechRate: Float = 1.0f,
     val ttsLanguage: String = "auto",
 )
 
@@ -39,9 +41,13 @@ class LockScreenStudyViewModel(
             val bookmarkOnly = preferences.config.value.target == LockScreenTarget.BOOKMARK_ONLY
             val card = repository.getRandomCard(bookmarkOnly)
             var lang = "auto"
+            var isReverse = false
+            var speechRate = 1.0f
             if (card != null) {
                 val deck = repository.getDeckById(card.deckId)
                 if (deck != null) {
+                    isReverse = deck.reverseMode
+                    speechRate = deck.speechRate
                     val subject = repository.getSubjectById(deck.subjectId)
                     if (subject != null) {
                         lang = subject.ttsLanguage
@@ -53,6 +59,8 @@ class LockScreenStudyViewModel(
                     isLoading = false,
                     card = card,
                     isFlipped = false,
+                    isReverse = isReverse,
+                    speechRate = speechRate,
                     ttsLanguage = lang,
                 )
             }
@@ -81,6 +89,10 @@ class LockScreenStudyViewModel(
     }
 
     fun speakText(text: String) {
-        ttsManager?.speak(text, _uiState.value.ttsLanguage)
+        ttsManager?.speak(
+            text = text,
+            languageTag = _uiState.value.ttsLanguage,
+            speechRate = _uiState.value.speechRate,
+        )
     }
 }

@@ -73,6 +73,25 @@ class LockScreenStudyViewModelTest {
         assertNotNull(state.card)
         assertEquals("apple", state.card?.front)
         assertEquals("en-US", state.ttsLanguage)
+        assertFalse(state.isReverse)
+        assertEquals(1.0f, state.speechRate, 0.01f)
+    }
+
+    @Test
+    fun loadRandomCard_whenDeckHasReverseMode_setsIsReverseTrue() = runTest {
+        val subject = Subject(id = "sub-1", name = "英語", ttsLanguage = "en-US")
+        val deck = Deck(id = "deck-1", subjectId = "sub-1", name = "単語帳", reverseMode = true, speechRate = 1.25f)
+        val card = Card(id = "card-1", deckId = "deck-1", front = "apple", back = "りんご")
+        fakeRepository.subjects.add(subject)
+        fakeRepository.decks.add(deck)
+        fakeRepository.cards.add(card)
+
+        viewModel = LockScreenStudyViewModel(fakeRepository, preferences)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isReverse)
+        assertEquals(1.25f, state.speechRate, 0.01f)
     }
 
     @Test

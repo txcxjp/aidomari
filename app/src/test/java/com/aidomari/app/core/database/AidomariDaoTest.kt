@@ -263,4 +263,54 @@ class AidomariDaoTest {
         assertEquals(1, retrieved?.partIndex)
         assertEquals(false, retrieved?.isCompleted)
     }
+
+    @Test
+    fun getRandomCard_excludesCardsFromArchivedSubjects() = runBlocking {
+        // Active subject with card
+        val activeSubject = SubjectEntity(id = "sub-active", name = "アクティブ教科", isArchived = false)
+        val activeDeck = DeckEntity(id = "deck-active", subjectId = "sub-active", name = "アクティブデッキ")
+        val activeCard = CardEntity(id = "card-active", deckId = "deck-active", front = "active", back = "有効")
+        dao.insertSubject(activeSubject)
+        dao.insertDeck(activeDeck)
+        dao.insertCard(activeCard)
+
+        // Archived subject with card
+        val archivedSubject = SubjectEntity(id = "sub-archived", name = "アーカイブ教科", isArchived = true)
+        val archivedDeck = DeckEntity(id = "deck-archived", subjectId = "sub-archived", name = "アーカイブデッキ")
+        val archivedCard = CardEntity(id = "card-archived", deckId = "deck-archived", front = "archived", back = "保存")
+        dao.insertSubject(archivedSubject)
+        dao.insertDeck(archivedDeck)
+        dao.insertCard(archivedCard)
+
+        // Verify getRandomCard only returns the card from active subject
+        val result = dao.getRandomCard()
+        assertNotNull(result)
+        assertEquals("card-active", result?.id)
+
+        // Archive activeSubject as well
+        dao.insertSubject(activeSubject.copy(isArchived = true))
+        val emptyResult = dao.getRandomCard()
+        assertTrue(emptyResult == null)
+    }
+
+    @Test
+    fun getRandomBookmarkedCard_excludesCardsFromArchivedSubjects() = runBlocking {
+        val activeSubject = SubjectEntity(id = "sub-bm-active", name = "アクティブ教科", isArchived = false)
+        val activeDeck = DeckEntity(id = "deck-bm-active", subjectId = "sub-bm-active", name = "デッキ")
+        val activeBmCard = CardEntity(id = "card-bm-active", deckId = "deck-bm-active", front = "active", back = "有効", isBookmarked = true)
+        dao.insertSubject(activeSubject)
+        dao.insertDeck(activeDeck)
+        dao.insertCard(activeBmCard)
+
+        val archivedSubject = SubjectEntity(id = "sub-bm-archived", name = "アーカイブ教科", isArchived = true)
+        val archivedDeck = DeckEntity(id = "deck-bm-archived", subjectId = "sub-bm-archived", name = "デッキ")
+        val archivedBmCard = CardEntity(id = "card-bm-archived", deckId = "deck-bm-archived", front = "archived", back = "保存", isBookmarked = true)
+        dao.insertSubject(archivedSubject)
+        dao.insertDeck(archivedDeck)
+        dao.insertCard(archivedBmCard)
+
+        val result = dao.getRandomBookmarkedCard()
+        assertNotNull(result)
+        assertEquals("card-bm-active", result?.id)
+    }
 }
