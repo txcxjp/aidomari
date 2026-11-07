@@ -117,7 +117,7 @@ fun RandomQuestionsDialog(
                             )
                             Text(
                                 text = if (isLearnedAvailable) {
-                                    "学習済み: ${learnedCardsCount} / ${totalCards}問"
+                                    "学習済み: $learnedCardsCount / ${totalCards}問"
                                 } else {
                                     "学習済みの単語がありません"
                                 },
