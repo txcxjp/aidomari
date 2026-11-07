@@ -430,6 +430,45 @@ class DeckViewModelTest {
         assertEquals("8日前", models[1].targetDateDescription)
     }
 
+    @Test
+    fun observeLearnedCardsInSubject_updatesStateFlow() = runTest {
+        val learned = listOf(
+            Card(id = "c1", deckId = "deck-1", front = "A", back = "あ"),
+            Card(id = "c2", deckId = "deck-1", front = "B", back = "い"),
+        )
+        fakeRepository.learnedCardsFlow.value = learned
+        advanceUntilIdle()
+
+        assertEquals(2, viewModel.learnedCardsInSubject.value.size)
+    }
+
+    @Test
+    fun loadDecks_populatesStudiedCardCount() = runTest {
+        val deck = Deck(id = "d1", subjectId = "sub-1", name = "Deck 1", splitSize = 50)
+        fakeRepository.decksList.add(deck)
+        fakeRepository.cardsList.addAll(
+            listOf(
+                Card(id = "c1", deckId = "d1", front = "A", back = "あ"),
+                Card(id = "c2", deckId = "d1", front = "B", back = "い"),
+            ),
+        )
+        fakeRepository.studyLogs.addAll(
+            listOf(
+                CardStudyLog(id = "l1", cardId = "c1", isCorrect = true),
+                CardStudyLog(id = "l2", cardId = "c2", isCorrect = false),
+            ),
+        )
+        fakeRepository.triggerDecksUpdate()
+
+        viewModel.loadDecks()
+        advanceUntilIdle()
+
+        val models = viewModel.decksWithParts.value
+        assertEquals(1, models.size)
+        assertEquals(2, models[0].studiedCardCount)
+        assertEquals(1, models[0].learnedCardCount)
+    }
+
     private class FakeDeckRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()
@@ -504,7 +543,15 @@ class DeckViewModelTest {
             cardsList.removeIf { it.id == cardId }
         }
         val bookmarkedFlow = MutableStateFlow<List<Card>>(emptyList())
+        val learnedCardsFlow = MutableStateFlow<List<Card>>(emptyList())
         val pastDayFlow = MutableStateFlow<Map<PastDayDeckType, PastDayGroup>>(emptyMap())
+
+        override fun getLearnedCardsBySubject(subjectId: String): Flow<List<Card>> = learnedCardsFlow
+        override suspend fun getLearnedCardsBySubjectSync(subjectId: String): List<Card> = learnedCardsFlow.value
+        override fun getLearnedCardsByDeck(deckId: String): Flow<List<Card>> =
+            MutableStateFlow(learnedCardsFlow.value.filter { it.deckId == deckId })
+        override suspend fun getLearnedCardsByDeckSync(deckId: String): List<Card> =
+            learnedCardsFlow.value.filter { it.deckId == deckId }
 
         override fun getPastDayCardsBySubject(subjectId: String): Flow<Map<PastDayDeckType, PastDayGroup>> = pastDayFlow
 

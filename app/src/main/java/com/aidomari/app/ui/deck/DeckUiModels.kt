@@ -21,6 +21,7 @@ data class DeckWithPartsUiModel(
     val parts: List<DeckPartWithSession>,
     val totalCardCount: Int,
     val learnedCardCount: Int = parts.filter { it.isCompleted }.sumOf { it.part.count },
+    val studiedCardCount: Int = 0,
 ) {
     val completedPartsCount: Int
         get() = parts.count { it.isCompleted }

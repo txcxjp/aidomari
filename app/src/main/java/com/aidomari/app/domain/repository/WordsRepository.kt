@@ -84,6 +84,10 @@ interface WordsRepository {
     suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card>
     suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card?
     suspend fun getAllCardsInSubject(subjectId: String): List<Card>
+    fun getLearnedCardsBySubject(subjectId: String): Flow<List<Card>> = emptyFlow()
+    suspend fun getLearnedCardsBySubjectSync(subjectId: String): List<Card> = emptyList()
+    fun getLearnedCardsByDeck(deckId: String): Flow<List<Card>> = emptyFlow()
+    suspend fun getLearnedCardsByDeckSync(deckId: String): List<Card> = emptyList()
     fun getPastDayCardsBySubject(subjectId: String): Flow<Map<PastDayDeckType, PastDayGroup>> = emptyFlow()
     suspend fun getCardsForPastDayDeckSync(subjectId: String, type: PastDayDeckType): List<Card> = emptyList()
     suspend fun getRandomCard(bookmarkOnly: Boolean = false): Card? = null

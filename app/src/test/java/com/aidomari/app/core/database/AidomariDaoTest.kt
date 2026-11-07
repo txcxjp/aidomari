@@ -517,6 +517,13 @@ class AidomariDaoTest {
 
         assertEquals("c2", results[1].card.id)
         assertEquals(2000L, results[1].maxStudiedAt)
+
+        val deckResults = dao.getCardsWithLatestStudyTimeByDeck("deck-p1").first()
+        val deckSyncResults = dao.getCardsWithLatestStudyTimeByDeckSync("deck-p1")
+        assertEquals(2, deckResults.size)
+        assertEquals(2, deckSyncResults.size)
+        assertEquals("c1", deckResults[0].card.id)
+        assertEquals("c2", deckResults[1].card.id)
     }
 
     @Test

@@ -622,10 +622,39 @@ class StudyViewModelTest {
         assertEquals(3, state.totalInPart)
     }
 
+    @Test
+    fun loadDeckAndPart_withLearnedSubjectRandomMode_loadsOnlyLearnedCards() = runTest {
+        val learnedCard = testCards[0]
+        fakeRepository.learnedCards.add(learnedCard)
+
+        viewModel.loadDeckAndPart("random_learned_10_sub-1", 0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("学習済みランダム (10問)", state.deck?.name)
+        assertEquals(1, state.totalInPart)
+        assertEquals("c1", state.currentCard?.id)
+    }
+
+    @Test
+    fun loadDeckAndPart_withLearnedDeckRandomMode_loadsOnlyLearnedCards() = runTest {
+        val learnedCard = testCards[1]
+        fakeRepository.learnedCards.add(learnedCard)
+
+        viewModel.loadDeckAndPart("random_deck_learned_10_deck-1", 0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("テスト単語帳 (学習済みランダム 10問)", state.deck?.name)
+        assertEquals(1, state.totalInPart)
+        assertEquals("c2", state.currentCard?.id)
+    }
+
     private class FakeStudyWordsRepository : WordsRepository {
         val subjects = mutableListOf<Subject>()
         val decks = mutableListOf<Deck>()
         val cards = mutableListOf<Card>()
+        val learnedCards = mutableListOf<Card>()
         val recordedLogs = mutableListOf<Pair<String, Boolean>>()
         var lastSavedSession: StudySession? = null
 
@@ -729,6 +758,12 @@ class StudyViewModelTest {
         override suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card> = emptyList()
         override suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card? = null
         override suspend fun getAllCardsInSubject(subjectId: String): List<Card> = cards
+        override fun getLearnedCardsBySubject(subjectId: String): Flow<List<Card>> = flowOf(learnedCards)
+        override suspend fun getLearnedCardsBySubjectSync(subjectId: String): List<Card> = learnedCards
+        override fun getLearnedCardsByDeck(deckId: String): Flow<List<Card>> =
+            flowOf(learnedCards.filter { it.deckId == deckId })
+        override suspend fun getLearnedCardsByDeckSync(deckId: String): List<Card> =
+            learnedCards.filter { it.deckId == deckId }
 
         override suspend fun getSession(deckId: String): StudySession? = lastSavedSession
         override fun getSessionFlow(deckId: String): Flow<StudySession?> = flowOf(lastSavedSession)

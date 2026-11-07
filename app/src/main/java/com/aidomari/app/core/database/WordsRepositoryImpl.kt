@@ -169,6 +169,22 @@ class WordsRepositoryImpl(
     override suspend fun getAllCardsInSubject(subjectId: String): List<Card> =
         dao.getAllCardsInSubject(subjectId).map { it.toDomain() }
 
+    override fun getLearnedCardsBySubject(subjectId: String): Flow<List<Card>> =
+        dao.getCardsWithLatestStudyTimeBySubject(subjectId).map { list ->
+            list.map { it.card.toDomain() }
+        }
+
+    override suspend fun getLearnedCardsBySubjectSync(subjectId: String): List<Card> =
+        dao.getCardsWithLatestStudyTimeBySubjectSync(subjectId).map { it.card.toDomain() }
+
+    override fun getLearnedCardsByDeck(deckId: String): Flow<List<Card>> =
+        dao.getCardsWithLatestStudyTimeByDeck(deckId).map { list ->
+            list.map { it.card.toDomain() }
+        }
+
+    override suspend fun getLearnedCardsByDeckSync(deckId: String): List<Card> =
+        dao.getCardsWithLatestStudyTimeByDeckSync(deckId).map { it.card.toDomain() }
+
     override fun getPastDayCardsBySubject(subjectId: String): Flow<Map<PastDayDeckType, PastDayGroup>> =
         dao.getCardsWithLatestStudyTimeBySubject(subjectId).map { list ->
             val pairs = list.map { it.card.toDomain() to it.maxStudiedAt }

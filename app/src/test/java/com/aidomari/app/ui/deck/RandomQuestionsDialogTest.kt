@@ -24,44 +24,58 @@ class RandomQuestionsDialogTest {
     @Test
     fun dialog_rendersAllOptionsAndDefaultsToInitialCount() {
         var startedCount: Int? = null
+        var startedOnlyLearned: Boolean? = null
 
         composeTestRule.setContent {
             RandomQuestionsDialog(
                 totalCards = 100,
                 initialCount = 10,
+                learnedCardsCount = 50,
                 onDismissRequest = {},
-                onStartStudy = { startedCount = it },
+                onStartStudy = { count, onlyLearned ->
+                    startedCount = count
+                    startedOnlyLearned = onlyLearned
+                },
             )
         }
 
         composeTestRule.onNodeWithText("ランダム出題の設定").assertIsDisplayed()
+        composeTestRule.onNodeWithText("学習済みの単語のみ出題").assertIsDisplayed()
+        composeTestRule.onNodeWithText("学習済み: 50 / 100問").assertIsDisplayed()
         composeTestRule.onNodeWithText("10問").assertIsDisplayed()
         composeTestRule.onNodeWithText("20問").assertIsDisplayed()
-        composeTestRule.onNodeWithText("30問").assertIsDisplayed()
+        composeTestRule.onNodeWithText("30問").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("50問").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("全問 (100問)").performScrollTo().assertIsDisplayed()
 
         composeTestRule.onNodeWithText("学習開始").performClick()
         assertEquals(10, startedCount)
+        assertEquals(false, startedOnlyLearned)
     }
 
     @Test
     fun dialog_selectCountAndStart_invokesCallbackWithSelectedCount() {
         var startedCount: Int? = null
+        var startedOnlyLearned: Boolean? = null
 
         composeTestRule.setContent {
             RandomQuestionsDialog(
                 totalCards = 100,
                 initialCount = 10,
+                learnedCardsCount = 40,
                 onDismissRequest = {},
-                onStartStudy = { startedCount = it },
+                onStartStudy = { count, onlyLearned ->
+                    startedCount = count
+                    startedOnlyLearned = onlyLearned
+                },
             )
         }
 
-        composeTestRule.onNodeWithText("30問").performClick()
+        composeTestRule.onNodeWithText("30問").performScrollTo().performClick()
         composeTestRule.onNodeWithText("学習開始").performClick()
 
         assertEquals(30, startedCount)
+        assertEquals(false, startedOnlyLearned)
     }
 
     @Test
@@ -73,7 +87,7 @@ class RandomQuestionsDialogTest {
                 totalCards = 42,
                 initialCount = 10,
                 onDismissRequest = {},
-                onStartStudy = { startedCount = it },
+                onStartStudy = { count, _ -> startedCount = count },
             )
         }
 
@@ -81,6 +95,52 @@ class RandomQuestionsDialogTest {
         composeTestRule.onNodeWithText("学習開始").performClick()
 
         assertEquals(-1, startedCount)
+    }
+
+    @Test
+    fun dialog_toggleOnlyLearned_updatesOptionsAndInvokesCallback() {
+        var startedCount: Int? = null
+        var startedOnlyLearned: Boolean? = null
+
+        composeTestRule.setContent {
+            RandomQuestionsDialog(
+                totalCards = 100,
+                initialCount = 10,
+                learnedCardsCount = 25,
+                onDismissRequest = {},
+                onStartStudy = { count, onlyLearned ->
+                    startedCount = count
+                    startedOnlyLearned = onlyLearned
+                },
+            )
+        }
+
+        // Toggle on
+        composeTestRule.onNodeWithText("学習済みの単語のみ出題").performClick()
+
+        // Total should now show 25
+        composeTestRule.onNodeWithText("全問 (25問)").performScrollTo().assertIsDisplayed()
+
+        composeTestRule.onNodeWithText("全問 (25問)").performClick()
+        composeTestRule.onNodeWithText("学習開始").performClick()
+
+        assertEquals(-1, startedCount)
+        assertEquals(true, startedOnlyLearned)
+    }
+
+    @Test
+    fun dialog_zeroLearnedCards_showsNoLearnedMessage() {
+        composeTestRule.setContent {
+            RandomQuestionsDialog(
+                totalCards = 50,
+                initialCount = 10,
+                learnedCardsCount = 0,
+                onDismissRequest = {},
+                onStartStudy = { _, _ -> },
+            )
+        }
+
+        composeTestRule.onNodeWithText("学習済みの単語がありません").assertIsDisplayed()
     }
 
     @Test
@@ -92,7 +152,7 @@ class RandomQuestionsDialogTest {
                 totalCards = 50,
                 initialCount = 10,
                 onDismissRequest = { dismissed = true },
-                onStartStudy = {},
+                onStartStudy = { _, _ -> },
             )
         }
 
@@ -109,7 +169,7 @@ class RandomQuestionsDialogTest {
                 title = "「英単語」のランダム出題",
                 description = "この単語帳からランダム出題します。",
                 onDismissRequest = {},
-                onStartStudy = {},
+                onStartStudy = { _, _ -> },
             )
         }
 
