@@ -33,6 +33,7 @@ class LockScreenPreferencesTest {
         val config = preferences.config.value
         assertFalse(config.isEnabled)
         assertEquals(LockScreenTarget.ALL, config.target)
+        assertEquals(3, config.daysThreshold)
     }
 
     @Test
@@ -49,7 +50,31 @@ class LockScreenPreferencesTest {
         preferences.setTarget(LockScreenTarget.BOOKMARK_ONLY)
         assertEquals(LockScreenTarget.BOOKMARK_ONLY, preferences.config.value.target)
 
+        preferences.setTarget(LockScreenTarget.DAYS_AGO)
+        assertEquals(LockScreenTarget.DAYS_AGO, preferences.config.value.target)
+
         preferences.setTarget(LockScreenTarget.ALL)
         assertEquals(LockScreenTarget.ALL, preferences.config.value.target)
+    }
+
+    @Test
+    fun setDaysThreshold_updatesConfigDaysThreshold() {
+        preferences.setDaysThreshold(7)
+        assertEquals(7, preferences.config.value.daysThreshold)
+
+        preferences.setDaysThreshold(14)
+        assertEquals(14, preferences.config.value.daysThreshold)
+    }
+
+    @Test
+    fun updateConfig_updatesAllFields() {
+        val newConfig = LockScreenConfig(
+            isEnabled = true,
+            target = LockScreenTarget.DAYS_AGO,
+            daysThreshold = 7,
+        )
+        preferences.updateConfig(newConfig)
+
+        assertEquals(newConfig, preferences.config.value)
     }
 }

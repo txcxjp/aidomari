@@ -523,8 +523,7 @@ fun SubjectListScreen(
         LockScreenSettingsDialog(
             config = currentLockConfig,
             onConfigChanged = {
-                actualLockPrefs.setEnabled(it.isEnabled)
-                actualLockPrefs.setTarget(it.target)
+                actualLockPrefs.updateConfig(it)
             },
             onDismissRequest = { showLockScreenDialog = false },
         )

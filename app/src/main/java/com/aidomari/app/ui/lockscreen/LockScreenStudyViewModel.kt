@@ -38,8 +38,16 @@ class LockScreenStudyViewModel(
     fun loadRandomCard() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, isFlipped = false) }
-            val bookmarkOnly = preferences.config.value.target == LockScreenTarget.BOOKMARK_ONLY
-            val card = repository.getRandomCard(bookmarkOnly)
+            val config = preferences.config.value
+            val card = when (config.target) {
+                LockScreenTarget.BOOKMARK_ONLY -> repository.getRandomCard(bookmarkOnly = true)
+                LockScreenTarget.DAYS_AGO -> {
+                    val cutoffTimestamp = System.currentTimeMillis() -
+                        (config.daysThreshold.toLong() * MILLIS_PER_DAY)
+                    repository.getRandomCardOverDaysAgo(cutoffTimestamp)
+                }
+                LockScreenTarget.ALL -> repository.getRandomCard(bookmarkOnly = false)
+            }
             var lang = "auto"
             var isReverse = false
             var speechRate = 1.0f
@@ -73,15 +81,17 @@ class LockScreenStudyViewModel(
 
     fun markDone(onFinish: () -> Unit) {
         viewModelScope.launch {
-            // 回答完了処理
+            uiState.value.card?.let { card ->
+                repository.recordStudyLog(card.id, isCorrect = true)
+            }
             onFinish()
         }
     }
 
     fun markRetry(onFinish: () -> Unit) {
         viewModelScope.launch {
-            // 苦手復習用: 必要なら自動ブックマーク等の処理
             uiState.value.card?.let { card ->
+                repository.recordStudyLog(card.id, isCorrect = false)
                 repository.setBookmark(card.id, true)
             }
             onFinish()
@@ -94,5 +104,9 @@ class LockScreenStudyViewModel(
             languageTag = _uiState.value.ttsLanguage,
             speechRate = _uiState.value.speechRate,
         )
+    }
+
+    companion object {
+        private const val MILLIS_PER_DAY = 24L * 60L * 60L * 1000L
     }
 }
