@@ -1,48 +1,73 @@
-# Aidomari（相泊）
+# 相泊（Aidomari）
 
-> 知床の最果て「相泊」の名を冠した、Android 専用の次世代ネイティブ単語帳アプリ。  
-> 旧 Words アプリ（Elm + Cordova）を完全刷新し、Kotlin + Jetpack Compose で再構築されたプロジェクトです。
-
----
-
-## 📚 ドキュメント
-
-- **[アーキテクチャ設計書 (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md)**: ドメインモデル、状態遷移、音量キー・スワイプ仕様、関連項目エンジン
-- **[開発・CI/CD ガイド (docs/DEVELOPMENT.md)](docs/DEVELOPMENT.md)**: 開発サイクル、コマンド集、Spotless、GitHub Actions パイプライン
+> **「アルゴリズムの奴隷」ではなく、「学習者の最高の相棒（愛刀）」へ。**  
+> 知床の最果て「相泊」の名を冠した、スマホ生活に溶け込む学習者のための Android ネイティブ単語帳アプリ。  
+> 旧 Words アプリ（Elm + Cordova）を完全刷新し、Kotlin + Jetpack Compose で現代的に再構築されたプロジェクトです。
 
 ---
 
-## 🌟 主な特徴
+## 💡 プロダクト哲学（Philosophy）
 
-- **複数教科（Subject）対応**: 英語、資格試験、世界史など、複数科目を切り替えて学習管理。
-- **3Dフリップ ＆ Tinder風スワイプ**: 表面から裏面への立体的な裏返りと、裏面からの左右スワイプ（右＝学習済み、左＝あとでもう一度）による軽快な操作感。
+相泊は、単に知識を脳へ詰め込むための無機質な暗記マシーンではありません。  
+**「どうやったら覚えられるか、自分の頭で工夫し、試行錯誤する楽しさ」** を大切にするアプリです。
+
+- **強制される日課ではなく、選べるレンズ（切り口）**: 「今日はサクッと1 Part」「苦手なブックマーク集中」「◯日以上前の単語」を自分の意志で選択。
+- **自分の知恵を吹き込む手作りの相棒**: 自分用の質問・メモ編集や、AI（NotebookLM等）と連携した自由なカード拡張。
+- **生活の無意識に溶け込む習慣化**: スマホを開くたびに1問だけサッと復習し、意志の力を使わずに記憶を定着。
+
+> 📖 より詳しいプロダクト哲学と開発指針は **[`notes/AIDOMARI_PHILOSOPHY_AND_VISION.md`](notes/AIDOMARI_PHILOSOPHY_AND_VISION.md)** をご覧ください。
+
+---
+
+## 🌟 主な機能（Features）
+
+### 1. 🔒 ロック画面学習（生活密着の習慣化）
+- **画面点灯時に1問出題**: スマホの画面を点けた瞬間（日常の無意識な導線）の上に演習カードを1問だけ表示。
+- **復習重視のスマート出題**:
+  - 新しい単語を無理強いせず、過去に一度学んだ単語のみを対象に設定可能。
+  - 「◯日以上前に出題した単語」を柔軟に選定（1日、3日、7日、14日、30日）。
+  - 該当がなければ「最も昔に出題された単語」を自動フォールバック。
+  - 出題実績がない場合は画面を起動せず、スマホ操作を一切邪魔しない親切設計。
+- **上スワイプ退場**: 急ぎでスマホを使いたい時は、カードを上へシュッとスワイプするだけで 0.2 秒で即座に退場。
+
+### 2. 🧩 一口サイズ学習（Part 分割 ＆ 進捗率）
+- **Part 自動分割**: 500枚、1000枚の大きなデッキでも、10枚〜50枚ずつの一息で回せる「Part」に自動分割。
+- **正確な進捗率（Mastery Rate）**: 直近の回答ログに基づいて「現在覚えている単語数 ÷ 総単語数」を算出。Part 枚数を途中で自由に変更しても進捗率がズレません。
+- **セッション永続化（続きから再開）**: アプリをいつ閉じても、直前のカード位置やリトライ状態を自動保持。
+
+### 3. 📊 出題履歴・学習実績（Study Logs）
+- カードごとに「いつ出題され、正解したか」の履歴を秒単位で永続記録。
+- 自分の工夫と成長の足跡を可視化し、「自分のやり方で覚えた！」という自己効力感を育みます。
+
+### 4. 🎴 快適なカード操作（3Dフリップ ＆ スワイプ ＆ 音量キー）
+- **立体的な 3D フリップ**: タップで表裏が滑らかに回転。
+- **左右スワイプ**: 右スワイプで「覚えた」、左スワイプで「もう一度」。
 - **音量キー操作**:
-  - 表面: 音量Up / Down でカード裏返り
-  - 裏面: 音量Down で右スワイプ（学習済み）、音量Up で左スワイプ（リトライ）
-- **関連項目（Keyword）エンジン**: カードテキスト内の単語から同一教科内の他カードへ自動リンクを生成。辞書のように知識を数珠つなぎで探索可能。
-- **50問自動分割 ＆ Auto-Continue**: 大規模なデッキを自動でPart分割し、完了時に自動で次のPartへシームレスに継続。
-- **セッション永続化（続きから再開）**: いつ中断しても直前の問題位置とリトライキューを保持。
-- **旧データ互換**: 旧 Words アプリのエクスポートデータ（V1, V2, CSV-JSON形式）のインポートに対応。
-- **ネイティブ音声読み上げ（TTS）**: 教科ごとの言語設定に応じた自動/手動発音。
+  - 表面: 音量 Up / Down で裏返し
+  - 裏面: 音量 Down で「覚えた」、音量 Up で「もう一度」  
+  ※ 満員電車や片手持ちでも画面を触らずにテンポよく演習可能。
+
+### 5. 🔗 知識が数珠つなぎになる「関連項目（Keyword）エンジン」
+- カードテキスト内の単語から、同一教科内の他カードへ自動リンクを生成。
+- 辞書のようにタップひとつで関連知識を数珠つなぎに探索・学習できます。
+
+### 6. 🤖 AI（NotebookLM）連携 ＆ データ互換
+- **NotebookLM インポート**: Google NotebookLM で生成した講義メモや要約から、相泊へワンタップで取り込めるプロンプトとインポート機能を完備（`notes/NOTEBOOKLM_PROMPT.md` 参照）。
+- **完全な双方向エクスポート/インポート**: 旧 Words 形式（V1, V2, CSV-JSON）と完全互換。データのバックアップやデッキ移行も安心です。
+
+### 7. 🎨 洗練されたモダン UI ＆ カスタマイズ
+- **マテリアル 3 デザイン**: 洗練された色彩と快適な左右スライド画面遷移。
+- **5つのカラーテーマ**: Indigo（藍）、Forest（森）、Sakura（桜）、Amber（琥珀）、Slate（石墨）から好みの配色を選択可能。
+- **表裏反転モード**: 「英語 → 日本語」だけでなく、「日本語 → 英語」の想起トレーニングもワンタップで切り替え。
+- **ネイティブ音声読み上げ（TTS）**: 教科ごとの言語設定に応じた自動/手動発音・再生速度調整。
 
 ---
 
-## 🚀 クイックスタート
+## 📱 最新 APK のダウンロード
 
-```bash
-# クローン
-git clone https://github.com/txcxjp/aidomari.git
-cd aidomari
+本リポジトリの GitHub Actions CI により、ビルドされた最新のデバッグ APK が常に配置されています。
 
-# コードフォーマット
-./gradlew spotlessApply
-
-# 単体テスト実行
-./gradlew testDebugUnitTest
-
-# デバッグAPKビルド
-./gradlew assembleDebug
-```
+- **APK 配置場所**: [`release/app-debug.apk`](release/app-debug.apk)
 
 ---
 
@@ -50,7 +75,38 @@ cd aidomari
 
 - **言語**: Kotlin 2.0.21
 - **UI フレームワーク**: Jetpack Compose (Material 3, Compose BOM 2024.10.01)
-- **データベース**: Room 2.6.1 (SQLite + KSP)
-- **非同期・状態管理**: Kotlin Coroutines & Flow, ViewModel
+- **データベース**: Room 2.6.1 (SQLite + KSP, 複数バージョンマイグレーション完備)
+- **非同期・状態管理**: Kotlin Coroutines & Flow, AndroidX Lifecycle ViewModel
+- **バックグラウンド**: Foreground Service, BroadcastReceiver (Screen On 検知)
 - **コード品質**: Spotless + ktlint, Android Lint
-- **CI/CD**: GitHub Actions (Lint, Test, Debug APK 自動ビルド・配布)
+- **テスト**: JUnit4, Robolectric 4.12+, Compose UI Test, Kotlin Coroutines Test
+- **CI/CD**: GitHub Actions (Lint, Format Check, Unit Tests, Debug APK 自動ビルド)
+
+---
+
+## 🚀 クイックスタート（開発者向け）
+
+```bash
+# リポジトリのクローン
+git clone https://github.com/txcxjp/aidomari.git
+cd aidomari
+
+# コードフォーマット規約チェック・自動修正
+./gradlew spotlessApply
+
+# 単体テスト実行（207件全パス検証）
+./gradlew testDebugUnitTest
+
+# デバッグ APK ビルド
+./gradlew assembleDebug
+```
+
+---
+
+## 📚 ドキュメント一覧
+
+- **[相泊プロダクト哲学・マニフェスト (notes/AIDOMARI_PHILOSOPHY_AND_VISION.md)](notes/AIDOMARI_PHILOSOPHY_AND_VISION.md)**: 相泊の設計思想、学習の主体性、判断基準
+- **[アーキテクチャ設計書 (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md)**: ドメインモデル、状態遷移、音量キー・スワイプ仕様、関連項目エンジン
+- **[開発・CI/CD ガイド (docs/DEVELOPMENT.md)](docs/DEVELOPMENT.md)**: 開発サイクル、コマンド集、Spotless、パイプライン構成
+- **[NotebookLM インポートプロンプト (notes/NOTEBOOKLM_PROMPT.md)](notes/NOTEBOOKLM_PROMPT.md)**: AI 生成カードの取り込み手順
+- **[ハーネス＆ループエンジニアリング報告書 (notes/HARNESS_AND_LOOP_ENGINEERING_REPORT.md)](notes/HARNESS_AND_LOOP_ENGINEERING_REPORT.md)**: 品質保証と自律型AI開発の取り組み記録
