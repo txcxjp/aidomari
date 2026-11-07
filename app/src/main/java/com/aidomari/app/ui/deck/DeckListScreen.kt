@@ -84,6 +84,7 @@ fun DeckListScreen(
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
     val allSubjectCards by viewModel.allSubjectCards.collectAsState()
+    val learnedSubjectCards by viewModel.learnedCardsInSubject.collectAsState()
     val randomQuestionCount by viewModel.randomQuestionCount.collectAsState()
     val isSubjectArchived by viewModel.isSubjectArchived.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -205,12 +206,14 @@ fun DeckListScreen(
     if (showRandomQuestionsDialog && allSubjectCards.isNotEmpty()) {
         RandomQuestionsDialog(
             totalCards = allSubjectCards.size,
+            learnedCardsCount = learnedSubjectCards.size,
             initialCount = randomQuestionCount,
             onDismissRequest = { showRandomQuestionsDialog = false },
-            onStartStudy = { count ->
+            onStartStudy = { count, onlyLearned ->
                 viewModel.setRandomQuestionCount(count)
                 showRandomQuestionsDialog = false
-                val randomDeckId = "random_${count}_${viewModel.subjectId}"
+                val prefix = if (onlyLearned) "random_learned_" else "random_"
+                val randomDeckId = "${prefix}${count}_${viewModel.subjectId}"
                 onPartClick(randomDeckId, 0)
             },
         )
@@ -220,15 +223,17 @@ fun DeckListScreen(
         val targetDeckUi = deckForRandomStudy!!
         RandomQuestionsDialog(
             totalCards = targetDeckUi.totalCardCount,
+            learnedCardsCount = targetDeckUi.studiedCardCount,
             initialCount = randomQuestionCount,
             title = "「${targetDeckUi.deck.name}」のランダム出題",
             description = "この単語帳のカード（${targetDeckUi.totalCardCount}枚）からランダムに出題します。出題する問題数を選択してください。",
             onDismissRequest = { deckForRandomStudy = null },
-            onStartStudy = { count ->
+            onStartStudy = { count, onlyLearned ->
                 viewModel.setRandomQuestionCount(count)
                 val targetDeckId = targetDeckUi.deck.id
                 deckForRandomStudy = null
-                val randomDeckId = "random_deck_${count}_$targetDeckId"
+                val prefix = if (onlyLearned) "random_deck_learned_" else "random_deck_"
+                val randomDeckId = "${prefix}${count}_$targetDeckId"
                 onPartClick(randomDeckId, 0)
             },
         )

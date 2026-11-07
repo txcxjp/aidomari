@@ -295,4 +295,34 @@ interface AidomariDao {
         """,
     )
     suspend fun getCardsWithLatestStudyTimeBySubjectSync(subjectId: String): List<CardWithLatestStudiedAt>
+
+    @Query(
+        """
+        SELECT cards.*, latest_log.max_studied_at
+        FROM cards
+        INNER JOIN (
+            SELECT card_id, MAX(studied_at) AS max_studied_at
+            FROM card_study_logs
+            GROUP BY card_id
+        ) latest_log ON cards.id = latest_log.card_id
+        WHERE cards.deck_id = :deckId
+        ORDER BY latest_log.max_studied_at DESC
+        """,
+    )
+    fun getCardsWithLatestStudyTimeByDeck(deckId: String): Flow<List<CardWithLatestStudiedAt>>
+
+    @Query(
+        """
+        SELECT cards.*, latest_log.max_studied_at
+        FROM cards
+        INNER JOIN (
+            SELECT card_id, MAX(studied_at) AS max_studied_at
+            FROM card_study_logs
+            GROUP BY card_id
+        ) latest_log ON cards.id = latest_log.card_id
+        WHERE cards.deck_id = :deckId
+        ORDER BY latest_log.max_studied_at DESC
+        """,
+    )
+    suspend fun getCardsWithLatestStudyTimeByDeckSync(deckId: String): List<CardWithLatestStudiedAt>
 }

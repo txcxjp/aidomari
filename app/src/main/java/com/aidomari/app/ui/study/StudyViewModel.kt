@@ -42,6 +42,7 @@ class StudyViewModel(
             val isBookmarkMode = deckId.startsWith("bookmark_")
             val isDeckRandomMode = deckId.startsWith("random_deck_")
             val isRandomMode = deckId.startsWith("random_") && !isDeckRandomMode
+            val isOnlyLearned = deckId.startsWith("random_deck_learned_") || deckId.startsWith("random_learned_")
             val isPastDayMode = pastDayInfo != null
             val deck = when {
                 isBookmarkMode -> {
@@ -49,28 +50,38 @@ class StudyViewModel(
                     repository.getOrCreateBookmarkDeck(subjectId)
                 }
                 isDeckRandomMode -> {
-                    val rest = deckId.removePrefix("random_deck_")
+                    val rest = if (isOnlyLearned) {
+                        deckId.removePrefix("random_deck_learned_")
+                    } else {
+                        deckId.removePrefix("random_deck_")
+                    }
                     val countPart = rest.substringBefore("_")
                     val actualDeckId = rest.substringAfter("_")
                     val questionCount = countPart.toIntOrNull() ?: 10
                     val baseDeck = repository.getDeckById(actualDeckId) ?: return@launch
                     val countLabel = if (questionCount <= 0) "全問" else "${questionCount}問"
+                    val modeLabel = if (isOnlyLearned) "学習済みランダム $countLabel" else "ランダム $countLabel"
                     baseDeck.copy(
                         id = deckId,
-                        name = "${baseDeck.name} (ランダム $countLabel)",
+                        name = "${baseDeck.name} ($modeLabel)",
                         shuffleMode = true,
                     )
                 }
                 isRandomMode -> {
-                    val rest = deckId.removePrefix("random_")
+                    val rest = if (isOnlyLearned) {
+                        deckId.removePrefix("random_learned_")
+                    } else {
+                        deckId.removePrefix("random_")
+                    }
                     val countPart = rest.substringBefore("_")
                     val subjectId = rest.substringAfter("_")
                     val questionCount = countPart.toIntOrNull() ?: 10
                     val baseDeck = repository.getOrCreateRandomDeck(subjectId)
                     val countLabel = if (questionCount <= 0) "全問" else "${questionCount}問"
+                    val modeLabel = if (isOnlyLearned) "学習済みランダム ($countLabel)" else "ランダム出題 ($countLabel)"
                     baseDeck.copy(
                         id = deckId,
-                        name = "ランダム出題 ($countLabel)",
+                        name = modeLabel,
                         shuffleMode = true,
                     )
                 }
@@ -91,11 +102,19 @@ class StudyViewModel(
                     repository.getBookmarkedCardsBySubject(deck.subjectId).first()
                 }
                 isDeckRandomMode -> {
-                    val rest = deckId.removePrefix("random_deck_")
+                    val rest = if (isOnlyLearned) {
+                        deckId.removePrefix("random_deck_learned_")
+                    } else {
+                        deckId.removePrefix("random_deck_")
+                    }
                     val countPart = rest.substringBefore("_")
                     val actualDeckId = rest.substringAfter("_")
                     val questionCount = countPart.toIntOrNull() ?: 10
-                    val deckCards = repository.getCardsByDeckSync(actualDeckId)
+                    val deckCards = if (isOnlyLearned) {
+                        repository.getLearnedCardsByDeckSync(actualDeckId)
+                    } else {
+                        repository.getCardsByDeckSync(actualDeckId)
+                    }
                     val shuffled = deckCards.shuffled()
                     if (questionCount > 0 && questionCount < shuffled.size) {
                         shuffled.take(questionCount)
@@ -104,10 +123,19 @@ class StudyViewModel(
                     }
                 }
                 isRandomMode -> {
-                    val rest = deckId.removePrefix("random_")
+                    val rest = if (isOnlyLearned) {
+                        deckId.removePrefix("random_learned_")
+                    } else {
+                        deckId.removePrefix("random_")
+                    }
                     val countPart = rest.substringBefore("_")
                     val questionCount = countPart.toIntOrNull() ?: 10
-                    val shuffled = subjectCards.shuffled()
+                    val poolCards = if (isOnlyLearned) {
+                        repository.getLearnedCardsBySubjectSync(deck.subjectId)
+                    } else {
+                        subjectCards
+                    }
+                    val shuffled = poolCards.shuffled()
                     if (questionCount > 0 && questionCount < shuffled.size) {
                         shuffled.take(questionCount)
                     } else {

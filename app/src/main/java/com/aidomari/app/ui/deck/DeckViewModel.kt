@@ -40,6 +40,9 @@ class DeckViewModel(
     private val _allSubjectCards = MutableStateFlow<List<Card>>(emptyList())
     val allSubjectCards: StateFlow<List<Card>> = _allSubjectCards.asStateFlow()
 
+    private val _learnedCardsInSubject = MutableStateFlow<List<Card>>(emptyList())
+    val learnedCardsInSubject: StateFlow<List<Card>> = _learnedCardsInSubject.asStateFlow()
+
     private val _randomQuestionCount = MutableStateFlow(10)
     val randomQuestionCount: StateFlow<Int> = _randomQuestionCount.asStateFlow()
 
@@ -52,6 +55,7 @@ class DeckViewModel(
         observeBookmarks()
         observePastDayDecks()
         loadAllSubjectCards()
+        observeLearnedCards()
     }
 
     fun loadSubjectInfo() {
@@ -193,9 +197,18 @@ class DeckViewModel(
                         parts = partModels,
                         totalCardCount = cards.size,
                         learnedCardCount = learnedCardCount,
+                        studiedCardCount = latestLogs.size,
                     )
                 }
                 _decksWithParts.value = uiModels
+            }
+        }
+    }
+
+    private fun observeLearnedCards() {
+        viewModelScope.launch {
+            repository.getLearnedCardsBySubject(subjectId).collect { cards ->
+                _learnedCardsInSubject.value = cards
             }
         }
     }
