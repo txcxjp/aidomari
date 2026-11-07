@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.domain.util.CardSnoozeCalculator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -156,14 +157,35 @@ class CardListViewModel(
         }
     }
 
+    fun snoozeCard(card: Card, onSnoozed: (durationLabel: String) -> Unit = {}) {
+        viewModelScope.launch {
+            val updated = repository.snoozeCard(card.id) ?: return@launch
+            val label = CardSnoozeCalculator.calculateNextSnooze(card.snoozeLevel).durationLabel
+            onSnoozed(label)
+            updateCardInState(updated)
+        }
+    }
+
+    fun unsnoozeCard(card: Card, onUnsnoozed: () -> Unit = {}) {
+        viewModelScope.launch {
+            val updated = repository.unsnoozeCard(card.id) ?: return@launch
+            onUnsnoozed()
+            updateCardInState(updated)
+        }
+    }
+
     private fun updateCardInState(updatedCard: Card) {
         _uiState.update { state ->
             val updatedCards = state.cards.map {
                 if (it.id == updatedCard.id) updatedCard else it
             }
+            val updatedAllSubject = state.allSubjectCards.map {
+                if (it.id == updatedCard.id) updatedCard else it
+            }
             state.copy(
                 cards = updatedCards,
                 filteredCards = filterCards(updatedCards, state.searchQuery),
+                allSubjectCards = updatedAllSubject,
             )
         }
     }

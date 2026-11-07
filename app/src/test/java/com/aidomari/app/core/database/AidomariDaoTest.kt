@@ -518,4 +518,50 @@ class AidomariDaoTest {
         assertEquals("c2", results[1].card.id)
         assertEquals(2000L, results[1].maxStudiedAt)
     }
+
+    @Test
+    fun setCardSnooze_updatesSnoozedUntilAndLevel() = runBlocking {
+        val subject = SubjectEntity(id = "sub-sn", name = "英語")
+        val deck = DeckEntity(id = "deck-sn", subjectId = "sub-sn", name = "単語帳")
+        val card = CardEntity(id = "c-sn", deckId = "deck-sn", front = "sleep", back = "眠る")
+        dao.insertSubject(subject)
+        dao.insertDeck(deck)
+        dao.insertCard(card)
+
+        dao.setCardSnooze("c-sn", snoozedUntil = 999999999L, snoozeLevel = 1)
+        val snoozed = dao.getCardById("c-sn")
+        assertEquals(999999999L, snoozed?.snoozedUntil)
+        assertEquals(1, snoozed?.snoozeLevel)
+
+        dao.setCardSnooze("c-sn", snoozedUntil = null, snoozeLevel = 0)
+        val unsnoozed = dao.getCardById("c-sn")
+        assertEquals(null, unsnoozed?.snoozedUntil)
+        assertEquals(0, unsnoozed?.snoozeLevel)
+    }
+
+    @Test
+    fun getRandomCard_excludesSnoozedCards() = runBlocking {
+        val subject = SubjectEntity(id = "sub-sn2", name = "英語")
+        val deck = DeckEntity(id = "deck-sn2", subjectId = "sub-sn2", name = "単語帳")
+        val activeCard = CardEntity(id = "c-active", deckId = "deck-sn2", front = "awake", back = "起きる")
+        val snoozedCard = CardEntity(
+            id = "c-snoozed",
+            deckId = "deck-sn2",
+            front = "nap",
+            back = "昼寝",
+            snoozedUntil = 20000L,
+            snoozeLevel = 1,
+        )
+        dao.insertSubject(subject)
+        dao.insertDeck(deck)
+        dao.insertCards(listOf(activeCard, snoozedCard))
+
+        // When current time is 10000L, snoozedCard (20000L) is snoozed -> only activeCard returned
+        val card = dao.getRandomCard(nowTimestamp = 10000L)
+        assertEquals("c-active", card?.id)
+
+        // When current time is 25000L, snoozedCard's snooze has expired -> both cards eligible
+        val expiredCard = dao.getRandomCard(nowTimestamp = 25000L)
+        assertNotNull(expiredCard)
+    }
 }

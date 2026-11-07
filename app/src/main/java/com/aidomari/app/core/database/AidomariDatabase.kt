@@ -20,7 +20,7 @@ import com.aidomari.app.core.database.entity.SubjectEntity
         StudySessionEntity::class,
         CardStudyLogEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class AidomariDatabase : RoomDatabase() {
@@ -67,6 +67,14 @@ abstract class AidomariDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE cards ADD COLUMN snoozed_until INTEGER")
+                db.execSQL("ALTER TABLE cards ADD COLUMN snooze_level INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_cards_snoozed_until ON cards(snoozed_until)")
+            }
+        }
+
         @Volatile
         private var instance: AidomariDatabase? = null
 
@@ -81,7 +89,7 @@ abstract class AidomariDatabase : RoomDatabase() {
                 AidomariDatabase::class.java,
                 DATABASE_NAME,
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .addCallback(
                     object : RoomDatabase.Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {

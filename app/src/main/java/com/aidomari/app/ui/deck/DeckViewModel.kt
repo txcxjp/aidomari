@@ -7,6 +7,7 @@ import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.domain.util.CardSnoozeCalculator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -127,6 +128,33 @@ class DeckViewModel(
         viewModelScope.launch {
             val card = repository.getCardById(cardId) ?: return@launch
             repository.saveCard(card.copy(userQuestion = q, userSupplement = s))
+        }
+    }
+
+    fun snoozeCard(card: Card, onSnoozed: (durationLabel: String) -> Unit = {}) {
+        viewModelScope.launch {
+            val updated = repository.snoozeCard(card.id) ?: return@launch
+            val label = CardSnoozeCalculator.calculateNextSnooze(card.snoozeLevel).durationLabel
+            onSnoozed(label)
+            _searchResults.value = _searchResults.value.map {
+                if (it.id == card.id) updated else it
+            }
+            _allSubjectCards.value = _allSubjectCards.value.map {
+                if (it.id == card.id) updated else it
+            }
+        }
+    }
+
+    fun unsnoozeCard(card: Card, onUnsnoozed: () -> Unit = {}) {
+        viewModelScope.launch {
+            val updated = repository.unsnoozeCard(card.id) ?: return@launch
+            onUnsnoozed()
+            _searchResults.value = _searchResults.value.map {
+                if (it.id == card.id) updated else it
+            }
+            _allSubjectCards.value = _allSubjectCards.value.map {
+                if (it.id == card.id) updated else it
+            }
         }
     }
 

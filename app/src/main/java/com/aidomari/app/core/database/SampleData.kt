@@ -120,8 +120,8 @@ object SampleData {
             val isBookmarked = if (card.isBookmarked) 1 else 0
             db.execSQL(
                 """
-                INSERT INTO cards (id, deck_id, front, back, user_question, user_supplement, is_bookmarked, order_index, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO cards (id, deck_id, front, back, user_question, user_supplement, is_bookmarked, order_index, created_at, snoozed_until, snooze_level)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """.trimIndent(),
                 arrayOf(
                     cardId,
@@ -133,6 +133,8 @@ object SampleData {
                     isBookmarked,
                     index,
                     now + index,
+                    null,
+                    0,
                 ),
             )
         }

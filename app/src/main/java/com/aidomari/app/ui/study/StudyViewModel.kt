@@ -8,6 +8,7 @@ import com.aidomari.app.domain.model.DeckPart
 import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.domain.util.CardSnoozeCalculator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -94,8 +95,9 @@ class StudyViewModel(
                     repository.getCardsByDeckSync(deckId)
                 }
             }
-            allCards = cards
-            cardsMap = cards.associateBy { it.id }
+            val activeCards = cards.filterNot { it.isSnoozed }
+            allCards = activeCards
+            cardsMap = activeCards.associateBy { it.id }
 
             val parts = if (isRandomMode) {
                 listOf(
@@ -103,17 +105,17 @@ class StudyViewModel(
                         partIndex = 0,
                         partNumber = 1,
                         startIndex = 0,
-                        endIndex = cards.size,
-                        count = cards.size,
+                        endIndex = activeCards.size,
+                        count = activeCards.size,
                     ),
                 )
             } else {
-                deck.calculateParts(cards.size)
+                deck.calculateParts(activeCards.size)
             }
             val currentPart = parts.getOrNull(partIndex)
             val hasNextPart = partIndex + 1 < parts.size
 
-            if (currentPart == null || cards.isEmpty()) {
+            if (currentPart == null || activeCards.isEmpty()) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -217,6 +219,62 @@ class StudyViewModel(
         }
 
         advanceToNextCard()
+    }
+
+    fun snoozeCurrentCard(onSnoozed: (durationLabel: String) -> Unit = {}) {
+        val state = _uiState.value
+        val currentCard = state.currentCard ?: return
+        if (state.isPartCompleted) return
+
+        queueCardIds.remove(currentCard.id)
+        retryCardIds.remove(currentCard.id)
+        completedCount++
+
+        viewModelScope.launch {
+            val updated = repository.snoozeCard(currentCard.id)
+            val label = CardSnoozeCalculator.calculateNextSnooze(currentCard.snoozeLevel).durationLabel
+            onSnoozed(label)
+            if (updated != null) {
+                updateCardInState(updated)
+            }
+        }
+
+        advanceToNextCard()
+    }
+
+    fun snoozeCard(card: Card, onSnoozed: (durationLabel: String) -> Unit = {}) {
+        viewModelScope.launch {
+            val updated = repository.snoozeCard(card.id) ?: return@launch
+            val label = CardSnoozeCalculator.calculateNextSnooze(card.snoozeLevel).durationLabel
+            onSnoozed(label)
+            updateCardInState(updated)
+        }
+    }
+
+    fun unsnoozeCard(card: Card, onUnsnoozed: () -> Unit = {}) {
+        viewModelScope.launch {
+            val updated = repository.unsnoozeCard(card.id) ?: return@launch
+            onUnsnoozed()
+            updateCardInState(updated)
+        }
+    }
+
+    private fun updateCardInState(updatedCard: Card) {
+        cardsMap = cardsMap + (updatedCard.id to updatedCard)
+        _uiState.update { state ->
+            val updatedSubjectCards = state.subjectCards.map {
+                if (it.id == updatedCard.id) updatedCard else it
+            }
+            val updatedSearchResults = state.searchResults.map {
+                if (it.id == updatedCard.id) updatedCard else it
+            }
+            state.copy(
+                currentCard = if (state.currentCard?.id == updatedCard.id) updatedCard else state.currentCard,
+                nextCard = if (state.nextCard?.id == updatedCard.id) updatedCard else state.nextCard,
+                subjectCards = updatedSubjectCards,
+                searchResults = updatedSearchResults,
+            )
+        }
     }
 
     fun toggleBookmark() {

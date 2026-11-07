@@ -10,6 +10,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -20,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +31,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.core.input.VolumeKeyHandler
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.util.CardSnoozeCalculator
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.study.components.CardEditNotesDialog
 import com.aidomari.app.ui.study.components.CardFaceBack
@@ -41,6 +45,7 @@ import com.aidomari.app.ui.study.components.StudyTopBar
 import com.aidomari.app.ui.study.components.StudyTtsSettingsDialog
 import com.aidomari.app.ui.theme.AidomariTheme
 import com.aidomari.app.ui.theme.ThemePreviews
+import kotlinx.coroutines.launch
 
 @Composable
 fun StudyScreen(
@@ -53,6 +58,8 @@ fun StudyScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
     var bottomSheetCard by remember { mutableStateOf<Card?>(null) }
     var showEditNotesDialog by remember { mutableStateOf(false) }
     var showTtsSettingsDialog by remember { mutableStateOf(false) }
@@ -63,6 +70,9 @@ fun StudyScreen(
     val isReverse = uiState.deck?.reverseMode == true
     val currentCard = uiState.currentCard
     val currentCardId = currentCard?.id
+    val nextSnoozeLabel = currentCard?.let {
+        CardSnoozeCalculator.calculateNextSnooze(it.snoozeLevel).durationLabel
+    }
 
     // Auto-speak on card display (オモテ面: 設問)
     LaunchedEffect(currentCardId, autoSpeak) {
@@ -109,6 +119,7 @@ fun StudyScreen(
 
     StudyContent(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onNavigateBack = onNavigateBack,
         onNavigateToPart = onNavigateToPart,
         onToggleBookmark = { viewModel.toggleBookmark() },
@@ -122,6 +133,19 @@ fun StudyScreen(
         onDeleteCard = { showDeleteConfirmDialog = true },
         onEditNotes = { showEditNotesDialog = true },
         onKeywordClick = { bottomSheetCard = it },
+        onSnoozeCard = if (uiState.currentCard != null) {
+            {
+                val front = uiState.currentCard?.front ?: ""
+                viewModel.snoozeCurrentCard { label ->
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("「$front」を${label}非表示にしました")
+                    }
+                }
+            }
+        } else {
+            null
+        },
+        snoozeDurationLabel = nextSnoozeLabel,
         modifier = modifier,
     )
 
@@ -181,6 +205,20 @@ fun StudyScreen(
             onDeleteCard = { cardId ->
                 viewModel.deleteCard(cardId)
             },
+            onSnoozeCard = { card ->
+                viewModel.snoozeCard(card) { label ->
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("「${card.front}」を${label}非表示にしました")
+                    }
+                }
+            },
+            onUnsnoozeCard = { card ->
+                viewModel.unsnoozeCard(card) {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("「${card.front}」のスヌーズを解除しました")
+                    }
+                }
+            },
         )
     }
 
@@ -226,6 +264,9 @@ fun StudyContent(
     onEditNotes: () -> Unit,
     onKeywordClick: (Card) -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onSnoozeCard: (() -> Unit)? = null,
+    snoozeDurationLabel: String? = null,
 ) {
     val autoSpeak = uiState.deck?.autoSpeak == true
     val isReverse = uiState.deck?.reverseMode == true
@@ -234,6 +275,7 @@ fun StudyContent(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             val partTitle = "Part ${uiState.partIndex + 1}"
             StudyTopBar(
@@ -248,6 +290,8 @@ fun StudyContent(
                 onSearchClick = onSearchClick,
                 onDeleteCard = if (uiState.currentCard != null) onDeleteCard else null,
                 onEditNotes = if (uiState.currentCard != null) onEditNotes else null,
+                onSnoozeCard = onSnoozeCard,
+                snoozeDurationLabel = snoozeDurationLabel,
             )
         },
     ) { innerPadding ->
@@ -364,6 +408,7 @@ fun StudyContent(
                                                 onSpeakText(backText)
                                             },
                                             onEditClick = onEditNotes,
+                                            onSnooze = onSnoozeCard,
                                         )
                                     },
                                 )

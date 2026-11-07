@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Snooze
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aidomari.app.domain.util.CardSnoozeCalculator
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.study.components.KeywordBottomSheet
 import com.aidomari.app.ui.theme.AidomariTheme
@@ -82,6 +84,7 @@ fun CardListScreen(
         onToggleBookmark = { viewModel.toggleBookmark(it) },
         onEditCardClick = { cardToEdit = it },
         onSpeakText = onSpeakText,
+        onUnsnoozeCard = { viewModel.unsnoozeCard(it) },
         modifier = modifier,
     )
 
@@ -124,6 +127,8 @@ fun CardListScreen(
             onDeleteCard = { cardId ->
                 viewModel.deleteCard(cardId)
             },
+            onSnoozeCard = { viewModel.snoozeCard(it) },
+            onUnsnoozeCard = { viewModel.unsnoozeCard(it) },
         )
     }
 }
@@ -142,6 +147,7 @@ fun CardListContent(
     onEditCardClick: (DomainCard) -> Unit,
     onSpeakText: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onUnsnoozeCard: (DomainCard) -> Unit = {},
 ) {
     val deckName = uiState.deck?.name ?: "単語帳"
 
@@ -371,12 +377,36 @@ fun CardListContent(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
 
-                                if (card.userQuestion.isNotBlank() || card.userSupplement.isNotBlank()) {
+                                if (card.isSnoozed || card.userQuestion.isNotBlank() || card.userSupplement.isNotBlank()) {
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         modifier = Modifier.fillMaxWidth(),
                                     ) {
+                                        if (card.isSnoozed) {
+                                            val untilLabel = CardSnoozeCalculator.formatSnoozeUntil(card.snoozedUntil ?: 0L)
+                                            SuggestionChip(
+                                                onClick = { onUnsnoozeCard(card) },
+                                                label = {
+                                                    Text(
+                                                        text = "スヌーズ中 ($untilLabel)",
+                                                        maxLines = 1,
+                                                        fontSize = 11.sp,
+                                                    )
+                                                },
+                                                icon = {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Snooze,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(14.dp),
+                                                    )
+                                                },
+                                                colors = SuggestionChipDefaults.suggestionChipColors(
+                                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+                                                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                                                ),
+                                            )
+                                        }
                                         if (card.userQuestion.isNotBlank()) {
                                             SuggestionChip(
                                                 onClick = { onEditCardClick(card) },
