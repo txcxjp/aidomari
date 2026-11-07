@@ -97,6 +97,9 @@ interface AidomariDao {
     @Query("UPDATE cards SET is_bookmarked = :isBookmarked WHERE id = :cardId")
     suspend fun setBookmark(cardId: String, isBookmarked: Boolean)
 
+    @Query("UPDATE cards SET snoozed_until = :snoozedUntil, snooze_level = :snoozeLevel WHERE id = :cardId")
+    suspend fun setCardSnooze(cardId: String, snoozedUntil: Long?, snoozeLevel: Int)
+
     @Query(
         """
         SELECT cards.* FROM cards
@@ -147,10 +150,11 @@ interface AidomariDao {
         INNER JOIN decks ON cards.deck_id = decks.id
         INNER JOIN subjects ON decks.subject_id = subjects.id
         WHERE subjects.is_archived = 0
+          AND (cards.snoozed_until IS NULL OR cards.snoozed_until <= :nowTimestamp)
         ORDER BY RANDOM() LIMIT 1
         """,
     )
-    suspend fun getRandomCard(): CardEntity?
+    suspend fun getRandomCard(nowTimestamp: Long = System.currentTimeMillis()): CardEntity?
 
     @Query(
         """
@@ -158,10 +162,11 @@ interface AidomariDao {
         INNER JOIN decks ON cards.deck_id = decks.id
         INNER JOIN subjects ON decks.subject_id = subjects.id
         WHERE subjects.is_archived = 0 AND cards.is_bookmarked = 1
+          AND (cards.snoozed_until IS NULL OR cards.snoozed_until <= :nowTimestamp)
         ORDER BY RANDOM() LIMIT 1
         """,
     )
-    suspend fun getRandomBookmarkedCard(): CardEntity?
+    suspend fun getRandomBookmarkedCard(nowTimestamp: Long = System.currentTimeMillis()): CardEntity?
 
     @Query(
         """
@@ -175,10 +180,14 @@ interface AidomariDao {
         ) latest_log ON cards.id = latest_log.card_id
         WHERE subjects.is_archived = 0
           AND latest_log.max_studied_at <= :cutoffTimestamp
+          AND (cards.snoozed_until IS NULL OR cards.snoozed_until <= :nowTimestamp)
         ORDER BY RANDOM() LIMIT 1
         """,
     )
-    suspend fun getRandomCardOverDaysAgo(cutoffTimestamp: Long): CardEntity?
+    suspend fun getRandomCardOverDaysAgo(
+        cutoffTimestamp: Long,
+        nowTimestamp: Long = System.currentTimeMillis(),
+    ): CardEntity?
 
     @Query(
         """
@@ -191,11 +200,12 @@ interface AidomariDao {
             GROUP BY card_id
         ) latest_log ON cards.id = latest_log.card_id
         WHERE subjects.is_archived = 0
+          AND (cards.snoozed_until IS NULL OR cards.snoozed_until <= :nowTimestamp)
         ORDER BY latest_log.max_studied_at ASC
         LIMIT 1
         """,
     )
-    suspend fun getOldestStudiedCard(): CardEntity?
+    suspend fun getOldestStudiedCard(nowTimestamp: Long = System.currentTimeMillis()): CardEntity?
 
     // --- StudySession Operations (続きから再開・進捗永続化) ---
     @Query("SELECT * FROM study_sessions WHERE deck_id = :deckId")

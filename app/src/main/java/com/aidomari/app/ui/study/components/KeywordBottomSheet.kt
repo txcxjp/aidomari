@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Snooze
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -31,6 +33,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -52,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.core.keyword.KeywordEngine
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.util.CardSnoozeCalculator
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.theme.AidomariTheme
 import com.aidomari.app.ui.theme.ThemePreviews
@@ -67,6 +72,8 @@ fun KeywordBottomSheet(
     onToggleBookmark: ((Card) -> Unit)? = null,
     onSaveNotes: ((cardId: String, userQuestion: String, userSupplement: String) -> Unit)? = null,
     onDeleteCard: ((cardId: String) -> Unit)? = null,
+    onSnoozeCard: ((Card) -> Unit)? = null,
+    onUnsnoozeCard: ((Card) -> Unit)? = null,
 ) {
     if (initialCard == null) return
 
@@ -124,6 +131,33 @@ fun KeywordBottomSheet(
                 { cardToDelete = currentCard }
             } else {
                 null
+            },
+            onSnoozeCard = onSnoozeCard?.let { callback ->
+                { card ->
+                    val next = CardSnoozeCalculator.calculateNextSnooze(card.snoozeLevel)
+                    val updated = card.copy(
+                        snoozedUntil = next.snoozedUntil,
+                        snoozeLevel = next.level,
+                    )
+                    val idx = cardStack.indexOfFirst { it.id == card.id }
+                    if (idx >= 0) {
+                        cardStack[idx] = updated
+                    }
+                    callback(card)
+                }
+            },
+            onUnsnoozeCard = onUnsnoozeCard?.let { callback ->
+                { card ->
+                    val updated = card.copy(
+                        snoozedUntil = null,
+                        snoozeLevel = 0,
+                    )
+                    val idx = cardStack.indexOfFirst { it.id == card.id }
+                    if (idx >= 0) {
+                        cardStack[idx] = updated
+                    }
+                    callback(card)
+                }
             },
         )
 
@@ -194,6 +228,8 @@ fun KeywordSheetContent(
     onToggleBookmark: ((Card) -> Unit)? = null,
     onEditNotesClick: (() -> Unit)? = null,
     onDeleteClick: (() -> Unit)? = null,
+    onSnoozeCard: ((Card) -> Unit)? = null,
+    onUnsnoozeCard: ((Card) -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
     val keywordEngine = remember { KeywordEngine() }
@@ -291,7 +327,7 @@ fun KeywordSheetContent(
                     )
                 }
 
-                if (onEditNotesClick != null || onDeleteClick != null) {
+                if (onEditNotesClick != null || onDeleteClick != null || onSnoozeCard != null || onUnsnoozeCard != null) {
                     var showMoreMenu by remember { mutableStateOf(false) }
                     Box {
                         IconButton(
@@ -308,6 +344,36 @@ fun KeywordSheetContent(
                             expanded = showMoreMenu,
                             onDismissRequest = { showMoreMenu = false },
                         ) {
+                            if (currentCard.isSnoozed && onUnsnoozeCard != null) {
+                                DropdownMenuItem(
+                                    text = { Text("スヌーズを解除") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Snooze,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onUnsnoozeCard(currentCard)
+                                    },
+                                )
+                            } else if (!currentCard.isSnoozed && onSnoozeCard != null) {
+                                val nextOption = CardSnoozeCalculator.calculateNextSnooze(currentCard.snoozeLevel)
+                                DropdownMenuItem(
+                                    text = { Text("しばらく表示しない (${nextOption.durationLabel})") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Snooze,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onSnoozeCard(currentCard)
+                                    },
+                                )
+                            }
                             if (onEditNotesClick != null) {
                                 DropdownMenuItem(
                                     text = { Text("メモ・疑問点を編集") },
@@ -348,6 +414,31 @@ fun KeywordSheetContent(
                     }
                 }
             }
+        }
+
+        if (currentCard.isSnoozed) {
+            Spacer(modifier = Modifier.height(6.dp))
+            val untilLabel = CardSnoozeCalculator.formatSnoozeUntil(currentCard.snoozedUntil ?: 0L)
+            SuggestionChip(
+                onClick = { onUnsnoozeCard?.invoke(currentCard) },
+                label = {
+                    Text(
+                        text = "スヌーズ中 ($untilLabel) - タップで解除",
+                        fontSize = 12.sp,
+                    )
+                },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Snooze,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                },
+                colors = SuggestionChipDefaults.suggestionChipColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
+                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                ),
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))

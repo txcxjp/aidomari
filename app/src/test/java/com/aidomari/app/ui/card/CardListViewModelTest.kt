@@ -5,6 +5,7 @@ import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.domain.util.CardSnoozeCalculator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -206,11 +207,80 @@ class CardListViewModelTest {
         assertEquals("更新されたメモ", repoCard?.userSupplement)
     }
 
+    @Test
+    fun snoozeCard_updatesSnoozeInStateAndRepository() = runTest {
+        advanceUntilIdle()
+
+        var notifiedLabel = ""
+        viewModel.snoozeCard(card1) { label -> notifiedLabel = label }
+        advanceUntilIdle()
+
+        val stateCard = viewModel.uiState.value.cards.find { it.id == "c1" }
+        assertNotNull(stateCard)
+        assertTrue(stateCard!!.isSnoozed)
+        assertEquals(1, stateCard.snoozeLevel)
+        assertEquals("明日まで", notifiedLabel)
+
+        val repoCard = fakeRepository.cards.find { it.id == "c1" }
+        assertNotNull(repoCard)
+        assertTrue(repoCard!!.isSnoozed)
+        assertEquals(1, repoCard.snoozeLevel)
+    }
+
+    @Test
+    fun unsnoozeCard_clearsSnoozeInStateAndRepository() = runTest {
+        advanceUntilIdle()
+
+        viewModel.snoozeCard(card1)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.cards.find { it.id == "c1" }!!.isSnoozed)
+
+        var unSnoozedNotified = false
+        val snoozedCard = viewModel.uiState.value.cards.find { it.id == "c1" }!!
+        viewModel.unsnoozeCard(snoozedCard) { unSnoozedNotified = true }
+        advanceUntilIdle()
+
+        assertTrue(unSnoozedNotified)
+        val stateCard = viewModel.uiState.value.cards.find { it.id == "c1" }
+        assertNotNull(stateCard)
+        assertFalse(stateCard!!.isSnoozed)
+        assertEquals(0, stateCard.snoozeLevel)
+
+        val repoCard = fakeRepository.cards.find { it.id == "c1" }
+        assertNotNull(repoCard)
+        assertFalse(repoCard!!.isSnoozed)
+        assertEquals(0, repoCard.snoozeLevel)
+    }
+
     private class FakeCardRepository(
         private val deck: Deck,
         initialCards: List<Card> = emptyList(),
     ) : WordsRepository {
         val cards = initialCards.toMutableList()
+
+        override suspend fun snoozeCard(cardId: String): Card? {
+            val idx = cards.indexOfFirst { it.id == cardId }
+            if (idx == -1) return null
+            val card = cards[idx]
+            val next = CardSnoozeCalculator.calculateNextSnooze(card.snoozeLevel)
+            val updated = card.copy(
+                snoozedUntil = next.snoozedUntil,
+                snoozeLevel = next.level,
+            )
+            cards[idx] = updated
+            return updated
+        }
+
+        override suspend fun unsnoozeCard(cardId: String): Card? {
+            val idx = cards.indexOfFirst { it.id == cardId }
+            if (idx == -1) return null
+            val updated = cards[idx].copy(
+                snoozedUntil = null,
+                snoozeLevel = 0,
+            )
+            cards[idx] = updated
+            return updated
+        }
 
         override fun getAllSubjects(): Flow<List<Subject>> = flowOf(emptyList())
         override suspend fun getSubjectById(subjectId: String): Subject? = null

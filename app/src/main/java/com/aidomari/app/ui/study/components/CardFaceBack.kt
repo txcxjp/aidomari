@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Snooze
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -53,6 +55,7 @@ fun CardFaceBack(
     isReverse: Boolean = false,
     onSpeak: (() -> Unit)? = null,
     onEditClick: (() -> Unit)? = null,
+    onSnooze: (() -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
     val keywordEngine = remember { KeywordEngine() }
@@ -173,13 +176,14 @@ fun CardFaceBack(
             }
         }
 
-        // Bottom grading action buttons (Left: Retry, Right: Done)
+        // Bottom grading action buttons (Left: Retry, Center: Snooze, Right: Done)
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(bottom = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             OutlinedButton(
                 onClick = onRetry,
@@ -194,6 +198,24 @@ fun CardFaceBack(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(text = "もう一度")
+            }
+
+            if (onSnooze != null) {
+                OutlinedButton(
+                    onClick = onSnooze,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Snooze,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "休眠")
+                }
             }
 
             OutlinedButton(

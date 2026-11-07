@@ -7,6 +7,7 @@ import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.domain.util.CardSnoozeCalculator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -523,6 +524,74 @@ class StudyViewModelTest {
         assertEquals(2, state.totalInPart)
     }
 
+    @Test
+    fun loadDeckAndPart_excludesSnoozedCards() = runTest {
+        val snoozedCard = Card(
+            id = "c-snoozed",
+            deckId = "deck-1",
+            front = "Snoozed",
+            back = "休眠中",
+            orderIndex = 3,
+            snoozedUntil = System.currentTimeMillis() + 86400000L,
+            snoozeLevel = 1,
+        )
+        fakeRepository.cards.add(snoozedCard)
+
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(3, state.totalInPart)
+        assertEquals(3, state.queueSize)
+    }
+
+    @Test
+    fun snoozeCurrentCard_snoozesCardAndAdvancesToNext() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        assertEquals("c1", viewModel.uiState.value.currentCard?.id)
+        var durationLabel = ""
+        viewModel.snoozeCurrentCard { label -> durationLabel = label }
+        advanceUntilIdle()
+
+        assertEquals("明日まで", durationLabel)
+        assertEquals("c2", viewModel.uiState.value.currentCard?.id)
+        assertEquals(1, viewModel.uiState.value.completedCount)
+
+        val repoCard = fakeRepository.cards.find { it.id == "c1" }
+        assertNotNull(repoCard)
+        assertTrue(repoCard!!.isSnoozed)
+        assertEquals(1, repoCard.snoozeLevel)
+    }
+
+    @Test
+    fun snoozeCard_and_unsnoozeCard_updatesCardState() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        val targetCard = testCards[0]
+        var notifiedLabel = ""
+        viewModel.snoozeCard(targetCard) { label -> notifiedLabel = label }
+        advanceUntilIdle()
+
+        assertEquals("明日まで", notifiedLabel)
+        val snoozedCard = fakeRepository.cards.find { it.id == targetCard.id }
+        assertNotNull(snoozedCard)
+        assertTrue(snoozedCard!!.isSnoozed)
+        assertEquals(1, snoozedCard.snoozeLevel)
+
+        var unSnoozedCalled = false
+        viewModel.unsnoozeCard(snoozedCard) { unSnoozedCalled = true }
+        advanceUntilIdle()
+
+        assertTrue(unSnoozedCalled)
+        val unsnoozedCard = fakeRepository.cards.find { it.id == targetCard.id }
+        assertNotNull(unsnoozedCard)
+        assertFalse(unsnoozedCard!!.isSnoozed)
+        assertEquals(0, unsnoozedCard.snoozeLevel)
+    }
+
     private class FakeStudyWordsRepository : WordsRepository {
         val subjects = mutableListOf<Subject>()
         val decks = mutableListOf<Deck>()
@@ -602,6 +671,28 @@ class StudyViewModelTest {
         override suspend fun setBookmark(cardId: String, isBookmarked: Boolean) {
             val idx = cards.indexOfFirst { it.id == cardId }
             if (idx != -1) cards[idx] = cards[idx].copy(isBookmarked = isBookmarked)
+        }
+        override suspend fun snoozeCard(cardId: String): Card? {
+            val idx = cards.indexOfFirst { it.id == cardId }
+            if (idx == -1) return null
+            val card = cards[idx]
+            val next = CardSnoozeCalculator.calculateNextSnooze(card.snoozeLevel)
+            val updated = card.copy(
+                snoozedUntil = next.snoozedUntil,
+                snoozeLevel = next.level,
+            )
+            cards[idx] = updated
+            return updated
+        }
+        override suspend fun unsnoozeCard(cardId: String): Card? {
+            val idx = cards.indexOfFirst { it.id == cardId }
+            if (idx == -1) return null
+            val updated = cards[idx].copy(
+                snoozedUntil = null,
+                snoozeLevel = 0,
+            )
+            cards[idx] = updated
+            return updated
         }
         override fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>> =
             flowOf(cards.filter { it.isBookmarked })

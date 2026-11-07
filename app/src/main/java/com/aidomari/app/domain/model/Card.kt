@@ -10,4 +10,9 @@ data class Card(
     val isBookmarked: Boolean = false,
     val orderIndex: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
-)
+    val snoozedUntil: Long? = null,
+    val snoozeLevel: Int = 0,
+) {
+    val isSnoozed: Boolean
+        get() = snoozedUntil != null && snoozedUntil > System.currentTimeMillis()
+}

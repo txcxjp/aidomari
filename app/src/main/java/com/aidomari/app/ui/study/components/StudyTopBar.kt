@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Snooze
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.DropdownMenu
@@ -46,6 +47,8 @@ fun StudyTopBar(
     onOpenTtsSettings: (() -> Unit)? = null,
     onSearchClick: (() -> Unit)? = null,
     onDeleteCard: (() -> Unit)? = null,
+    onSnoozeCard: (() -> Unit)? = null,
+    snoozeDurationLabel: String? = null,
 ) {
     TopAppBar(
         modifier = modifier,
@@ -145,6 +148,22 @@ fun StudyTopBar(
                             onClick = {
                                 showMenu = false
                                 onEditNotes()
+                            },
+                        )
+                    }
+
+                    if (onSnoozeCard != null && snoozeDurationLabel != null) {
+                        DropdownMenuItem(
+                            text = { Text("しばらく表示しない ($snoozeDurationLabel)") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Snooze,
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                onSnoozeCard()
                             },
                         )
                     }

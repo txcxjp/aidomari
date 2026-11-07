@@ -78,6 +78,8 @@ interface WordsRepository {
     suspend fun saveCards(cards: List<Card>)
     suspend fun deleteCard(cardId: String)
     suspend fun setBookmark(cardId: String, isBookmarked: Boolean)
+    suspend fun snoozeCard(cardId: String): Card? = null
+    suspend fun unsnoozeCard(cardId: String): Card? = null
     fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>>
     suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card>
     suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card?

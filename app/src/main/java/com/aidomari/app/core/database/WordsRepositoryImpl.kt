@@ -13,6 +13,7 @@ import com.aidomari.app.domain.model.PastDayGroup
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.domain.util.CardSnoozeCalculator
 import com.aidomari.app.domain.util.PastDayDecksCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -133,6 +134,27 @@ class WordsRepositoryImpl(
 
     override suspend fun setBookmark(cardId: String, isBookmarked: Boolean) {
         dao.setBookmark(cardId, isBookmarked)
+    }
+
+    override suspend fun snoozeCard(cardId: String): Card? {
+        val card = dao.getCardById(cardId)?.toDomain() ?: return null
+        val snoozeResult = CardSnoozeCalculator.calculateNextSnooze(card.snoozeLevel)
+        val updated = card.copy(
+            snoozedUntil = snoozeResult.snoozedUntil,
+            snoozeLevel = snoozeResult.newLevel,
+        )
+        dao.setCardSnooze(cardId, snoozeResult.snoozedUntil, snoozeResult.newLevel)
+        return updated
+    }
+
+    override suspend fun unsnoozeCard(cardId: String): Card? {
+        val card = dao.getCardById(cardId)?.toDomain() ?: return null
+        val updated = card.copy(
+            snoozedUntil = null,
+            snoozeLevel = 0,
+        )
+        dao.setCardSnooze(cardId, snoozedUntil = null, snoozeLevel = 0)
+        return updated
     }
 
     override fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>> =
@@ -269,6 +291,8 @@ class WordsRepositoryImpl(
         isBookmarked = isBookmarked,
         orderIndex = orderIndex,
         createdAt = createdAt,
+        snoozedUntil = snoozedUntil,
+        snoozeLevel = snoozeLevel,
     )
 
     private fun Card.toEntity() = CardEntity(
@@ -281,6 +305,8 @@ class WordsRepositoryImpl(
         isBookmarked = isBookmarked,
         orderIndex = orderIndex,
         createdAt = createdAt,
+        snoozedUntil = snoozedUntil,
+        snoozeLevel = snoozeLevel,
     )
 
     private fun StudySessionEntity.toDomain() = StudySession(

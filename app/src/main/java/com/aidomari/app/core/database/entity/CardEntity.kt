@@ -20,6 +20,7 @@ import java.util.UUID
     indices = [
         Index("deck_id"),
         Index("front"),
+        Index("snoozed_until"),
     ],
 )
 data class CardEntity(
@@ -39,4 +40,8 @@ data class CardEntity(
     val orderIndex: Int = 0,
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "snoozed_until")
+    val snoozedUntil: Long? = null,
+    @ColumnInfo(name = "snooze_level")
+    val snoozeLevel: Int = 0,
 )
