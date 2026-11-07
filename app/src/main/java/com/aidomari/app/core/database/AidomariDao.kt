@@ -162,6 +162,23 @@ interface AidomariDao {
     )
     suspend fun getRandomBookmarkedCard(): CardEntity?
 
+    @Query(
+        """
+        SELECT cards.* FROM cards
+        INNER JOIN decks ON cards.deck_id = decks.id
+        INNER JOIN subjects ON decks.subject_id = subjects.id
+        LEFT JOIN (
+            SELECT card_id, MAX(studied_at) AS max_studied_at
+            FROM card_study_logs
+            GROUP BY card_id
+        ) latest_log ON cards.id = latest_log.card_id
+        WHERE subjects.is_archived = 0
+          AND (latest_log.max_studied_at IS NULL OR latest_log.max_studied_at <= :cutoffTimestamp)
+        ORDER BY RANDOM() LIMIT 1
+        """,
+    )
+    suspend fun getRandomCardOverDaysAgo(cutoffTimestamp: Long): CardEntity?
+
     // --- StudySession Operations (続きから再開・進捗永続化) ---
     @Query("SELECT * FROM study_sessions WHERE deck_id = :deckId")
     suspend fun getSession(deckId: String): StudySessionEntity?

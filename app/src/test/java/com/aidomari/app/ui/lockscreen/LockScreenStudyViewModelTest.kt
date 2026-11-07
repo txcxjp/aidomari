@@ -117,6 +117,42 @@ class LockScreenStudyViewModelTest {
     }
 
     @Test
+    fun targetDaysAgo_requestsCardOverDaysAgo() = runTest {
+        preferences.updateConfig(
+            com.aidomari.app.core.lockscreen.LockScreenConfig(
+                isEnabled = true,
+                target = LockScreenTarget.DAYS_AGO,
+                daysThreshold = 7,
+            ),
+        )
+        val daysAgoCard = Card(id = "card-days-ago", deckId = "deck-1", front = "old", back = "古い")
+        fakeRepository.cardOverDaysAgo = daysAgoCard
+
+        viewModel = LockScreenStudyViewModel(fakeRepository, preferences)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("card-days-ago", state.card?.id)
+        assertNotNull(fakeRepository.lastCutoffTimestamp)
+    }
+
+    @Test
+    fun markDone_recordsStudyLogWithTrueAndCallsCallback() = runTest {
+        val card = Card(id = "card-1", deckId = "deck-1", front = "test", back = "テスト")
+        fakeRepository.cards.add(card)
+
+        viewModel = LockScreenStudyViewModel(fakeRepository, preferences)
+        advanceUntilIdle()
+
+        var finished = false
+        viewModel.markDone { finished = true }
+        advanceUntilIdle()
+
+        assertTrue(finished)
+        assertEquals(listOf("card-1" to true), fakeRepository.recordedLogs)
+    }
+
+    @Test
     fun markRetry_setsBookmarkAndCallsCallback() = runTest {
         val card = Card(id = "card-1", deckId = "deck-1", front = "test", back = "テスト", isBookmarked = false)
         fakeRepository.cards.add(card)
@@ -130,6 +166,7 @@ class LockScreenStudyViewModelTest {
 
         assertTrue(finished)
         assertTrue(fakeRepository.bookmarkedCardIds.contains("card-1"))
+        assertEquals(listOf("card-1" to false), fakeRepository.recordedLogs)
     }
 
     @Test
@@ -151,6 +188,9 @@ class LockScreenStudyViewModelTest {
         val decks = mutableListOf<Deck>()
         val cards = mutableListOf<Card>()
         val bookmarkedCardIds = mutableSetOf<String>()
+        val recordedLogs = mutableListOf<Pair<String, Boolean>>()
+        var cardOverDaysAgo: Card? = null
+        var lastCutoffTimestamp: Long? = null
 
         override fun getAllSubjects(): Flow<List<Subject>> = MutableStateFlow(subjects)
         override suspend fun getSubjectById(id: String): Subject? = subjects.find { it.id == id }
@@ -182,6 +222,23 @@ class LockScreenStudyViewModelTest {
             cards.find { it.isBookmarked }
         } else {
             cards.firstOrNull()
+        }
+
+        override suspend fun getRandomCardOverDaysAgo(cutoffTimestamp: Long): Card? {
+            lastCutoffTimestamp = cutoffTimestamp
+            return cardOverDaysAgo
+        }
+
+        override suspend fun recordStudyLog(
+            cardId: String,
+            isCorrect: Boolean,
+        ): com.aidomari.app.domain.model.CardStudyLog {
+            recordedLogs.add(cardId to isCorrect)
+            return com.aidomari.app.domain.model.CardStudyLog(
+                id = "log-id",
+                cardId = cardId,
+                isCorrect = isCorrect,
+            )
         }
 
         override suspend fun getSession(deckId: String) = null

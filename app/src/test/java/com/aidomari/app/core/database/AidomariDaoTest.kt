@@ -387,4 +387,47 @@ class AidomariDaoTest {
         dao.deleteCard(card)
         assertEquals(0, dao.getReviewCountForCard("card-cas"))
     }
+
+    @Test
+    fun getRandomCardOverDaysAgo_returnsUnstudiedAndOldCards_excludesRecentAndArchived() = runBlocking {
+        val now = 100_000L
+        val cutoff = now - 30_000L // 30秒前（実世界では3日前など）
+
+        // Active Subject
+        val activeSubject = SubjectEntity(id = "sub-active", name = "英語", isArchived = false)
+        val activeDeck = DeckEntity(id = "deck-active", subjectId = "sub-active", name = "単語帳")
+        dao.insertSubject(activeSubject)
+        dao.insertDeck(activeDeck)
+
+        // card-unstudied: ログなし（未学習）
+        val unstudiedCard = CardEntity(id = "c-unstudied", deckId = "deck-active", front = "new", back = "新しい")
+        // card-old: 過去に学習済み（studiedAt = 50_000L <= cutoff）
+        val oldCard = CardEntity(id = "c-old", deckId = "deck-active", front = "old", back = "古い")
+        // card-recent: 最近学習済み（studiedAt = 90_000L > cutoff）
+        val recentCard = CardEntity(id = "c-recent", deckId = "deck-active", front = "recent", back = "最近")
+        dao.insertCards(listOf(unstudiedCard, oldCard, recentCard))
+
+        dao.insertStudyLog(CardStudyLogEntity(id = "log-old", cardId = "c-old", isCorrect = true, studiedAt = 50_000L))
+        dao.insertStudyLog(CardStudyLogEntity(id = "log-recent", cardId = "c-recent", isCorrect = true, studiedAt = 90_000L))
+
+        // Archived Subject
+        val archivedSubject = SubjectEntity(id = "sub-arch", name = "保存教科", isArchived = true)
+        val archivedDeck = DeckEntity(id = "deck-arch", subjectId = "sub-arch", name = "保存デッキ")
+        val archivedCard = CardEntity(id = "c-arch", deckId = "deck-arch", front = "archived", back = "保存")
+        dao.insertSubject(archivedSubject)
+        dao.insertDeck(archivedDeck)
+        dao.insertCard(archivedCard)
+
+        // 複数回試行して、取得されるカードが c-unstudied または c-old のみであり、c-recent や c-arch が決して返らないことを検証
+        val returnedIds = mutableSetOf<String>()
+        repeat(30) {
+            val card = dao.getRandomCardOverDaysAgo(cutoff)
+            assertNotNull(card)
+            card?.let { returnedIds.add(it.id) }
+        }
+
+        assertTrue(returnedIds.contains("c-unstudied") || returnedIds.contains("c-old"))
+        assertTrue(!returnedIds.contains("c-recent"))
+        assertTrue(!returnedIds.contains("c-arch"))
+    }
 }

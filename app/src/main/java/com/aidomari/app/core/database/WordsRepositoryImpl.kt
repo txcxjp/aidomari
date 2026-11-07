@@ -135,6 +135,9 @@ class WordsRepositoryImpl(
         return entity?.toDomain()
     }
 
+    override suspend fun getRandomCardOverDaysAgo(cutoffTimestamp: Long): Card? =
+        dao.getRandomCardOverDaysAgo(cutoffTimestamp)?.toDomain()
+
     override suspend fun getSession(deckId: String): StudySession? =
         dao.getSession(deckId)?.toDomain()
 

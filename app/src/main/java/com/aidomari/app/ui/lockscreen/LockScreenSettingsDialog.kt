@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,11 +15,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -177,6 +180,57 @@ fun LockScreenSettingsDialog(
                             MaterialTheme.colorScheme.outline
                         },
                     )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = config.isEnabled) {
+                            onConfigChanged(config.copy(target = LockScreenTarget.DAYS_AGO))
+                        }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = config.target == LockScreenTarget.DAYS_AGO,
+                        onClick = { onConfigChanged(config.copy(target = LockScreenTarget.DAYS_AGO)) },
+                        enabled = config.isEnabled,
+                        modifier = Modifier.testTag("TargetDaysAgoRadio"),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${config.daysThreshold}日以上前に出題した単語（未学習含む）",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (config.isEnabled) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.outline
+                        },
+                    )
+                }
+
+                if (config.target == LockScreenTarget.DAYS_AGO) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 36.dp, top = 2.dp, bottom = 4.dp)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        listOf(1, 3, 7, 14, 30).forEach { days ->
+                            FilterChip(
+                                selected = config.daysThreshold == days,
+                                onClick = {
+                                    if (config.isEnabled) {
+                                        onConfigChanged(config.copy(daysThreshold = days))
+                                    }
+                                },
+                                label = { Text("${days}日") },
+                                enabled = config.isEnabled,
+                                modifier = Modifier.testTag("DaysThresholdChip_$days"),
+                            )
+                        }
+                    }
                 }
 
                 if (config.isEnabled) {
