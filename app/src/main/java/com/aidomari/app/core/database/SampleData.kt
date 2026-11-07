@@ -16,18 +16,21 @@ object SampleData {
             name = SAMPLE_SUBJECT_NAME,
             ttsLanguage = "en-US",
             sortOrder = 0,
+            colorTheme = "INDIGO",
         ),
         Subject(
             id = "sample-subject-2",
             name = "世界史",
             ttsLanguage = "ja-JP",
             sortOrder = 1,
+            colorTheme = "AMBER",
         ),
         Subject(
             id = "sample-subject-3",
             name = "情報科学・IT用語",
             ttsLanguage = "ja-JP",
             sortOrder = 2,
+            colorTheme = "FOREST",
         ),
     )
 
@@ -101,10 +104,10 @@ object SampleData {
 
         db.execSQL(
             """
-            INSERT INTO subjects (id, name, tts_language, sort_order, created_at, is_archived)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO subjects (id, name, tts_language, sort_order, created_at, is_archived, color_theme)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
-            arrayOf(subjectId, SAMPLE_SUBJECT_NAME, "en-US", 0, now, 0),
+            arrayOf(subjectId, SAMPLE_SUBJECT_NAME, "en-US", 0, now, 0, "INDIGO"),
         )
 
         db.execSQL(

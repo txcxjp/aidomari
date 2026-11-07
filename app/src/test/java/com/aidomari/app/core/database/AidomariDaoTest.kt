@@ -41,13 +41,14 @@ class AidomariDaoTest {
 
     @Test
     fun insertAndGetSubject() = runBlocking {
-        val subject = SubjectEntity(id = "sub-1", name = "英語", ttsLanguage = "en-US")
+        val subject = SubjectEntity(id = "sub-1", name = "英語", ttsLanguage = "en-US", colorTheme = "INDIGO")
         dao.insertSubject(subject)
 
         val retrieved = dao.getSubjectById("sub-1")
         assertNotNull(retrieved)
         assertEquals("英語", retrieved?.name)
         assertEquals("en-US", retrieved?.ttsLanguage)
+        assertEquals("INDIGO", retrieved?.colorTheme)
     }
 
     @Test

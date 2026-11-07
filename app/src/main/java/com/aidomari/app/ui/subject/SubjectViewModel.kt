@@ -36,7 +36,7 @@ class SubjectViewModel(
             initialValue = emptyList(),
         )
 
-    fun createSubject(name: String, ttsLanguage: String = "auto") {
+    fun createSubject(name: String, ttsLanguage: String = "auto", colorTheme: String? = null) {
         if (name.isBlank()) return
         viewModelScope.launch {
             val newSubject = Subject(
@@ -44,12 +44,13 @@ class SubjectViewModel(
                 name = name.trim(),
                 ttsLanguage = ttsLanguage,
                 sortOrder = subjects.value.size,
+                colorTheme = colorTheme,
             )
             repository.saveSubject(newSubject)
         }
     }
 
-    fun updateSubject(id: String, name: String, ttsLanguage: String = "auto") {
+    fun updateSubject(id: String, name: String, ttsLanguage: String = "auto", colorTheme: String? = null) {
         if (name.isBlank()) return
         viewModelScope.launch {
             val subject = repository.getSubjectById(id) ?: return@launch
@@ -57,6 +58,7 @@ class SubjectViewModel(
                 subject.copy(
                     name = name.trim(),
                     ttsLanguage = ttsLanguage,
+                    colorTheme = colorTheme,
                 ),
             )
         }

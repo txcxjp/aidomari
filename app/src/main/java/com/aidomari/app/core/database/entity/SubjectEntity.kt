@@ -18,4 +18,6 @@ data class SubjectEntity(
     val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "is_archived")
     val isArchived: Boolean = false,
+    @ColumnInfo(name = "color_theme")
+    val colorTheme: String? = null,
 )

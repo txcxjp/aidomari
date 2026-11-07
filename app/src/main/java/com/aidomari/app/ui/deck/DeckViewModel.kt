@@ -49,6 +49,9 @@ class DeckViewModel(
     private val _isSubjectArchived = MutableStateFlow(false)
     val isSubjectArchived: StateFlow<Boolean> = _isSubjectArchived.asStateFlow()
 
+    private val _subject = MutableStateFlow<Subject?>(null)
+    val subject: StateFlow<Subject?> = _subject.asStateFlow()
+
     init {
         loadSubjectInfo()
         loadDecks()
@@ -60,8 +63,9 @@ class DeckViewModel(
 
     fun loadSubjectInfo() {
         viewModelScope.launch {
-            val subject = repository.getSubjectById(subjectId)
-            _isSubjectArchived.value = subject?.isArchived == true
+            val s = repository.getSubjectById(subjectId)
+            _subject.value = s
+            _isSubjectArchived.value = s?.isArchived == true
         }
     }
 
