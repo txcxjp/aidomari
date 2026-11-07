@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
@@ -76,7 +77,11 @@ fun LockScreenSettingsDialog(
             )
         },
         text = {
-            Column(modifier = modifier.fillMaxWidth()) {
+            Column(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+            ) {
                 Text(
                     text = "スマホの画面点灯時に、ロック画面の上に1問演習カードを表示して習慣化します。",
                     style = MaterialTheme.typography.bodySmall,

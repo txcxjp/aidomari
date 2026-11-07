@@ -1,10 +1,14 @@
 package com.aidomari.app.ui.lockscreen
 
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.aidomari.app.core.lockscreen.LockScreenConfig
 import com.aidomari.app.core.lockscreen.LockScreenTarget
 import org.junit.Assert.assertEquals
@@ -32,45 +36,49 @@ class LockScreenSettingsDialogTest {
             )
         }
 
-        composeTestRule.onNodeWithText("ロック画面学習の設定").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("TargetAllRadio").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("TargetBookmarkRadio").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("TargetDaysAgoRadio").assertIsDisplayed()
+        composeTestRule.onNodeWithText("ロック画面学習の設定").assertExists()
+        composeTestRule.onNodeWithTag("TargetAllRadio").assertExists()
+        composeTestRule.onNodeWithTag("TargetBookmarkRadio").assertExists()
+        composeTestRule.onNodeWithTag("TargetDaysAgoRadio").assertExists()
     }
 
     @Test
     fun selectDaysAgoTarget_callsOnConfigChangedWithDaysAgo() {
-        var updatedConfig: LockScreenConfig? = null
+        var currentConfig by mutableStateOf(
+            LockScreenConfig(isEnabled = true, target = LockScreenTarget.ALL),
+        )
         composeTestRule.setContent {
             LockScreenSettingsDialog(
-                config = LockScreenConfig(isEnabled = true, target = LockScreenTarget.ALL),
-                onConfigChanged = { updatedConfig = it },
+                config = currentConfig,
+                onConfigChanged = { currentConfig = it },
                 onDismissRequest = {},
             )
         }
 
-        composeTestRule.onNodeWithTag("TargetDaysAgoRadio").performClick()
-        assertEquals(LockScreenTarget.DAYS_AGO, updatedConfig?.target)
+        composeTestRule.onNodeWithTag("TargetDaysAgoRadio").performScrollTo().performClick()
+        assertEquals(LockScreenTarget.DAYS_AGO, currentConfig.target)
     }
 
     @Test
     fun daysAgoTargetSelected_displaysThresholdChips_andUpdatesThresholdOnSelect() {
-        var updatedConfig: LockScreenConfig? = null
+        var currentConfig by mutableStateOf(
+            LockScreenConfig(
+                isEnabled = true,
+                target = LockScreenTarget.DAYS_AGO,
+                daysThreshold = 3,
+            ),
+        )
         composeTestRule.setContent {
             LockScreenSettingsDialog(
-                config = LockScreenConfig(
-                    isEnabled = true,
-                    target = LockScreenTarget.DAYS_AGO,
-                    daysThreshold = 3,
-                ),
-                onConfigChanged = { updatedConfig = it },
+                config = currentConfig,
+                onConfigChanged = { currentConfig = it },
                 onDismissRequest = {},
             )
         }
 
-        composeTestRule.onNodeWithTag("DaysThresholdChip_7").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("DaysThresholdChip_7").performClick()
-        assertEquals(7, updatedConfig?.daysThreshold)
+        composeTestRule.onNodeWithTag("DaysThresholdChip_7").assertExists()
+        composeTestRule.onNodeWithTag("DaysThresholdChip_7").performScrollTo().performClick()
+        assertEquals(7, currentConfig.daysThreshold)
     }
 
     @Test
