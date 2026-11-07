@@ -75,8 +75,9 @@ class LockScreenSettingsDialogTest {
             )
         }
 
+        composeTestRule.onNodeWithTag("DaysThresholdRow").performScrollTo()
         composeTestRule.onNodeWithTag("DaysThresholdChip_7").assertExists()
-        composeTestRule.onNodeWithTag("DaysThresholdChip_7").performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("DaysThresholdChip_7").performClick()
         assertEquals(7, currentConfig.daysThreshold)
     }
 

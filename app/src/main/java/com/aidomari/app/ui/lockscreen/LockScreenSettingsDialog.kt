@@ -219,6 +219,7 @@ fun LockScreenSettingsDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 36.dp, top = 2.dp, bottom = 4.dp)
+                            .testTag("DaysThresholdRow")
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
