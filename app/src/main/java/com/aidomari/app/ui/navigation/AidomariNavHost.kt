@@ -1,5 +1,10 @@
 package com.aidomari.app.ui.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -21,6 +26,8 @@ import com.aidomari.app.ui.subject.SubjectListScreen
 import com.aidomari.app.ui.subject.SubjectViewModel
 import com.aidomari.app.ui.theme.ThemePreferences
 
+private const val TRANSITION_DURATION_MS = 280
+
 @Composable
 fun AidomariNavHost(
     repository: WordsRepository,
@@ -33,6 +40,30 @@ fun AidomariNavHost(
         navController = navController,
         startDestination = "subjects",
         modifier = modifier,
+        enterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                animationSpec = tween(TRANSITION_DURATION_MS, easing = FastOutSlowInEasing),
+            ) + fadeIn(animationSpec = tween(TRANSITION_DURATION_MS))
+        },
+        exitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                animationSpec = tween(TRANSITION_DURATION_MS, easing = FastOutSlowInEasing),
+            ) + fadeOut(animationSpec = tween(TRANSITION_DURATION_MS))
+        },
+        popEnterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.End,
+                animationSpec = tween(TRANSITION_DURATION_MS, easing = FastOutSlowInEasing),
+            ) + fadeIn(animationSpec = tween(TRANSITION_DURATION_MS))
+        },
+        popExitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.End,
+                animationSpec = tween(TRANSITION_DURATION_MS, easing = FastOutSlowInEasing),
+            ) + fadeOut(animationSpec = tween(TRANSITION_DURATION_MS))
+        },
     ) {
         composable("subjects") {
             val subjectViewModel = remember { SubjectViewModel(repository) }
