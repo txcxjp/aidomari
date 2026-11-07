@@ -109,22 +109,7 @@ fun FlippableCard(
 
                     if (!pointer.pressed) {
                         // Pointer lifted
-                        if (!isHorizontalDrag && !isVerticalDrag) {
-                            if (!pointer.isConsumed) {
-                                // Tap: flip card
-                                coroutineScope.launch {
-                                    val target = if (!isFlipped) 180f else 0f
-                                    rotation.animateTo(
-                                        targetValue = target,
-                                        animationSpec = tween(
-                                            durationMillis = 260,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
-                                    onFlip()
-                                }
-                            }
-                        } else if (isHorizontalDrag) {
+                        if (isHorizontalDrag) {
                             if (!isFlipped) {
                                 // Front face drag end: snap to back or bounce to front (direction-aware)
                                 val progress = (abs(totalDragX) / flipDistance).coerceIn(0f, 1f)
