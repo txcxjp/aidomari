@@ -6,6 +6,7 @@ import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.StudySession
+import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
 import com.aidomari.app.domain.util.CardSnoozeCalculator
 import kotlinx.coroutines.flow.MutableStateFlow
