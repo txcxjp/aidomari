@@ -139,4 +139,37 @@ class DeckItemCardTest {
         composeTestRule.onNodeWithText("自動音声 (1.0x)").assertIsDisplayed()
         composeTestRule.onNodeWithText("Part 1 (0枚)").assertIsDisplayed()
     }
+
+    @Test
+    fun deckItemCard_randomStudyViaMenu_invokesCallback() {
+        val deck = Deck(
+            id = "deck-1",
+            subjectId = "sub-1",
+            name = "日常英会話",
+        )
+        val item = DeckWithPartsUiModel(
+            deck = deck,
+            parts = emptyList(),
+            totalCardCount = 20,
+        )
+
+        var randomStudyClicked = false
+
+        composeTestRule.setContent {
+            DeckItemCard(
+                item = item,
+                onPartClick = { _, _ -> },
+                onToggleShuffle = {},
+                onToggleAutoSpeak = {},
+                onManageCardsClick = {},
+                onEditDeck = {},
+                onDeleteDeck = {},
+                onRandomStudyClick = { randomStudyClicked = true },
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Deck More Options").performClick()
+        composeTestRule.onNodeWithText("ランダム出題").performClick()
+        assertTrue(randomStudyClicked)
+    }
 }

@@ -93,6 +93,7 @@ fun DeckListScreen(
     var selectedSearchCard by remember { mutableStateOf<Card?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showRandomQuestionsDialog by remember { mutableStateOf(false) }
+    var deckForRandomStudy by remember { mutableStateOf<DeckWithPartsUiModel?>(null) }
     var deckToEdit by remember { mutableStateOf<Deck?>(null) }
     var deckToDelete by remember { mutableStateOf<Deck?>(null) }
 
@@ -135,6 +136,7 @@ fun DeckListScreen(
         onManageCardsClick = onManageCardsClick,
         onAddDeckClick = { showAddDialog = true },
         onRandomQuestionsClick = { showRandomQuestionsDialog = true },
+        onDeckRandomStudyClick = { deckForRandomStudy = it },
         onUnarchiveSubject = {
             viewModel.unarchiveSubject {
                 coroutineScope.launch {
@@ -213,6 +215,24 @@ fun DeckListScreen(
             },
         )
     }
+
+    if (deckForRandomStudy != null) {
+        val targetDeckUi = deckForRandomStudy!!
+        RandomQuestionsDialog(
+            totalCards = targetDeckUi.totalCardCount,
+            initialCount = randomQuestionCount,
+            title = "「${targetDeckUi.deck.name}」のランダム出題",
+            description = "この単語帳のカード（${targetDeckUi.totalCardCount}枚）からランダムに出題します。出題する問題数を選択してください。",
+            onDismissRequest = { deckForRandomStudy = null },
+            onStartStudy = { count ->
+                viewModel.setRandomQuestionCount(count)
+                val targetDeckId = targetDeckUi.deck.id
+                deckForRandomStudy = null
+                val randomDeckId = "random_deck_${count}_${targetDeckId}"
+                onPartClick(randomDeckId, 0)
+            },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -247,6 +267,7 @@ fun DeckListContent(
     onSpeakText: (String) -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onDeckRandomStudyClick: ((DeckWithPartsUiModel) -> Unit)? = null,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -443,6 +464,7 @@ fun DeckListContent(
                             onManageCardsClick = { onManageCardsClick(item.deck.id) },
                             onEditDeck = { onEditDeck(item.deck) },
                             onDeleteDeck = { onDeleteDeck(item.deck) },
+                            onRandomStudyClick = { onDeckRandomStudyClick?.invoke(item) },
                         )
                     }
                 }
