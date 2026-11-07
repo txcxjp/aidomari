@@ -88,7 +88,9 @@ class SubjectListScreenTest {
         composeTestRule.onNodeWithText("教科をアーカイブ").performClick()
         composeTestRule.waitForIdle()
 
-        // Should see archived section link via TopBar button
+        // Navigate to archived section via TopBar overflow menu
+        composeTestRule.onNodeWithTag("TopBarMenuButton").performClick()
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("TopBarArchivedButton").performClick()
         composeTestRule.waitForIdle()
 
@@ -107,7 +109,7 @@ class SubjectListScreenTest {
     }
 
     @Test
-    fun archiveSubject_withOtherActiveSubjects_showsArchivedSubjectsLinkAtBottom() {
+    fun archiveSubject_withOtherActiveSubjects_navigatesViaTopBarMenu_withoutDuplicateBottomCard() {
         val subject1 = Subject(id = "sub-1", name = "物理基礎")
         val subject2 = Subject(id = "sub-2", name = "化学基礎")
         fakeRepository.seedSubjects(listOf(subject1, subject2))
@@ -127,8 +129,13 @@ class SubjectListScreenTest {
         // sub-2 is still active
         composeTestRule.onNodeWithText("化学基礎").assertIsDisplayed()
 
-        // Archived link is shown at bottom
-        composeTestRule.onNodeWithTag("ArchivedSubjectsLink").performClick()
+        // Duplicate bottom archived link card should NOT exist
+        composeTestRule.onNodeWithTag("ArchivedSubjectsLink").assertDoesNotExist()
+
+        // Open TopBar menu and navigate to archived view
+        composeTestRule.onNodeWithTag("TopBarMenuButton").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("TopBarArchivedButton").performClick()
         composeTestRule.waitForIdle()
 
         // In archived view
@@ -196,8 +203,10 @@ class SubjectListScreenTest {
             )
         }
 
-        // Click import button
-        composeTestRule.onNodeWithText("インポート").performClick()
+        // Open TopBar menu and click import
+        composeTestRule.onNodeWithTag("TopBarMenuButton").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("MenuImportItem").performClick()
         composeTestRule.waitForIdle()
 
         // Target subject selector should be displayed
