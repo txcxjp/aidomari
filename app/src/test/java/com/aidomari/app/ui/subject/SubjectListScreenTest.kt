@@ -258,12 +258,14 @@ class SubjectListScreenTest {
         }
 
         // Click Add Subject FAB
-        composeTestRule.onNodeWithContentDescription("教科を追加").performClick()
+        composeTestRule.onNodeWithTag("AddSubjectFab").performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("新規教科の作成").assertIsDisplayed()
         composeTestRule.onNodeWithText("カラーテーマ:").assertIsDisplayed()
-        composeTestRule.onNodeWithText("標準").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("ColorThemeOption_DEFAULT").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("標準テーマ").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("ColorThemeOption_INDIGO").assertIsDisplayed()
     }
 }
 

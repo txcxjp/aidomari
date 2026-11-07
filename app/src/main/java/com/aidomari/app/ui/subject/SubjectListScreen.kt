@@ -693,6 +693,7 @@ fun SubjectListContent(
             if (!isArchivedView) {
                 FloatingActionButton(
                     onClick = onAddSubjectClick,
+                    modifier = Modifier.testTag("AddSubjectFab"),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -1198,6 +1199,7 @@ private fun SubjectColorThemePicker(
                         color = if (isDefaultSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                         shape = CircleShape,
                     )
+                    .testTag("ColorThemeOption_DEFAULT")
                     .clickable { onColorThemeSelected(null) },
                 contentAlignment = Alignment.Center,
             ) {
@@ -1230,6 +1232,7 @@ private fun SubjectColorThemePicker(
                             color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
                             shape = CircleShape,
                         )
+                        .testTag("ColorThemeOption_${theme.name}")
                         .clickable { onColorThemeSelected(theme.name) },
                     contentAlignment = Alignment.Center,
                 ) {
