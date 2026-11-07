@@ -5,6 +5,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import com.aidomari.app.domain.model.Card
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -88,6 +90,31 @@ class LockScreenStudyContentTest {
         }
 
         composeTestRule.onNodeWithTag("LockScreenDismissButton").performClick()
+        assertTrue(dismissed)
+    }
+
+    @Test
+    fun lockScreenContent_upwardSwipe_animatesAndCallsOnDismiss() {
+        var dismissed = false
+        composeTestRule.setContent {
+            LockScreenStudyContent(
+                uiState = LockScreenUiState(
+                    isLoading = false,
+                    card = sampleCard,
+                    isFlipped = false,
+                ),
+                onFlip = {},
+                onDone = {},
+                onRetry = {},
+                onSpeak = {},
+                onDismiss = { dismissed = true },
+            )
+        }
+
+        composeTestRule.onNodeWithTag("LockScreenStudyRoot").performTouchInput {
+            swipeUp()
+        }
+        composeTestRule.waitForIdle()
         assertTrue(dismissed)
     }
 }
