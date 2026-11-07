@@ -108,7 +108,7 @@ fun CardFaceFront(
 
         // Bottom hint
         Text(
-            text = "タップまたは音量キーでめくる",
+            text = "左右スワイプまたは音量キーでめくる",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline,
             modifier = Modifier
