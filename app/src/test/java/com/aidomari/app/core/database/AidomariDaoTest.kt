@@ -389,9 +389,9 @@ class AidomariDaoTest {
     }
 
     @Test
-    fun getRandomCardOverDaysAgo_returnsUnstudiedAndOldCards_excludesRecentAndArchived() = runBlocking {
+    fun getRandomCardOverDaysAgo_returnsOnlyOldStudiedCards_excludesUnstudiedRecentAndArchived() = runBlocking {
         val now = 100_000L
-        val cutoff = now - 30_000L // 30秒前（実世界では3日前など）
+        val cutoff = now - 30_000L // 70_000L
 
         // Active Subject
         val activeSubject = SubjectEntity(id = "sub-active", name = "英語", isArchived = false)
@@ -399,7 +399,7 @@ class AidomariDaoTest {
         dao.insertSubject(activeSubject)
         dao.insertDeck(activeDeck)
 
-        // card-unstudied: ログなし（未学習）
+        // card-unstudied: ログなし（未学習・新規）
         val unstudiedCard = CardEntity(id = "c-unstudied", deckId = "deck-active", front = "new", back = "新しい")
         // card-old: 過去に学習済み（studiedAt = 50_000L <= cutoff）
         val oldCard = CardEntity(id = "c-old", deckId = "deck-active", front = "old", back = "古い")
@@ -417,17 +417,46 @@ class AidomariDaoTest {
         dao.insertSubject(archivedSubject)
         dao.insertDeck(archivedDeck)
         dao.insertCard(archivedCard)
+        dao.insertStudyLog(CardStudyLogEntity(id = "log-arch", cardId = "c-arch", isCorrect = true, studiedAt = 40_000L))
 
-        // 複数回試行して、取得されるカードが c-unstudied または c-old のみであり、c-recent や c-arch が決して返らないことを検証
-        val returnedIds = mutableSetOf<String>()
-        repeat(30) {
-            val card = dao.getRandomCardOverDaysAgo(cutoff)
-            assertNotNull(card)
-            card?.let { returnedIds.add(it.id) }
-        }
+        // c-old のみが返ること（c-unstudied, c-recent, c-arch は除外される）
+        val card = dao.getRandomCardOverDaysAgo(cutoff)
+        assertNotNull(card)
+        assertEquals("c-old", card?.id)
+    }
 
-        assertTrue(returnedIds.contains("c-unstudied") || returnedIds.contains("c-old"))
-        assertTrue(!returnedIds.contains("c-recent"))
-        assertTrue(!returnedIds.contains("c-arch"))
+    @Test
+    fun getOldestStudiedCard_returnsCardWithOldestMaxStudiedAt_excludesArchivedAndUnstudied() = runBlocking {
+        val activeSubject = SubjectEntity(id = "sub-oldest", name = "英語", isArchived = false)
+        val activeDeck = DeckEntity(id = "deck-oldest", subjectId = "sub-oldest", name = "単語帳")
+        dao.insertSubject(activeSubject)
+        dao.insertDeck(activeDeck)
+
+        val unstudied = CardEntity(id = "c-unstudied", deckId = "deck-oldest", front = "unstudied", back = "未学習")
+        val old1 = CardEntity(id = "c-old1", deckId = "deck-oldest", front = "older", back = "より古い")
+        val old2 = CardEntity(id = "c-old2", deckId = "deck-oldest", front = "newer", back = "より新しい")
+        dao.insertCards(listOf(unstudied, old1, old2))
+
+        // old1: last studied at 1000L
+        dao.insertStudyLog(CardStudyLogEntity(id = "l1", cardId = "c-old1", isCorrect = true, studiedAt = 1000L))
+        // old2: last studied at 5000L
+        dao.insertStudyLog(CardStudyLogEntity(id = "l2", cardId = "c-old2", isCorrect = true, studiedAt = 5000L))
+
+        val oldestCard = dao.getOldestStudiedCard()
+        assertNotNull(oldestCard)
+        assertEquals("c-old1", oldestCard?.id)
+    }
+
+    @Test
+    fun getOldestStudiedCard_whenNoCardsStudied_returnsNull() = runBlocking {
+        val subject = SubjectEntity(id = "sub-none", name = "英語", isArchived = false)
+        val deck = DeckEntity(id = "deck-none", subjectId = "sub-none", name = "単語帳")
+        val unstudied = CardEntity(id = "c-none", deckId = "deck-none", front = "unstudied", back = "未学習")
+        dao.insertSubject(subject)
+        dao.insertDeck(deck)
+        dao.insertCard(unstudied)
+
+        val card = dao.getOldestStudiedCard()
+        assertTrue(card == null)
     }
 }

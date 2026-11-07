@@ -15,12 +15,20 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.aidomari.app.AidomariApp
 import com.aidomari.app.MainActivity
 import com.aidomari.app.ui.lockscreen.LockScreenStudyActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class LockScreenStudyService : Service() {
 
     private var screenReceiver: BroadcastReceiver? = null
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
         super.onCreate()
@@ -35,6 +43,7 @@ class LockScreenStudyService : Service() {
 
     override fun onDestroy() {
         unregisterScreenReceiver()
+        serviceScope.cancel()
         super.onDestroy()
     }
 
@@ -75,15 +84,37 @@ class LockScreenStudyService : Service() {
                     val keyguardManager =
                         context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
                     if (keyguardManager?.isKeyguardLocked == true) {
-                        val activityIntent =
-                            Intent(context, LockScreenStudyActivity::class.java).apply {
-                                addFlags(
-                                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                        Intent.FLAG_ACTIVITY_SINGLE_TOP,
-                                )
+                        val app = context.applicationContext as? AidomariApp
+                        val repo = app?.repository
+                        val prefs = app?.lockScreenPreferences
+                        if (repo != null && prefs != null) {
+                            serviceScope.launch(Dispatchers.IO) {
+                                val config = prefs.config.value
+                                val card = when (config.target) {
+                                    LockScreenTarget.BOOKMARK_ONLY -> repo.getRandomCard(bookmarkOnly = true)
+                                    LockScreenTarget.DAYS_AGO -> {
+                                        val cutoffTimestamp = System.currentTimeMillis() -
+                                            (config.daysThreshold.toLong() * MILLIS_PER_DAY)
+                                        repo.getRandomCardOverDaysAgo(cutoffTimestamp)
+                                            ?: repo.getOldestStudiedCard()
+                                    }
+                                    LockScreenTarget.ALL -> repo.getRandomCard(bookmarkOnly = false)
+                                }
+                                if (card != null) {
+                                    withContext(Dispatchers.Main) {
+                                        val activityIntent =
+                                            Intent(context, LockScreenStudyActivity::class.java).apply {
+                                                addFlags(
+                                                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                                                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                                        Intent.FLAG_ACTIVITY_SINGLE_TOP,
+                                                )
+                                            }
+                                        context.startActivity(activityIntent)
+                                    }
+                                }
                             }
-                        context.startActivity(activityIntent)
+                        }
                     }
                 }
             }
@@ -126,6 +157,7 @@ class LockScreenStudyService : Service() {
     companion object {
         const val CHANNEL_ID = "lock_screen_study_channel"
         const val NOTIFICATION_ID = 2001
+        private const val MILLIS_PER_DAY = 24L * 60L * 60L * 1000L
 
         fun start(context: Context) {
             val intent = Intent(context, LockScreenStudyService::class.java)

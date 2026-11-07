@@ -67,6 +67,7 @@ interface WordsRepository {
     suspend fun getAllCardsInSubject(subjectId: String): List<Card>
     suspend fun getRandomCard(bookmarkOnly: Boolean = false): Card? = null
     suspend fun getRandomCardOverDaysAgo(cutoffTimestamp: Long): Card? = null
+    suspend fun getOldestStudiedCard(): Card? = null
 
     // Session (続きから再開)
     suspend fun getSession(deckId: String): StudySession?

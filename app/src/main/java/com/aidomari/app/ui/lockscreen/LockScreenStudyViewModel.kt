@@ -45,6 +45,7 @@ class LockScreenStudyViewModel(
                     val cutoffTimestamp = System.currentTimeMillis() -
                         (config.daysThreshold.toLong() * MILLIS_PER_DAY)
                     repository.getRandomCardOverDaysAgo(cutoffTimestamp)
+                        ?: repository.getOldestStudiedCard()
                 }
                 LockScreenTarget.ALL -> repository.getRandomCard(bookmarkOnly = false)
             }
