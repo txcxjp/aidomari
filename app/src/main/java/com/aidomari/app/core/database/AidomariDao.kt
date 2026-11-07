@@ -8,6 +8,7 @@ import androidx.room.Update
 import androidx.room.Upsert
 import com.aidomari.app.core.database.entity.CardEntity
 import com.aidomari.app.core.database.entity.CardStudyLogEntity
+import com.aidomari.app.core.database.entity.CardWithLatestStudiedAt
 import com.aidomari.app.core.database.entity.DeckEntity
 import com.aidomari.app.core.database.entity.DeckWithCards
 import com.aidomari.app.core.database.entity.StudySessionEntity
@@ -45,7 +46,7 @@ interface AidomariDao {
     suspend fun deleteSubjectById(id: String)
 
     // --- Deck Operations ---
-    @Query("SELECT * FROM decks WHERE subject_id = :subjectId AND id NOT LIKE 'bookmark_%' AND id NOT LIKE 'random_%' ORDER BY sort_order ASC, created_at ASC")
+    @Query("SELECT * FROM decks WHERE subject_id = :subjectId AND id NOT LIKE 'bookmark_%' AND id NOT LIKE 'random_%' AND id NOT LIKE 'past_%' ORDER BY sort_order ASC, created_at ASC")
     fun getDecksBySubject(subjectId: String): Flow<List<DeckEntity>>
 
     @Query("SELECT * FROM decks WHERE id = :id")
@@ -252,4 +253,36 @@ interface AidomariDao {
 
     @Query("SELECT COUNT(*) FROM card_study_logs WHERE card_id = :cardId AND is_correct = 1")
     suspend fun getCorrectCountForCard(cardId: String): Int
+
+    @Query(
+        """
+        SELECT cards.*, latest_log.max_studied_at
+        FROM cards
+        INNER JOIN decks ON cards.deck_id = decks.id
+        INNER JOIN (
+            SELECT card_id, MAX(studied_at) AS max_studied_at
+            FROM card_study_logs
+            GROUP BY card_id
+        ) latest_log ON cards.id = latest_log.card_id
+        WHERE decks.subject_id = :subjectId
+        ORDER BY latest_log.max_studied_at DESC
+        """,
+    )
+    fun getCardsWithLatestStudyTimeBySubject(subjectId: String): Flow<List<CardWithLatestStudiedAt>>
+
+    @Query(
+        """
+        SELECT cards.*, latest_log.max_studied_at
+        FROM cards
+        INNER JOIN decks ON cards.deck_id = decks.id
+        INNER JOIN (
+            SELECT card_id, MAX(studied_at) AS max_studied_at
+            FROM card_study_logs
+            GROUP BY card_id
+        ) latest_log ON cards.id = latest_log.card_id
+        WHERE decks.subject_id = :subjectId
+        ORDER BY latest_log.max_studied_at DESC
+        """,
+    )
+    suspend fun getCardsWithLatestStudyTimeBySubjectSync(subjectId: String): List<CardWithLatestStudiedAt>
 }

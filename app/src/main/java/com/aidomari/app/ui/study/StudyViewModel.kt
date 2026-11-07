@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.DeckPart
+import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,8 +37,10 @@ class StudyViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
+            val pastDayInfo = PastDayDeckType.fromDeckId(deckId)
             val isBookmarkMode = deckId.startsWith("bookmark_")
             val isRandomMode = deckId.startsWith("random_")
+            val isPastDayMode = pastDayInfo != null
             val deck = when {
                 isBookmarkMode -> {
                     val subjectId = deckId.removePrefix("bookmark_")
@@ -55,6 +58,10 @@ class StudyViewModel(
                         name = "ランダム出題 ($countLabel)",
                         shuffleMode = true,
                     )
+                }
+                isPastDayMode -> {
+                    val (type, subjectId) = pastDayInfo!!
+                    repository.getOrCreatePastDayDeck(subjectId, type)
                 }
                 else -> {
                     repository.getDeckById(deckId) ?: return@launch
@@ -78,6 +85,10 @@ class StudyViewModel(
                     } else {
                         shuffled
                     }
+                }
+                isPastDayMode -> {
+                    val (type, subjectId) = pastDayInfo!!
+                    repository.getCardsForPastDayDeckSync(subjectId, type)
                 }
                 else -> {
                     repository.getCardsByDeckSync(deckId)

@@ -57,6 +57,7 @@ import com.aidomari.app.ui.deck.components.DeckItemCard
 import com.aidomari.app.ui.deck.components.DeckSearchContent
 import com.aidomari.app.ui.deck.components.DeleteDeckConfirmDialog
 import com.aidomari.app.ui.deck.components.EditDeckDialog
+import com.aidomari.app.ui.deck.components.PastDayDecksCard
 import com.aidomari.app.ui.deck.components.RandomQuestionsCard
 import com.aidomari.app.ui.deck.components.RandomQuestionsDialog
 import com.aidomari.app.ui.preview.PreviewSampleData
@@ -78,6 +79,7 @@ fun DeckListScreen(
 ) {
     val decksWithParts by viewModel.decksWithParts.collectAsState()
     val bookmarkModel by viewModel.bookmarkDeckUiModel.collectAsState()
+    val pastDayDecks by viewModel.pastDayDecks.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
@@ -103,6 +105,7 @@ fun DeckListScreen(
         subjectName = subjectName,
         decksWithParts = decksWithParts,
         bookmarkModel = bookmarkModel,
+        pastDayDecks = pastDayDecks,
         randomQuestionCount = randomQuestionCount,
         totalCards = allSubjectCards.size,
         isSubjectArchived = isSubjectArchived,
@@ -218,6 +221,7 @@ fun DeckListContent(
     subjectName: String,
     decksWithParts: List<DeckWithPartsUiModel>,
     bookmarkModel: BookmarkDeckUiModel?,
+    pastDayDecks: List<PastDayDeckUiModel> = emptyList(),
     randomQuestionCount: Int,
     totalCards: Int,
     isSubjectArchived: Boolean,
@@ -332,7 +336,7 @@ fun DeckListContent(
                     onToggleBookmark = onToggleBookmark,
                     onSpeakText = onSpeakText,
                 )
-            } else if (decksWithParts.isEmpty() && (bookmarkModel == null || bookmarkModel.totalCount == 0) && totalCards == 0) {
+            } else if (decksWithParts.isEmpty() && (bookmarkModel == null || bookmarkModel.totalCount == 0) && pastDayDecks.isEmpty() && totalCards == 0) {
                 Column(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -406,6 +410,15 @@ fun DeckListContent(
                         item(key = "bookmark_study_section") {
                             BookmarkDeckCard(
                                 model = bookmarkModel,
+                                onPartClick = onPartClick,
+                            )
+                        }
+                    }
+
+                    if (!isSubjectArchived && pastDayDecks.isNotEmpty()) {
+                        item(key = "past_day_decks_section") {
+                            PastDayDecksCard(
+                                decks = pastDayDecks,
                                 onPartClick = onPartClick,
                             )
                         }

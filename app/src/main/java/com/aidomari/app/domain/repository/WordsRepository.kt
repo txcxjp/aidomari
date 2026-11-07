@@ -3,6 +3,8 @@ package com.aidomari.app.domain.repository
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.PastDayDeckType
+import com.aidomari.app.domain.model.PastDayGroup
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import kotlinx.coroutines.flow.Flow
@@ -50,6 +52,21 @@ interface WordsRepository {
         saveDeck(newDeck)
         return newDeck
     }
+    suspend fun getOrCreatePastDayDeck(subjectId: String, type: PastDayDeckType): Deck {
+        val id = "${type.idPrefix}$subjectId"
+        val existing = getDeckById(id)
+        if (existing != null) return existing
+        val newDeck = Deck(
+            id = id,
+            subjectId = subjectId,
+            name = type.title,
+            splitSize = 50,
+            autoContinue = true,
+            shuffleMode = false,
+        )
+        saveDeck(newDeck)
+        return newDeck
+    }
     suspend fun saveDeck(deck: Deck)
     suspend fun deleteDeck(deckId: String)
 
@@ -65,6 +82,8 @@ interface WordsRepository {
     suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card>
     suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card?
     suspend fun getAllCardsInSubject(subjectId: String): List<Card>
+    fun getPastDayCardsBySubject(subjectId: String): Flow<Map<PastDayDeckType, PastDayGroup>> = emptyFlow()
+    suspend fun getCardsForPastDayDeckSync(subjectId: String, type: PastDayDeckType): List<Card> = emptyList()
     suspend fun getRandomCard(bookmarkOnly: Boolean = false): Card? = null
     suspend fun getRandomCardOverDaysAgo(cutoffTimestamp: Long): Card? = null
     suspend fun getOldestStudiedCard(): Card? = null

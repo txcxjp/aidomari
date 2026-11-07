@@ -8,9 +8,12 @@ import com.aidomari.app.core.database.entity.SubjectEntity
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.PastDayDeckType
+import com.aidomari.app.domain.model.PastDayGroup
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.domain.util.PastDayDecksCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
@@ -75,6 +78,24 @@ class WordsRepositoryImpl(
         return newDeck
     }
 
+    override suspend fun getOrCreatePastDayDeck(subjectId: String, type: PastDayDeckType): Deck {
+        val id = "${type.idPrefix}$subjectId"
+        val existing = dao.getDeckById(id)
+        if (existing != null) {
+            return existing.toDomain()
+        }
+        val newDeck = Deck(
+            id = id,
+            subjectId = subjectId,
+            name = type.title,
+            splitSize = 50,
+            autoContinue = true,
+            shuffleMode = false,
+        )
+        dao.insertDeck(newDeck.toEntity())
+        return newDeck
+    }
+
     override suspend fun saveDeck(deck: Deck) {
         dao.insertDeck(deck.toEntity())
     }
@@ -125,6 +146,19 @@ class WordsRepositoryImpl(
 
     override suspend fun getAllCardsInSubject(subjectId: String): List<Card> =
         dao.getAllCardsInSubject(subjectId).map { it.toDomain() }
+
+    override fun getPastDayCardsBySubject(subjectId: String): Flow<Map<PastDayDeckType, PastDayGroup>> =
+        dao.getCardsWithLatestStudyTimeBySubject(subjectId).map { list ->
+            val pairs = list.map { it.card.toDomain() to it.maxStudiedAt }
+            PastDayDecksCalculator.calculate(pairs)
+        }
+
+    override suspend fun getCardsForPastDayDeckSync(subjectId: String, type: PastDayDeckType): List<Card> {
+        val list = dao.getCardsWithLatestStudyTimeBySubjectSync(subjectId)
+        val pairs = list.map { it.card.toDomain() to it.maxStudiedAt }
+        val result = PastDayDecksCalculator.calculate(pairs)
+        return result[type]?.cards ?: emptyList()
+    }
 
     override suspend fun getRandomCard(bookmarkOnly: Boolean): Card? {
         val entity = if (bookmarkOnly) {
