@@ -631,7 +631,7 @@ class StudyViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals("テスト教科 (学習済みランダム 10問)", state.deck?.name)
+        assertEquals("学習済みランダム (10問)", state.deck?.name)
         assertEquals(1, state.totalInPart)
         assertEquals("c1", state.currentCard?.id)
     }

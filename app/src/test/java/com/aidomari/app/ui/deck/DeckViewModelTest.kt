@@ -458,6 +458,7 @@ class DeckViewModelTest {
                 CardStudyLog(id = "l2", cardId = "c2", isCorrect = false),
             ),
         )
+        fakeRepository.triggerDecksUpdate()
 
         viewModel.loadDecks()
         advanceUntilIdle()

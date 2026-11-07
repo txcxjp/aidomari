@@ -138,19 +138,13 @@ fun RandomQuestionsDialog(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     options.forEach { count ->
                         val isAvailable = effectiveTotalCards > 0 && (count <= 0 || effectiveTotalCards >= count)
-                        val isSelected = if (selectedCount <= 0 || selectedCount > effectiveTotalCards) {
-                            count == -1
-                        } else {
-                            selectedCount == count
-                        }
+                        val isSelected = selectedCount == count
                         val label = if (count <= 0) "全問 (${effectiveTotalCards}問)" else "${count}問"
 
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(enabled = isAvailable) {
-                                    selectedCount = count
-                                },
+                                .clickable { selectedCount = count },
                             shape = RoundedCornerShape(8.dp),
                             color = if (isSelected) {
                                 MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
@@ -166,8 +160,7 @@ fun RandomQuestionsDialog(
                             ) {
                                 RadioButton(
                                     selected = isSelected,
-                                    enabled = isAvailable,
-                                    onClick = { if (isAvailable) selectedCount = count },
+                                    onClick = { selectedCount = count },
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
@@ -177,7 +170,7 @@ fun RandomQuestionsDialog(
                                     color = if (isAvailable) {
                                         MaterialTheme.colorScheme.onSurface
                                     } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        MaterialTheme.colorScheme.onSurfaceVariant
                                     },
                                 )
                             }
@@ -190,11 +183,7 @@ fun RandomQuestionsDialog(
             Button(
                 enabled = effectiveTotalCards > 0,
                 onClick = {
-                    val finalCount = if (selectedCount <= 0 || selectedCount > effectiveTotalCards) {
-                        -1
-                    } else {
-                        selectedCount
-                    }
+                    val finalCount = if (selectedCount <= 0) -1 else selectedCount
                     onStartStudy(finalCount, isFilteringLearned)
                 },
             ) {

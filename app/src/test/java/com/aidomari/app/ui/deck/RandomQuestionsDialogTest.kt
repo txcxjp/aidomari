@@ -44,7 +44,7 @@ class RandomQuestionsDialogTest {
         composeTestRule.onNodeWithText("学習済み: 50 / 100問").assertIsDisplayed()
         composeTestRule.onNodeWithText("10問").assertIsDisplayed()
         composeTestRule.onNodeWithText("20問").assertIsDisplayed()
-        composeTestRule.onNodeWithText("30問").assertIsDisplayed()
+        composeTestRule.onNodeWithText("30問").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("50問").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("全問 (100問)").performScrollTo().assertIsDisplayed()
 
@@ -71,7 +71,7 @@ class RandomQuestionsDialogTest {
             )
         }
 
-        composeTestRule.onNodeWithText("30問").performClick()
+        composeTestRule.onNodeWithText("30問").performScrollTo().performClick()
         composeTestRule.onNodeWithText("学習開始").performClick()
 
         assertEquals(30, startedCount)
