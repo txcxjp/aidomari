@@ -228,7 +228,7 @@ fun DeckListScreen(
                 viewModel.setRandomQuestionCount(count)
                 val targetDeckId = targetDeckUi.deck.id
                 deckForRandomStudy = null
-                val randomDeckId = "random_deck_${count}_${targetDeckId}"
+                val randomDeckId = "random_deck_${count}_$targetDeckId"
                 onPartClick(randomDeckId, 0)
             },
         )
