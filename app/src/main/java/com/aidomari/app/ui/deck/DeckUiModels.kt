@@ -19,6 +19,7 @@ data class DeckWithPartsUiModel(
     val deck: Deck,
     val parts: List<DeckPartWithSession>,
     val totalCardCount: Int,
+    val learnedCardCount: Int = parts.filter { it.isCompleted }.sumOf { it.part.count },
 ) {
     val completedPartsCount: Int
         get() = parts.count { it.isCompleted }
@@ -28,9 +29,6 @@ data class DeckWithPartsUiModel(
 
     val isAllCompleted: Boolean
         get() = parts.isNotEmpty() && completedPartsCount == totalPartsCount
-
-    val learnedCardCount: Int
-        get() = parts.filter { it.isCompleted }.sumOf { it.part.count }
 
     val masteryRate: Float
         get() = if (totalCardCount > 0) {
@@ -44,6 +42,7 @@ data class BookmarkDeckUiModel(
     val deck: Deck,
     val parts: List<DeckPartWithSession>,
     val totalCount: Int,
+    val learnedCardCount: Int = parts.filter { it.isCompleted }.sumOf { it.part.count },
 ) {
     val completedPartsCount: Int
         get() = parts.count { it.isCompleted }
@@ -53,9 +52,6 @@ data class BookmarkDeckUiModel(
 
     val isAllCompleted: Boolean
         get() = parts.isNotEmpty() && completedPartsCount == totalPartsCount
-
-    val learnedCardCount: Int
-        get() = parts.filter { it.isCompleted }.sumOf { it.part.count }
 
     val masteryRate: Float
         get() = if (totalCount > 0) {

@@ -1,14 +1,17 @@
 package com.aidomari.app.core.database
 
 import com.aidomari.app.core.database.entity.CardEntity
+import com.aidomari.app.core.database.entity.CardStudyLogEntity
 import com.aidomari.app.core.database.entity.DeckEntity
 import com.aidomari.app.core.database.entity.StudySessionEntity
 import com.aidomari.app.core.database.entity.SubjectEntity
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
+import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -146,6 +149,29 @@ class WordsRepositoryImpl(
         dao.deleteSession(deckId)
     }
 
+    override suspend fun recordStudyLog(cardId: String, isCorrect: Boolean): CardStudyLog {
+        val log = CardStudyLog(
+            id = UUID.randomUUID().toString(),
+            cardId = cardId,
+            isCorrect = isCorrect,
+            studiedAt = System.currentTimeMillis(),
+        )
+        dao.insertStudyLog(log.toEntity())
+        return log
+    }
+
+    override suspend fun getRecentLogsForCard(cardId: String, limit: Int): List<CardStudyLog> =
+        dao.getRecentLogsForCard(cardId, limit).map { it.toDomain() }
+
+    override fun getLogsForCardFlow(cardId: String): Flow<List<CardStudyLog>> =
+        dao.getLogsForCardFlow(cardId).map { list -> list.map { it.toDomain() } }
+
+    override fun getLatestLogsForDeck(deckId: String): Flow<List<CardStudyLog>> =
+        dao.getLatestLogsForDeck(deckId).map { list -> list.map { it.toDomain() } }
+
+    override suspend fun getLatestLogsForDeckSync(deckId: String): List<CardStudyLog> =
+        dao.getLatestLogsForDeckSync(deckId).map { it.toDomain() }
+
     // --- Mappers ---
     private fun SubjectEntity.toDomain() = Subject(
         id = id,
@@ -237,5 +263,19 @@ class WordsRepositoryImpl(
         isCompleted = isCompleted,
         lastStudiedAt = lastStudiedAt,
         completedPartIndicesJson = completedPartIndicesJson(),
+    )
+
+    private fun CardStudyLogEntity.toDomain() = CardStudyLog(
+        id = id,
+        cardId = cardId,
+        isCorrect = isCorrect,
+        studiedAt = studiedAt,
+    )
+
+    private fun CardStudyLog.toEntity() = CardStudyLogEntity(
+        id = id,
+        cardId = cardId,
+        isCorrect = isCorrect,
+        studiedAt = studiedAt,
     )
 }

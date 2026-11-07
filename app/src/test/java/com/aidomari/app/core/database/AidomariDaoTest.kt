@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.aidomari.app.core.database.entity.CardEntity
+import com.aidomari.app.core.database.entity.CardStudyLogEntity
 import com.aidomari.app.core.database.entity.DeckEntity
 import com.aidomari.app.core.database.entity.StudySessionEntity
 import com.aidomari.app.core.database.entity.SubjectEntity
@@ -312,5 +313,78 @@ class AidomariDaoTest {
         val result = dao.getRandomBookmarkedCard()
         assertNotNull(result)
         assertEquals("card-bm-active", result?.id)
+    }
+
+    @Test
+    fun insertAndGetRecentLogsForCard() = runBlocking {
+        val subject = SubjectEntity(id = "sub-log", name = "英語")
+        val deck = DeckEntity(id = "deck-log", subjectId = "sub-log", name = "単語帳")
+        val card = CardEntity(id = "card-log-1", deckId = "deck-log", front = "apple", back = "りんご")
+        dao.insertSubject(subject)
+        dao.insertDeck(deck)
+        dao.insertCard(card)
+
+        // Insert multiple study logs
+        dao.insertStudyLog(CardStudyLogEntity(id = "log-1", cardId = "card-log-1", isCorrect = false, studiedAt = 1000L))
+        dao.insertStudyLog(CardStudyLogEntity(id = "log-2", cardId = "card-log-1", isCorrect = true, studiedAt = 2000L))
+        dao.insertStudyLog(CardStudyLogEntity(id = "log-3", cardId = "card-log-1", isCorrect = true, studiedAt = 3000L))
+
+        val recentLogs = dao.getRecentLogsForCard("card-log-1", limit = 2)
+        assertEquals(2, recentLogs.size)
+        // Should be ordered by studied_at DESC
+        assertEquals("log-3", recentLogs[0].id)
+        assertEquals("log-2", recentLogs[1].id)
+
+        val totalReviews = dao.getReviewCountForCard("card-log-1")
+        val totalCorrect = dao.getCorrectCountForCard("card-log-1")
+        assertEquals(3, totalReviews)
+        assertEquals(2, totalCorrect)
+    }
+
+    @Test
+    fun getLatestLogsForDeckSync_returnsOnlyLatestLogPerCard() = runBlocking {
+        val subject = SubjectEntity(id = "sub-latest", name = "英語")
+        val deck = DeckEntity(id = "deck-latest", subjectId = "sub-latest", name = "単語帳")
+        val card1 = CardEntity(id = "card-1", deckId = "deck-latest", front = "apple", back = "りんご")
+        val card2 = CardEntity(id = "card-2", deckId = "deck-latest", front = "banana", back = "バナナ")
+        dao.insertSubject(subject)
+        dao.insertDeck(deck)
+        dao.insertCards(listOf(card1, card2))
+
+        // card1: answered twice, latest is correct
+        dao.insertStudyLog(CardStudyLogEntity(id = "l1", cardId = "card-1", isCorrect = false, studiedAt = 1000L))
+        dao.insertStudyLog(CardStudyLogEntity(id = "l2", cardId = "card-1", isCorrect = true, studiedAt = 2000L))
+
+        // card2: answered once, incorrect
+        dao.insertStudyLog(CardStudyLogEntity(id = "l3", cardId = "card-2", isCorrect = false, studiedAt = 1500L))
+
+        val latestLogs = dao.getLatestLogsForDeckSync("deck-latest")
+        assertEquals(2, latestLogs.size)
+
+        val c1Log = latestLogs.find { it.cardId == "card-1" }
+        val c2Log = latestLogs.find { it.cardId == "card-2" }
+        assertNotNull(c1Log)
+        assertNotNull(c2Log)
+        assertEquals("l2", c1Log?.id)
+        assertTrue(c1Log?.isCorrect == true)
+        assertEquals("l3", c2Log?.id)
+        assertTrue(c2Log?.isCorrect == false)
+    }
+
+    @Test
+    fun deleteCard_cascadeDeletesCardStudyLogs() = runBlocking {
+        val subject = SubjectEntity(id = "sub-cas", name = "英語")
+        val deck = DeckEntity(id = "deck-cas", subjectId = "sub-cas", name = "単語帳")
+        val card = CardEntity(id = "card-cas", deckId = "deck-cas", front = "apple", back = "りんご")
+        dao.insertSubject(subject)
+        dao.insertDeck(deck)
+        dao.insertCard(card)
+
+        dao.insertStudyLog(CardStudyLogEntity(id = "log-cas", cardId = "card-cas", isCorrect = true, studiedAt = 1000L))
+        assertEquals(1, dao.getReviewCountForCard("card-cas"))
+
+        // Delete card -> log should be deleted by cascade
+        dao.deleteCard(card)
+        assertEquals(0, dao.getReviewCountForCard("card-cas"))
     }
 }

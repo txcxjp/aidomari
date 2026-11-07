@@ -186,6 +186,10 @@ class StudyViewModel(
         queueCardIds.remove(currentCard.id)
         completedCount++
 
+        viewModelScope.launch {
+            repository.recordStudyLog(currentCard.id, isCorrect = true)
+        }
+
         advanceToNextCard()
     }
 
@@ -196,6 +200,10 @@ class StudyViewModel(
 
         queueCardIds.remove(currentCard.id)
         retryCardIds.add(currentCard.id)
+
+        viewModelScope.launch {
+            repository.recordStudyLog(currentCard.id, isCorrect = false)
+        }
 
         advanceToNextCard()
     }

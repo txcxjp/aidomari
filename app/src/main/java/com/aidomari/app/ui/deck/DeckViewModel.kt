@@ -152,10 +152,14 @@ class DeckViewModel(
                         DeckPartWithSession(part = part, session = matchingSession)
                     }
 
+                    val latestLogs = repository.getLatestLogsForDeckSync(deck.id)
+                    val learnedCardCount = latestLogs.count { it.isCorrect }
+
                     DeckWithPartsUiModel(
                         deck = deck,
                         parts = partModels,
                         totalCardCount = cards.size,
+                        learnedCardCount = learnedCardCount,
                     )
                 }
                 _decksWithParts.value = uiModels
@@ -190,10 +194,15 @@ class DeckViewModel(
                         }
                         DeckPartWithSession(part = part, session = matchingSession)
                     }
+                    val learnedCardCount = bookmarkedCards.count { card ->
+                        val recent = repository.getRecentLogsForCard(card.id, limit = 1)
+                        recent.firstOrNull()?.isCorrect == true
+                    }
                     _bookmarkDeckUiModel.value = BookmarkDeckUiModel(
                         deck = bookmarkDeck,
                         parts = partModels,
                         totalCount = bookmarkedCards.size,
+                        learnedCardCount = learnedCardCount,
                     )
                 }
             }
