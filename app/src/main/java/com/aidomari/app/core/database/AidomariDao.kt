@@ -325,4 +325,10 @@ interface AidomariDao {
         """,
     )
     suspend fun getCardsWithLatestStudyTimeByDeckSync(deckId: String): List<CardWithLatestStudiedAt>
+
+    @Query("SELECT * FROM card_study_logs ORDER BY studied_at ASC")
+    fun getAllStudyLogsFlow(): Flow<List<CardStudyLogEntity>>
+
+    @Query("SELECT * FROM card_study_logs ORDER BY studied_at ASC")
+    suspend fun getAllStudyLogsSync(): List<CardStudyLogEntity>
 }

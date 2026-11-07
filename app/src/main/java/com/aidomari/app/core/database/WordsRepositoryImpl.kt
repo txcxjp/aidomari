@@ -250,6 +250,12 @@ class WordsRepositoryImpl(
     override suspend fun getLatestLogsForDeckSync(deckId: String): List<CardStudyLog> =
         dao.getLatestLogsForDeckSync(deckId).map { it.toDomain() }
 
+    override fun getAllStudyLogsFlow(): Flow<List<CardStudyLog>> =
+        dao.getAllStudyLogsFlow().map { list -> list.map { it.toDomain() } }
+
+    override suspend fun getAllStudyLogsSync(): List<CardStudyLog> =
+        dao.getAllStudyLogsSync().map { it.toDomain() }
+
     // --- Mappers ---
     private fun SubjectEntity.toDomain() = Subject(
         id = id,

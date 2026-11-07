@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -94,6 +95,7 @@ fun SubjectListScreen(
     viewModel: SubjectViewModel,
     onSubjectClick: (subjectId: String, subjectName: String) -> Unit,
     modifier: Modifier = Modifier,
+    onCalendarClick: () -> Unit = {},
     themePreferences: ThemePreferences? = null,
     lockScreenPreferences: LockScreenPreferences? = null,
 ) {
@@ -177,6 +179,7 @@ fun SubjectListScreen(
         onImportClick = { showImportDialog = true },
         onExportClick = { exportFileLauncher.launch("aidomari_backup.json") },
         onThemeClick = { showThemeDialog = true },
+        onCalendarClick = onCalendarClick,
         onLockScreenClick = { showLockScreenDialog = true },
         onArchiveSubject = { subject ->
             viewModel.archiveSubject(subject.id)
@@ -572,6 +575,7 @@ fun SubjectListContent(
     onFilePickerClick: (() -> Unit)? = null,
     onEditSubject: (Subject) -> Unit = {},
     onLockScreenClick: () -> Unit = {},
+    onCalendarClick: () -> Unit = {},
 ) {
     var showTopBarMenu by remember { mutableStateOf(false) }
 
@@ -612,6 +616,15 @@ fun SubjectListContent(
                         }
                     },
                     actions = {
+                        IconButton(
+                            onClick = onCalendarClick,
+                            modifier = Modifier.testTag("CalendarButton"),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = "学習カレンダー",
+                            )
+                        }
                         IconButton(
                             onClick = onLockScreenClick,
                             modifier = Modifier.testTag("LockScreenSettingsButton"),

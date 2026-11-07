@@ -107,4 +107,6 @@ interface WordsRepository {
     fun getLogsForCardFlow(cardId: String): Flow<List<CardStudyLog>> = emptyFlow()
     fun getLatestLogsForDeck(deckId: String): Flow<List<CardStudyLog>> = emptyFlow()
     suspend fun getLatestLogsForDeckSync(deckId: String): List<CardStudyLog> = emptyList()
+    fun getAllStudyLogsFlow(): Flow<List<CardStudyLog>> = emptyFlow()
+    suspend fun getAllStudyLogsSync(): List<CardStudyLog> = emptyList()
 }

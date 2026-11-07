@@ -18,6 +18,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.aidomari.app.core.tts.TtsManager
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.ui.calendar.CalendarScreen
+import com.aidomari.app.ui.calendar.CalendarViewModel
 import com.aidomari.app.ui.card.CardListScreen
 import com.aidomari.app.ui.card.CardListViewModel
 import com.aidomari.app.ui.deck.DeckListScreen
@@ -78,6 +80,17 @@ fun AidomariNavHost(
                 onSubjectClick = { subjectId, subjectName ->
                     navController.navigate("decks/$subjectId/$subjectName")
                 },
+                onCalendarClick = {
+                    navController.navigate("calendar")
+                },
+            )
+        }
+
+        composable("calendar") {
+            val calendarViewModel = remember { CalendarViewModel(repository) }
+            CalendarScreen(
+                viewModel = calendarViewModel,
+                onBackClick = { navController.popBackStack() },
             )
         }
 
