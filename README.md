@@ -14,8 +14,7 @@
 - **強制される日課ではなく、選べるレンズ（切り口）**: 「今日はサクッと1 Part」「苦手なブックマーク集中」「◯日以上前の単語」を自分の意志で選択。
 - **自分の知恵を吹き込む手作りの相棒**: 自分用の質問・メモ編集や、AI（NotebookLM等）と連携した自由なカード拡張。
 - **生活の無意識に溶け込む習慣化**: スマホを開くたびに1問だけサッと復習し、意志の力を使わずに記憶を定着。
-
-> 📖 より詳しいプロダクト哲学と開発指針は **[`notes/AIDOMARI_PHILOSOPHY_AND_VISION.md`](notes/AIDOMARI_PHILOSOPHY_AND_VISION.md)** をご覧ください。
+- **自分の工夫で覚えたという自己効力感**: システムが人を管理するのではなく、「自分の工夫と努力の足跡」を可視化。
 
 ---
 
@@ -52,7 +51,7 @@
 - 辞書のようにタップひとつで関連知識を数珠つなぎに探索・学習できます。
 
 ### 6. 🤖 AI（NotebookLM）連携 ＆ データ互換
-- **NotebookLM インポート**: Google NotebookLM で生成した講義メモや要約から、相泊へワンタップで取り込めるプロンプトとインポート機能を完備（`notes/NOTEBOOKLM_PROMPT.md` 参照）。
+- **NotebookLM インポート**: Google NotebookLM で生成した講義メモや要約から、相泊へワンタップで取り込める JSON インポート機能を完備。
 - **完全な双方向エクスポート/インポート**: 旧 Words 形式（V1, V2, CSV-JSON）と完全互換。データのバックアップやデッキ移行も安心です。
 
 ### 7. 🎨 洗練されたモダン UI ＆ カスタマイズ
@@ -105,8 +104,5 @@ cd aidomari
 
 ## 📚 ドキュメント一覧
 
-- **[相泊プロダクト哲学・マニフェスト (notes/AIDOMARI_PHILOSOPHY_AND_VISION.md)](notes/AIDOMARI_PHILOSOPHY_AND_VISION.md)**: 相泊の設計思想、学習の主体性、判断基準
 - **[アーキテクチャ設計書 (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md)**: ドメインモデル、状態遷移、音量キー・スワイプ仕様、関連項目エンジン
 - **[開発・CI/CD ガイド (docs/DEVELOPMENT.md)](docs/DEVELOPMENT.md)**: 開発サイクル、コマンド集、Spotless、パイプライン構成
-- **[NotebookLM インポートプロンプト (notes/NOTEBOOKLM_PROMPT.md)](notes/NOTEBOOKLM_PROMPT.md)**: AI 生成カードの取り込み手順
-- **[ハーネス＆ループエンジニアリング報告書 (notes/HARNESS_AND_LOOP_ENGINEERING_REPORT.md)](notes/HARNESS_AND_LOOP_ENGINEERING_REPORT.md)**: 品質保証と自律型AI開発の取り組み記録
