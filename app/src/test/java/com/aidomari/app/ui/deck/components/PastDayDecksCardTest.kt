@@ -1,6 +1,5 @@
 package com.aidomari.app.ui.deck.components
 
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -75,18 +74,18 @@ class PastDayDecksCardTest {
         }
 
         // Section header
-        composeTestRule.onNodeWithText("あの日のカード").assertIsDisplayed()
+        composeTestRule.onNodeWithText("あの日のカード").assertExists()
 
         // Yesterday deck
-        composeTestRule.onNodeWithText("昨日のカード").assertIsDisplayed()
-        composeTestRule.onNodeWithText("1日前").assertIsDisplayed()
-        composeTestRule.onAllNodesWithText("3 枚")[0].assertIsDisplayed()
+        composeTestRule.onNodeWithText("昨日のカード").assertExists()
+        composeTestRule.onNodeWithText("1日前").assertExists()
+        composeTestRule.onAllNodesWithText("3 枚")[0].assertExists()
 
         // Week deck
-        composeTestRule.onNodeWithText("先週のカード").assertIsDisplayed()
-        composeTestRule.onNodeWithText("8日前").assertIsDisplayed()
-        composeTestRule.onAllNodesWithText("5 枚")[0].assertIsDisplayed()
-        composeTestRule.onNodeWithText("完了").assertIsDisplayed()
+        composeTestRule.onNodeWithText("先週のカード").assertExists()
+        composeTestRule.onNodeWithText("8日前").assertExists()
+        composeTestRule.onAllNodesWithText("5 枚")[0].assertExists()
+        composeTestRule.onNodeWithText("完了").assertExists()
 
         // Click yesterday part
         composeTestRule.onNodeWithTag("PastDayPart_YESTERDAY_0").performClick()

@@ -15,18 +15,15 @@ class PastDayDecksCalculatorTest {
     private val zoneId = ZoneId.of("Asia/Tokyo")
     private val today = LocalDate.of(2026, 11, 7)
 
-    private fun createCard(id: String): Card {
-        return Card(
-            id = id,
-            deckId = "deck-1",
-            front = "front-$id",
-            back = "back-$id",
-        )
-    }
+    private fun createCard(id: String): Card = Card(
+        id = id,
+        deckId = "deck-1",
+        front = "front-$id",
+        back = "back-$id",
+    )
 
-    private fun epochMillisFor(date: LocalDate, hour: Int = 12): Long {
-        return date.atTime(hour, 0).atZone(zoneId).toInstant().toEpochMilli()
-    }
+    private fun epochMillisFor(date: LocalDate, hour: Int = 12): Long =
+        date.atTime(hour, 0).atZone(zoneId).toInstant().toEpochMilli()
 
     @Test
     fun calculate_emptyInput_returnsEmptyMap() {
