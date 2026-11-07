@@ -3,6 +3,7 @@ package com.aidomari.app.ui.study
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
@@ -503,6 +504,25 @@ class StudyViewModelTest {
         assertEquals("c2" to true, fakeRepository.recordedLogs[1])
     }
 
+    @Test
+    fun loadDeckAndPart_withPastDayDeck_startsStudySuccessfully() = runTest {
+        val pastCards = listOf(
+            Card(id = "past-1", deckId = "deck-1", front = "Past Apple", back = "過去のりんご"),
+            Card(id = "past-2", deckId = "deck-1", front = "Past Banana", back = "過去のバナナ"),
+        )
+        fakeRepository.pastDayCards[PastDayDeckType.YESTERDAY] = pastCards
+
+        viewModel.loadDeckAndPart("past_yesterday_sub-1", 0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertEquals("past_yesterday_sub-1", state.deck?.id)
+        assertEquals("昨日のカード", state.deck?.name)
+        assertEquals("past-1", state.currentCard?.id)
+        assertEquals(2, state.totalInPart)
+    }
+
     private class FakeStudyWordsRepository : WordsRepository {
         val subjects = mutableListOf<Subject>()
         val decks = mutableListOf<Deck>()
@@ -540,6 +560,22 @@ class StudyViewModelTest {
             decks.add(newDeck)
             return newDeck
         }
+        val pastDayCards = mutableMapOf<PastDayDeckType, List<Card>>()
+        override suspend fun getOrCreatePastDayDeck(subjectId: String, type: PastDayDeckType): Deck {
+            val id = "${type.idPrefix}$subjectId"
+            val existing = decks.find { it.id == id }
+            if (existing != null) return existing
+            val newDeck = Deck(
+                id = id,
+                subjectId = subjectId,
+                name = type.title,
+                splitSize = 50,
+            )
+            decks.add(newDeck)
+            return newDeck
+        }
+        override suspend fun getCardsForPastDayDeckSync(subjectId: String, type: PastDayDeckType): List<Card> =
+            pastDayCards[type] ?: emptyList()
         override suspend fun saveDeck(deck: Deck) {
             decks.removeIf { it.id == deck.id }
             decks.add(deck)

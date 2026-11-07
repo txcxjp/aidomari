@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,9 @@ class DeckViewModel(
 
     private val _bookmarkDeckUiModel = MutableStateFlow<BookmarkDeckUiModel?>(null)
     val bookmarkDeckUiModel: StateFlow<BookmarkDeckUiModel?> = _bookmarkDeckUiModel.asStateFlow()
+
+    private val _pastDayDecks = MutableStateFlow<List<PastDayDeckUiModel>>(emptyList())
+    val pastDayDecks: StateFlow<List<PastDayDeckUiModel>> = _pastDayDecks.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -45,6 +49,7 @@ class DeckViewModel(
         loadSubjectInfo()
         loadDecks()
         observeBookmarks()
+        observePastDayDecks()
         loadAllSubjectCards()
     }
 
@@ -205,6 +210,62 @@ class DeckViewModel(
                         learnedCardCount = learnedCardCount,
                     )
                 }
+            }
+        }
+    }
+
+    private fun observePastDayDecks() {
+        viewModelScope.launch {
+            repository.getPastDayCardsBySubject(subjectId).collect { groups ->
+                val order = listOf(
+                    PastDayDeckType.YESTERDAY,
+                    PastDayDeckType.WEEK,
+                    PastDayDeckType.MONTH,
+                )
+                val uiModels = order.mapNotNull { type ->
+                    val group = groups[type] ?: return@mapNotNull null
+                    if (group.cards.isEmpty()) return@mapNotNull null
+
+                    val deck = repository.getOrCreatePastDayDeck(subjectId, group.type)
+                    val parts = deck.calculateParts(group.cards.size)
+                    val session = repository.getSession(deck.id)
+                    val completedParts = session?.completedPartIndices ?: emptySet()
+                    val partModels = parts.map { part ->
+                        val isPartCompleted = completedParts.contains(part.partIndex) ||
+                            (session?.partIndex == part.partIndex && session.isCompleted)
+                        val matchingSession = if (session?.partIndex == part.partIndex) {
+                            session.copy(isCompleted = isPartCompleted)
+                        } else if (isPartCompleted) {
+                            StudySession(
+                                deckId = deck.id,
+                                partIndex = part.partIndex,
+                                isCompleted = true,
+                                completedPartIndices = completedParts,
+                            )
+                        } else {
+                            null
+                        }
+                        DeckPartWithSession(part = part, session = matchingSession)
+                    }
+                    val learnedCardCount = group.cards.count { card ->
+                        val recent = repository.getRecentLogsForCard(card.id, limit = 1)
+                        recent.firstOrNull()?.isCorrect == true
+                    }
+                    val dateDescription = when (group.type) {
+                        PastDayDeckType.YESTERDAY -> "1日前"
+                        PastDayDeckType.WEEK -> "${group.daysAgo}日前"
+                        PastDayDeckType.MONTH -> "${group.daysAgo}日前"
+                    }
+                    PastDayDeckUiModel(
+                        type = group.type,
+                        deck = deck,
+                        parts = partModels,
+                        totalCount = group.cards.size,
+                        learnedCardCount = learnedCardCount,
+                        targetDateDescription = dateDescription,
+                    )
+                }
+                _pastDayDecks.value = uiModels
             }
         }
     }

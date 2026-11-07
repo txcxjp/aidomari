@@ -459,4 +459,63 @@ class AidomariDaoTest {
         val card = dao.getOldestStudiedCard()
         assertTrue(card == null)
     }
+
+    @Test
+    fun getDecksBySubject_excludesPastDayVirtualDecks() = runBlocking {
+        val subject = SubjectEntity(id = "sub-virtual", name = "英語")
+        dao.insertSubject(subject)
+
+        val normalDeck = DeckEntity(id = "deck-normal", subjectId = "sub-virtual", name = "通常デッキ")
+        val bookmarkDeck = DeckEntity(id = "bookmark_sub-virtual", subjectId = "sub-virtual", name = "苦手単語")
+        val randomDeck = DeckEntity(id = "random_10_sub-virtual", subjectId = "sub-virtual", name = "ランダム出題")
+        val pastYesterdayDeck = DeckEntity(id = "past_yesterday_sub-virtual", subjectId = "sub-virtual", name = "昨日のカード")
+        val pastWeekDeck = DeckEntity(id = "past_week_sub-virtual", subjectId = "sub-virtual", name = "先週のカード")
+        val pastMonthDeck = DeckEntity(id = "past_month_sub-virtual", subjectId = "sub-virtual", name = "先月のカード")
+
+        dao.insertDecks(listOf(normalDeck, bookmarkDeck, randomDeck, pastYesterdayDeck, pastWeekDeck, pastMonthDeck))
+
+        val decks = dao.getDecksBySubject("sub-virtual").first()
+        assertEquals(1, decks.size)
+        assertEquals("deck-normal", decks[0].id)
+    }
+
+    @Test
+    fun getCardsWithLatestStudyTimeBySubject_returnsLatestTimestampPerCardInSubject() = runBlocking {
+        val subject1 = SubjectEntity(id = "sub-p1", name = "英語")
+        val subject2 = SubjectEntity(id = "sub-p2", name = "数学")
+        dao.insertSubjects(listOf(subject1, subject2))
+
+        val deck1 = DeckEntity(id = "deck-p1", subjectId = "sub-p1", name = "英単語")
+        val deck2 = DeckEntity(id = "deck-p2", subjectId = "sub-p2", name = "数式")
+        dao.insertDecks(listOf(deck1, deck2))
+
+        val card1 = CardEntity(id = "c1", deckId = "deck-p1", front = "apple", back = "りんご")
+        val card2 = CardEntity(id = "c2", deckId = "deck-p1", front = "book", back = "本")
+        val unstudiedCard = CardEntity(id = "c3", deckId = "deck-p1", front = "cat", back = "猫")
+        val otherSubjectCard = CardEntity(id = "c4", deckId = "deck-p2", front = "formula", back = "公式")
+        dao.insertCards(listOf(card1, card2, unstudiedCard, otherSubjectCard))
+
+        // card1 has two study logs: 1000L and 3000L -> latest is 3000L
+        dao.insertStudyLog(CardStudyLogEntity(id = "log-1", cardId = "c1", isCorrect = true, studiedAt = 1000L))
+        dao.insertStudyLog(CardStudyLogEntity(id = "log-2", cardId = "c1", isCorrect = false, studiedAt = 3000L))
+
+        // card2 has one study log: 2000L
+        dao.insertStudyLog(CardStudyLogEntity(id = "log-3", cardId = "c2", isCorrect = true, studiedAt = 2000L))
+
+        // otherSubjectCard has log: 5000L
+        dao.insertStudyLog(CardStudyLogEntity(id = "log-4", cardId = "c4", isCorrect = true, studiedAt = 5000L))
+
+        val results = dao.getCardsWithLatestStudyTimeBySubject("sub-p1").first()
+        val syncResults = dao.getCardsWithLatestStudyTimeBySubjectSync("sub-p1")
+
+        assertEquals(2, results.size)
+        assertEquals(2, syncResults.size)
+
+        // Ordered by max_studied_at DESC -> c1 (3000L) then c2 (2000L)
+        assertEquals("c1", results[0].card.id)
+        assertEquals(3000L, results[0].maxStudiedAt)
+
+        assertEquals("c2", results[1].card.id)
+        assertEquals(2000L, results[1].maxStudiedAt)
+    }
 }

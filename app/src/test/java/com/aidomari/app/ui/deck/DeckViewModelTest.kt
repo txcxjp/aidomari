@@ -3,6 +3,8 @@ package com.aidomari.app.ui.deck
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.PastDayDeckType
+import com.aidomari.app.domain.model.PastDayGroup
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
@@ -20,6 +22,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeckViewModelTest {
@@ -386,6 +389,47 @@ class DeckViewModelTest {
         assertEquals(false, fakeRepository.subjectsList[0].isArchived)
     }
 
+    @Test
+    fun pastDayDecks_emitsUiModels_whenPastDayCardsExist() = runTest {
+        val cardYesterday = Card(id = "c-y", deckId = "d-1", front = "apple", back = "りんご")
+        val cardWeek = Card(id = "c-w", deckId = "d-1", front = "book", back = "本")
+
+        fakeRepository.cardsList.addAll(listOf(cardYesterday, cardWeek))
+
+        val map = mapOf(
+            PastDayDeckType.YESTERDAY to PastDayGroup(
+                type = PastDayDeckType.YESTERDAY,
+                targetDate = LocalDate.of(2026, 11, 6),
+                daysAgo = 1,
+                cards = listOf(cardYesterday),
+            ),
+            PastDayDeckType.WEEK to PastDayGroup(
+                type = PastDayDeckType.WEEK,
+                targetDate = LocalDate.of(2026, 10, 30),
+                daysAgo = 8,
+                cards = listOf(cardWeek),
+            ),
+        )
+
+        fakeRepository.pastDayFlow.value = map
+        advanceUntilIdle()
+
+        val models = viewModel.pastDayDecks.value
+        assertEquals(2, models.size)
+
+        // Yesterday model
+        assertEquals(PastDayDeckType.YESTERDAY, models[0].type)
+        assertEquals("昨日のカード", models[0].deck.name)
+        assertEquals(1, models[0].totalCount)
+        assertEquals("1日前", models[0].targetDateDescription)
+
+        // Week model
+        assertEquals(PastDayDeckType.WEEK, models[1].type)
+        assertEquals("先週のカード", models[1].deck.name)
+        assertEquals(1, models[1].totalCount)
+        assertEquals("8日前", models[1].targetDateDescription)
+    }
+
     private class FakeDeckRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()
@@ -421,6 +465,19 @@ class DeckViewModelTest {
             decksList.add(newDeck)
             return newDeck
         }
+        override suspend fun getOrCreatePastDayDeck(subjectId: String, type: PastDayDeckType): Deck {
+            val id = "${type.idPrefix}$subjectId"
+            val existing = decksList.find { it.id == id }
+            if (existing != null) return existing
+            val newDeck = Deck(
+                id = id,
+                subjectId = subjectId,
+                name = type.title,
+                splitSize = 50,
+            )
+            decksList.add(newDeck)
+            return newDeck
+        }
         override suspend fun saveDeck(deck: Deck) {
             decksList.removeIf { it.id == deck.id }
             decksList.add(deck)
@@ -447,6 +504,9 @@ class DeckViewModelTest {
             cardsList.removeIf { it.id == cardId }
         }
         val bookmarkedFlow = MutableStateFlow<List<Card>>(emptyList())
+        val pastDayFlow = MutableStateFlow<Map<PastDayDeckType, PastDayGroup>>(emptyMap())
+
+        override fun getPastDayCardsBySubject(subjectId: String): Flow<Map<PastDayDeckType, PastDayGroup>> = pastDayFlow
 
         override suspend fun setBookmark(cardId: String, isBookmarked: Boolean) {
             val idx = cardsList.indexOfFirst { it.id == cardId }
