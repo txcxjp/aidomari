@@ -65,6 +65,7 @@ fun DeckItemCard(
     onEditDeck: () -> Unit,
     onDeleteDeck: () -> Unit,
     modifier: Modifier = Modifier,
+    onRandomStudyClick: (() -> Unit)? = null,
 ) {
     val deck = item.deck
     Card(
@@ -145,6 +146,21 @@ fun DeckItemCard(
                             expanded = showDeckMenu,
                             onDismissRequest = { showDeckMenu = false },
                         ) {
+                            if (onRandomStudyClick != null && item.totalCardCount > 0) {
+                                DropdownMenuItem(
+                                    text = { Text("ランダム出題") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Shuffle,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        showDeckMenu = false
+                                        onRandomStudyClick()
+                                    },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("デッキを編集") },
                                 leadingIcon = {

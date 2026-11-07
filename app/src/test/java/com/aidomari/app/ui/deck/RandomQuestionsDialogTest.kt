@@ -99,4 +99,21 @@ class RandomQuestionsDialogTest {
         composeTestRule.onNodeWithText("キャンセル").performClick()
         assertTrue(dismissed)
     }
+
+    @Test
+    fun dialog_customTitleAndDescription_rendersCorrectly() {
+        composeTestRule.setContent {
+            RandomQuestionsDialog(
+                totalCards = 30,
+                initialCount = 10,
+                title = "「英単語」のランダム出題",
+                description = "この単語帳からランダム出題します。",
+                onDismissRequest = {},
+                onStartStudy = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText("「英単語」のランダム出題").assertIsDisplayed()
+        composeTestRule.onNodeWithText("この単語帳からランダム出題します。").assertIsDisplayed()
+    }
 }

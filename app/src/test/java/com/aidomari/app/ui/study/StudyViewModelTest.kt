@@ -592,6 +592,36 @@ class StudyViewModelTest {
         assertEquals(0, unsnoozedCard.snoozeLevel)
     }
 
+    @Test
+    fun loadDeckAndPart_withDeckRandomMode_loadsCardsFromSpecificDeck() = runTest {
+        val otherDeck = Deck(id = "deck-other", subjectId = "sub-1", name = "別デッキ")
+        val otherCard = Card(id = "c-other", deckId = "deck-other", front = "Other", back = "別")
+        fakeRepository.decks.add(otherDeck)
+        fakeRepository.cards.add(otherCard)
+
+        viewModel.loadDeckAndPart("random_deck_2_deck-1", 0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertEquals("random_deck_2_deck-1", state.deck?.id)
+        assertEquals("テスト単語帳 (ランダム 2問)", state.deck?.name)
+        assertEquals(2, state.totalInPart)
+        assertEquals(2, state.queueSize)
+        assertTrue(state.deck?.shuffleMode == true)
+        assertFalse(state.currentCard?.deckId == "deck-other")
+    }
+
+    @Test
+    fun loadDeckAndPart_withDeckRandomMode_allQuestions() = runTest {
+        viewModel.loadDeckAndPart("random_deck_-1_deck-1", 0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("テスト単語帳 (ランダム 全問)", state.deck?.name)
+        assertEquals(3, state.totalInPart)
+    }
+
     private class FakeStudyWordsRepository : WordsRepository {
         val subjects = mutableListOf<Subject>()
         val decks = mutableListOf<Deck>()

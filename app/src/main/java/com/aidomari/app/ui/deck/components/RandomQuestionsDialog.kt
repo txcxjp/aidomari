@@ -42,6 +42,8 @@ fun RandomQuestionsDialog(
     onDismissRequest: () -> Unit,
     onStartStudy: (count: Int) -> Unit,
     modifier: Modifier = Modifier,
+    title: String = "ランダム出題の設定",
+    description: String = "教科全体のカード（${totalCards}枚）からランダムに出題します。出題する問題数を選択してください。",
 ) {
     var selectedCount by remember(initialCount) { mutableIntStateOf(initialCount) }
     val options = listOf(10, 20, 30, 50, -1)
@@ -58,7 +60,7 @@ fun RandomQuestionsDialog(
         },
         title = {
             Text(
-                text = "ランダム出題の設定",
+                text = title,
                 fontWeight = FontWeight.Bold,
             )
         },
@@ -69,7 +71,7 @@ fun RandomQuestionsDialog(
                     .verticalScroll(rememberScrollState()),
             ) {
                 Text(
-                    text = "教科全体のカード（${totalCards}枚）からランダムに出題します。出題する問題数を選択してください。",
+                    text = description,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
