@@ -42,6 +42,6 @@ data class CardEntity(
     val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "snoozed_until")
     val snoozedUntil: Long? = null,
-    @ColumnInfo(name = "snooze_level")
+    @ColumnInfo(name = "snooze_level", defaultValue = "0")
     val snoozeLevel: Int = 0,
 )

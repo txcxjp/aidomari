@@ -1,10 +1,10 @@
 package com.aidomari.app.domain.util
 
+import org.junit.Assert.assertEquals
+import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import org.junit.Assert.assertEquals
-import org.junit.Test
 
 class CardSnoozeCalculatorTest {
 
