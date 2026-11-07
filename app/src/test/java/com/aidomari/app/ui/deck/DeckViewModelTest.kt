@@ -1,6 +1,7 @@
 package com.aidomari.app.ui.deck
 
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
@@ -316,6 +317,8 @@ class DeckViewModelTest {
             isCompleted = false,
             completedPartIndices = setOf(0),
         )
+        fakeRepository.studyLogs.add(CardStudyLog(id = "l1", cardId = "c1", isCorrect = true, studiedAt = 1000L))
+        fakeRepository.studyLogs.add(CardStudyLog(id = "l2", cardId = "c2", isCorrect = true, studiedAt = 2000L))
         fakeRepository.triggerDecksUpdate()
         advanceUntilIdle()
 
@@ -350,6 +353,8 @@ class DeckViewModelTest {
             isCompleted = true,
             completedPartIndices = setOf(0),
         )
+        fakeRepository.studyLogs.add(CardStudyLog(id = "l1", cardId = "c1", isCorrect = true, studiedAt = 1000L))
+        fakeRepository.studyLogs.add(CardStudyLog(id = "l2", cardId = "c2", isCorrect = true, studiedAt = 2000L))
         fakeRepository.triggerDecksUpdate()
         advanceUntilIdle()
 
@@ -467,6 +472,17 @@ class DeckViewModelTest {
         }
         override suspend fun deleteSession(deckId: String) {
             savedSession = null
+        }
+
+        val studyLogs = mutableListOf<CardStudyLog>()
+        override suspend fun getLatestLogsForDeckSync(deckId: String): List<CardStudyLog> {
+            val deckCardIds = cardsList.filter { it.deckId == deckId }.map { it.id }.toSet()
+            return studyLogs
+                .filter { it.cardId in deckCardIds }
+                .groupBy { it.cardId }
+                .mapValues { (_, logs) -> logs.maxByOrNull { it.studiedAt }!! }
+                .values
+                .toList()
         }
     }
 }
