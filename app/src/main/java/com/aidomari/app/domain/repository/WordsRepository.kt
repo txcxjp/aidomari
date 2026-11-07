@@ -1,10 +1,13 @@
 package com.aidomari.app.domain.repository
 
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import java.util.UUID
 
 interface WordsRepository {
 
@@ -69,4 +72,12 @@ interface WordsRepository {
     fun getSessionFlow(deckId: String): Flow<StudySession?>
     suspend fun saveSession(session: StudySession)
     suspend fun deleteSession(deckId: String)
+
+    // StudyLog (出題履歴・実績)
+    suspend fun recordStudyLog(cardId: String, isCorrect: Boolean): CardStudyLog =
+        CardStudyLog(id = UUID.randomUUID().toString(), cardId = cardId, isCorrect = isCorrect)
+    suspend fun getRecentLogsForCard(cardId: String, limit: Int = 10): List<CardStudyLog> = emptyList()
+    fun getLogsForCardFlow(cardId: String): Flow<List<CardStudyLog>> = emptyFlow()
+    fun getLatestLogsForDeck(deckId: String): Flow<List<CardStudyLog>> = emptyFlow()
+    suspend fun getLatestLogsForDeckSync(deckId: String): List<CardStudyLog> = emptyList()
 }

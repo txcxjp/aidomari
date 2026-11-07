@@ -7,6 +7,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import androidx.room.Upsert
 import com.aidomari.app.core.database.entity.CardEntity
+import com.aidomari.app.core.database.entity.CardStudyLogEntity
 import com.aidomari.app.core.database.entity.DeckEntity
 import com.aidomari.app.core.database.entity.DeckWithCards
 import com.aidomari.app.core.database.entity.StudySessionEntity
@@ -173,4 +174,48 @@ interface AidomariDao {
 
     @Query("DELETE FROM study_sessions WHERE deck_id = :deckId")
     suspend fun deleteSession(deckId: String)
+
+    // --- StudyLog Operations (出題履歴・実績) ---
+    @Upsert
+    suspend fun insertStudyLog(log: CardStudyLogEntity): Long
+
+    @Query("SELECT * FROM card_study_logs WHERE card_id = :cardId ORDER BY studied_at DESC LIMIT :limit")
+    suspend fun getRecentLogsForCard(cardId: String, limit: Int = 10): List<CardStudyLogEntity>
+
+    @Query("SELECT * FROM card_study_logs WHERE card_id = :cardId ORDER BY studied_at DESC")
+    fun getLogsForCardFlow(cardId: String): Flow<List<CardStudyLogEntity>>
+
+    @Query(
+        """
+        SELECT l.* FROM card_study_logs l
+        INNER JOIN (
+            SELECT card_id, MAX(studied_at) as max_studied_at
+            FROM card_study_logs
+            GROUP BY card_id
+        ) latest ON l.card_id = latest.card_id AND l.studied_at = latest.max_studied_at
+        INNER JOIN cards c ON c.id = l.card_id
+        WHERE c.deck_id = :deckId
+        """,
+    )
+    fun getLatestLogsForDeck(deckId: String): Flow<List<CardStudyLogEntity>>
+
+    @Query(
+        """
+        SELECT l.* FROM card_study_logs l
+        INNER JOIN (
+            SELECT card_id, MAX(studied_at) as max_studied_at
+            FROM card_study_logs
+            GROUP BY card_id
+        ) latest ON l.card_id = latest.card_id AND l.studied_at = latest.max_studied_at
+        INNER JOIN cards c ON c.id = l.card_id
+        WHERE c.deck_id = :deckId
+        """,
+    )
+    suspend fun getLatestLogsForDeckSync(deckId: String): List<CardStudyLogEntity>
+
+    @Query("SELECT COUNT(*) FROM card_study_logs WHERE card_id = :cardId")
+    suspend fun getReviewCountForCard(cardId: String): Int
+
+    @Query("SELECT COUNT(*) FROM card_study_logs WHERE card_id = :cardId AND is_correct = 1")
+    suspend fun getCorrectCountForCard(cardId: String): Int
 }

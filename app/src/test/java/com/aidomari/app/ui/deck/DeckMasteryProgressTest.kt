@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
@@ -50,6 +51,8 @@ class DeckMasteryProgressTest {
             isCompleted = false,
             completedPartIndices = setOf(0),
         )
+        fakeRepository.studyLogs.add(CardStudyLog(id = "l1", cardId = "c1", isCorrect = true, studiedAt = 1000L))
+        fakeRepository.studyLogs.add(CardStudyLog(id = "l2", cardId = "c2", isCorrect = true, studiedAt = 2000L))
         fakeRepository.triggerDecksUpdate()
 
         composeTestRule.setContent {
@@ -87,6 +90,8 @@ class DeckMasteryProgressTest {
             isCompleted = true,
             completedPartIndices = setOf(0),
         )
+        fakeRepository.studyLogs.add(CardStudyLog(id = "l1", cardId = "c1", isCorrect = true, studiedAt = 1000L))
+        fakeRepository.studyLogs.add(CardStudyLog(id = "l2", cardId = "c2", isCorrect = true, studiedAt = 2000L))
         fakeRepository.triggerDecksUpdate()
 
         composeTestRule.setContent {
@@ -107,11 +112,67 @@ class DeckMasteryProgressTest {
         composeTestRule.onNodeWithText("完了").assertIsDisplayed()
     }
 
+    @Test
+    fun deckList_progressRemainsConsistent_whenSplitSizeChanged() {
+        // 4 cards in total, 2 cards correctly answered (c1, c2)
+        val deckInitial = Deck(id = "d1", subjectId = "sub-1", name = "枚数変更テスト", splitSize = 2)
+        val cards = listOf(
+            Card(id = "c1", deckId = "d1", front = "f1", back = "b1"),
+            Card(id = "c2", deckId = "d1", front = "f2", back = "b2"),
+            Card(id = "c3", deckId = "d1", front = "f3", back = "b3"),
+            Card(id = "c4", deckId = "d1", front = "f4", back = "b4"),
+        )
+        fakeRepository.decksList.add(deckInitial)
+        fakeRepository.cardsList.addAll(cards)
+        fakeRepository.studyLogs.add(CardStudyLog(id = "l1", cardId = "c1", isCorrect = true, studiedAt = 1000L))
+        fakeRepository.studyLogs.add(CardStudyLog(id = "l2", cardId = "c2", isCorrect = true, studiedAt = 2000L))
+        fakeRepository.triggerDecksUpdate()
+
+        composeTestRule.setContent {
+            DeckListScreen(
+                subjectName = "英単語",
+                viewModel = viewModel,
+                onBack = {},
+                onPartClick = { _, _ -> },
+                onSpeakText = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // 2/4 cards learned -> 50%
+        composeTestRule.onNodeWithText("進捗率: 50%").assertIsDisplayed()
+        composeTestRule.onNodeWithText("2 / 4 単語").assertIsDisplayed()
+
+        // Now change splitSize to 4 (combine into 1 part)
+        fakeRepository.decksList.clear()
+        fakeRepository.decksList.add(deckInitial.copy(splitSize = 4))
+        fakeRepository.triggerDecksUpdate()
+        composeTestRule.waitForIdle()
+
+        // Progress rate MUST stay 50% even after changing splitSize!
+        composeTestRule.onNodeWithText("進捗率: 50%").assertIsDisplayed()
+        composeTestRule.onNodeWithText("2 / 4 単語").assertIsDisplayed()
+    }
+
     private class FakeMasteryRepository : WordsRepository {
         val cardsList = mutableListOf<Card>()
         val decksList = mutableListOf<Deck>()
         val decksFlow = MutableStateFlow<List<Deck>>(emptyList())
         val sessionsMap = mutableMapOf<String, StudySession>()
+        val studyLogs = mutableListOf<CardStudyLog>()
+
+        override suspend fun getLatestLogsForDeckSync(deckId: String): List<CardStudyLog> {
+            val deckCardIds = cardsList.filter { it.deckId == deckId }.map { it.id }.toSet()
+            return studyLogs
+                .filter { it.cardId in deckCardIds }
+                .groupBy { it.cardId }
+                .mapValues { (_, logs) -> logs.maxByOrNull { it.studiedAt }!! }
+                .values
+                .toList()
+        }
+
+        override suspend fun getRecentLogsForCard(cardId: String, limit: Int): List<CardStudyLog> =
+            studyLogs.filter { it.cardId == cardId }.sortedByDescending { it.studiedAt }.take(limit)
 
         fun triggerDecksUpdate() {
             decksFlow.value = decksList.toList()

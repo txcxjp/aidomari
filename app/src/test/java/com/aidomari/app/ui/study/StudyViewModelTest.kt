@@ -1,6 +1,7 @@
 package com.aidomari.app.ui.study
 
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
@@ -484,11 +485,35 @@ class StudyViewModelTest {
         assertTrue(session.completedPartIndices.contains(0))
     }
 
+    @Test
+    fun markDone_and_markRetry_recordsStudyLogs() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        // Card c1 -> Retry
+        viewModel.markRetry()
+        advanceUntilIdle()
+
+        // Card c2 -> Done
+        viewModel.markDone()
+        advanceUntilIdle()
+
+        assertEquals(2, fakeRepository.recordedLogs.size)
+        assertEquals("c1" to false, fakeRepository.recordedLogs[0])
+        assertEquals("c2" to true, fakeRepository.recordedLogs[1])
+    }
+
     private class FakeStudyWordsRepository : WordsRepository {
         val subjects = mutableListOf<Subject>()
         val decks = mutableListOf<Deck>()
         val cards = mutableListOf<Card>()
+        val recordedLogs = mutableListOf<Pair<String, Boolean>>()
         var lastSavedSession: StudySession? = null
+
+        override suspend fun recordStudyLog(cardId: String, isCorrect: Boolean): CardStudyLog {
+            recordedLogs.add(cardId to isCorrect)
+            return CardStudyLog(id = "log-${recordedLogs.size}", cardId = cardId, isCorrect = isCorrect)
+        }
 
         override fun getAllSubjects(): Flow<List<Subject>> = flowOf(subjects)
         override suspend fun getSubjectById(id: String): Subject? = subjects.find { it.id == id }
