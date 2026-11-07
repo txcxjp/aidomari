@@ -21,11 +21,10 @@ enum class PastDayDeckType(
     ;
 
     companion object {
-        fun fromDeckId(deckId: String): Pair<PastDayDeckType, String>? {
-            return entries.firstOrNull { deckId.startsWith(it.idPrefix) }?.let {
+        fun fromDeckId(deckId: String): Pair<PastDayDeckType, String>? =
+            entries.firstOrNull { deckId.startsWith(it.idPrefix) }?.let {
                 it to deckId.removePrefix(it.idPrefix)
             }
-        }
     }
 }
 

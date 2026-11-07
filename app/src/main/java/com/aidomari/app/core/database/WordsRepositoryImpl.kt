@@ -147,12 +147,11 @@ class WordsRepositoryImpl(
     override suspend fun getAllCardsInSubject(subjectId: String): List<Card> =
         dao.getAllCardsInSubject(subjectId).map { it.toDomain() }
 
-    override fun getPastDayCardsBySubject(subjectId: String): Flow<Map<PastDayDeckType, PastDayGroup>> {
-        return dao.getCardsWithLatestStudyTimeBySubject(subjectId).map { list ->
+    override fun getPastDayCardsBySubject(subjectId: String): Flow<Map<PastDayDeckType, PastDayGroup>> =
+        dao.getCardsWithLatestStudyTimeBySubject(subjectId).map { list ->
             val pairs = list.map { it.card.toDomain() to it.maxStudiedAt }
             PastDayDecksCalculator.calculate(pairs)
         }
-    }
 
     override suspend fun getCardsForPastDayDeckSync(subjectId: String, type: PastDayDeckType): List<Card> {
         val list = dao.getCardsWithLatestStudyTimeBySubjectSync(subjectId)
