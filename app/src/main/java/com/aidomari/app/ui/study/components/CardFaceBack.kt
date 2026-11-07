@@ -94,7 +94,7 @@ fun CardFaceBack(
                 .align(Alignment.Center)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 40.dp)
-                .verticalScroll(scrollState),
+                .verticalScroll(scrollState, enabled = scrollState.maxValue > 0),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {

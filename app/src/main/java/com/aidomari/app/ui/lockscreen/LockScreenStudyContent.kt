@@ -1,6 +1,11 @@
 package com.aidomari.app.ui.lockscreen
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -13,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,13 +32,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.ui.preview.PreviewSampleData
@@ -40,6 +54,11 @@ import com.aidomari.app.ui.study.components.CardFaceBack
 import com.aidomari.app.ui.study.components.CardFaceFront
 import com.aidomari.app.ui.study.components.FlippableCard
 import com.aidomari.app.ui.theme.AidomariTheme
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
+
+private const val UPWARD_SWIPE_THRESHOLD = 80f
 
 @Composable
 fun LockScreenStudyContent(
@@ -51,17 +70,64 @@ fun LockScreenStudyContent(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current.density
+    val configuration = LocalConfiguration.current
+    val offscreenTargetY = (configuration.screenHeightDp * density * 1.1f).coerceAtLeast(1400f)
+
+    var isDismissing by remember { mutableStateOf(false) }
+    val dragOffsetY = remember { Animatable(0f) }
+    val dismissProgress = (abs(dragOffsetY.value) / offscreenTargetY).coerceIn(0f, 1f)
+    val scrimAlpha = 0.85f * (1f - dismissProgress * 0.6f)
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.85f))
-            .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dragAmount ->
-                    // Upward swipe threshold (dragAmount < -30px)
-                    if (dragAmount < -30f) {
-                        onDismiss()
-                    }
-                }
+            .background(Color.Black.copy(alpha = scrimAlpha))
+            .pointerInput(isDismissing) {
+                if (isDismissing) return@pointerInput
+                detectVerticalDragGestures(
+                    onVerticalDrag = { _, dragAmount ->
+                        val nextOffset = (dragOffsetY.value + dragAmount).coerceAtMost(0f)
+                        coroutineScope.launch {
+                            dragOffsetY.snapTo(nextOffset)
+                        }
+                    },
+                    onDragEnd = {
+                        coroutineScope.launch {
+                            if (dragOffsetY.value < -UPWARD_SWIPE_THRESHOLD) {
+                                isDismissing = true
+                                dragOffsetY.animateTo(
+                                    targetValue = -offscreenTargetY,
+                                    animationSpec = tween(
+                                        durationMillis = 220,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                )
+                                onDismiss()
+                            } else {
+                                dragOffsetY.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMedium,
+                                    ),
+                                )
+                            }
+                        }
+                    },
+                    onDragCancel = {
+                        coroutineScope.launch {
+                            dragOffsetY.animateTo(
+                                targetValue = 0f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMedium,
+                                ),
+                            )
+                        }
+                    },
+                )
             }
             .testTag("LockScreenStudyRoot"),
     ) {
@@ -113,7 +179,8 @@ fun LockScreenStudyContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    .offset { IntOffset(0, dragOffsetY.value.roundToInt()) },
                 contentAlignment = Alignment.Center,
             ) {
                 when {
