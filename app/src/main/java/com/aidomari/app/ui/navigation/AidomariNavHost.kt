@@ -6,6 +6,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -24,6 +26,9 @@ import com.aidomari.app.ui.study.StudyScreen
 import com.aidomari.app.ui.study.StudyViewModel
 import com.aidomari.app.ui.subject.SubjectListScreen
 import com.aidomari.app.ui.subject.SubjectViewModel
+import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.AppColorTheme
+import com.aidomari.app.ui.theme.LocalThemeConfig
 import com.aidomari.app.ui.theme.ThemePreferences
 
 private const val TRANSITION_DURATION_MS = 280
@@ -86,21 +91,31 @@ fun AidomariNavHost(
             val subjectId = backStackEntry.arguments?.getString("subjectId") ?: return@composable
             val subjectName = backStackEntry.arguments?.getString("subjectName") ?: "単語帳"
             val deckViewModel = remember(subjectId) { DeckViewModel(subjectId, repository) }
+            val subject by deckViewModel.subject.collectAsState()
+            val currentConfig = LocalThemeConfig.current
+            val subjectColorTheme = subject?.colorTheme?.let { runCatching { AppColorTheme.valueOf(it) }.getOrNull() }
+            val effectiveConfig = if (subjectColorTheme != null) {
+                currentConfig.copy(colorTheme = subjectColorTheme)
+            } else {
+                currentConfig
+            }
 
-            DeckListScreen(
-                subjectName = subjectName,
-                viewModel = deckViewModel,
-                onBack = { navController.popBackStack() },
-                onPartClick = { deckId, partIndex ->
-                    navController.navigate("study/$deckId/$partIndex")
-                },
-                onSpeakText = { text ->
-                    ttsManager.speak(text)
-                },
-                onManageCardsClick = { deckId ->
-                    navController.navigate("deck/$deckId/cards")
-                },
-            )
+            AidomariTheme(themeConfig = effectiveConfig) {
+                DeckListScreen(
+                    subjectName = subjectName,
+                    viewModel = deckViewModel,
+                    onBack = { navController.popBackStack() },
+                    onPartClick = { deckId, partIndex ->
+                        navController.navigate("study/$deckId/$partIndex")
+                    },
+                    onSpeakText = { text ->
+                        ttsManager.speak(text)
+                    },
+                    onManageCardsClick = { deckId ->
+                        navController.navigate("deck/$deckId/cards")
+                    },
+                )
+            }
         }
 
         composable(
@@ -134,25 +149,35 @@ fun AidomariNavHost(
             val deckId = backStackEntry.arguments?.getString("deckId") ?: return@composable
             val partIndex = backStackEntry.arguments?.getInt("partIndex") ?: 0
             val studyViewModel = remember(deckId) { StudyViewModel(repository) }
+            val state by studyViewModel.uiState.collectAsState()
+            val currentConfig = LocalThemeConfig.current
+            val subjectColorTheme = state.subject?.colorTheme?.let { runCatching { AppColorTheme.valueOf(it) }.getOrNull() }
+            val effectiveConfig = if (subjectColorTheme != null) {
+                currentConfig.copy(colorTheme = subjectColorTheme)
+            } else {
+                currentConfig
+            }
 
-            StudyScreen(
-                deckId = deckId,
-                partIndex = partIndex,
-                viewModel = studyViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToPart = { nextPartIndex ->
-                    navController.navigate("study/$deckId/$nextPartIndex") {
-                        popUpTo("study/$deckId/$partIndex") { inclusive = true }
-                    }
-                },
-                onSpeakText = { text ->
-                    val deck = studyViewModel.uiState.value.deck
-                    val rate = deck?.speechRate ?: 1.0f
-                    ttsManager.setSpeechRate(rate)
-                    val lang = "auto"
-                    ttsManager.speak(text, lang)
-                },
-            )
+            AidomariTheme(themeConfig = effectiveConfig) {
+                StudyScreen(
+                    deckId = deckId,
+                    partIndex = partIndex,
+                    viewModel = studyViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToPart = { nextPartIndex ->
+                        navController.navigate("study/$deckId/$nextPartIndex") {
+                            popUpTo("study/$deckId/$partIndex") { inclusive = true }
+                        }
+                    },
+                    onSpeakText = { text ->
+                        val deck = studyViewModel.uiState.value.deck
+                        val rate = deck?.speechRate ?: 1.0f
+                        ttsManager.setSpeechRate(rate)
+                        val lang = "auto"
+                        ttsManager.speak(text, lang)
+                    },
+                )
+            }
         }
     }
 }

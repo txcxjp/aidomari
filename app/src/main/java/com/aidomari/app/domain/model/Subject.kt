@@ -7,4 +7,5 @@ data class Subject(
     val sortOrder: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
     val isArchived: Boolean = false,
+    val colorTheme: String? = null,
 )

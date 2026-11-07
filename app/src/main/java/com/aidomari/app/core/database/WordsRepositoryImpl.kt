@@ -258,6 +258,7 @@ class WordsRepositoryImpl(
         sortOrder = sortOrder,
         createdAt = createdAt,
         isArchived = isArchived,
+        colorTheme = colorTheme,
     )
 
     private fun Subject.toEntity() = SubjectEntity(
@@ -267,6 +268,7 @@ class WordsRepositoryImpl(
         sortOrder = sortOrder,
         createdAt = createdAt,
         isArchived = isArchived,
+        colorTheme = colorTheme,
     )
 
     private fun DeckEntity.toDomain() = Deck(

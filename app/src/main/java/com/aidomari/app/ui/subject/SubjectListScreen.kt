@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,15 +16,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
@@ -60,6 +66,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -74,6 +82,7 @@ import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.ui.lockscreen.LockScreenSettingsDialog
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.theme.AidomariTheme
+import com.aidomari.app.ui.theme.AppColorTheme
 import com.aidomari.app.ui.theme.ThemePreferences
 import com.aidomari.app.ui.theme.ThemePreviews
 import com.aidomari.app.ui.theme.ThemeSettingsDialog
@@ -204,6 +213,7 @@ fun SubjectListScreen(
     if (showAddDialog) {
         var subjectName by remember { mutableStateOf("") }
         var selectedLanguage by remember { mutableStateOf("en-US") }
+        var selectedColorTheme by remember { mutableStateOf<String?>(null) }
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
@@ -239,13 +249,18 @@ fun SubjectListScreen(
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(14.dp))
+                    SubjectColorThemePicker(
+                        selectedColorTheme = selectedColorTheme,
+                        onColorThemeSelected = { selectedColorTheme = it },
+                    )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         if (subjectName.isNotBlank()) {
-                            viewModel.createSubject(subjectName, selectedLanguage)
+                            viewModel.createSubject(subjectName, selectedLanguage, selectedColorTheme)
                             showAddDialog = false
                         }
                     },
@@ -266,6 +281,7 @@ fun SubjectListScreen(
         val target = subjectToEdit!!
         var subjectName by remember(target) { mutableStateOf(target.name) }
         var selectedLanguage by remember(target) { mutableStateOf(target.ttsLanguage) }
+        var selectedColorTheme by remember(target) { mutableStateOf(target.colorTheme) }
 
         AlertDialog(
             onDismissRequest = { subjectToEdit = null },
@@ -303,13 +319,18 @@ fun SubjectListScreen(
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(14.dp))
+                    SubjectColorThemePicker(
+                        selectedColorTheme = selectedColorTheme,
+                        onColorThemeSelected = { selectedColorTheme = it },
+                    )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         if (subjectName.isNotBlank()) {
-                            viewModel.updateSubject(target.id, subjectName, selectedLanguage)
+                            viewModel.updateSubject(target.id, subjectName, selectedLanguage, selectedColorTheme)
                             subjectToEdit = null
                             coroutineScope.launch {
                                 snackbarHostState.showSnackbar("「$subjectName」に更新しました")
@@ -672,6 +693,7 @@ fun SubjectListContent(
             if (!isArchivedView) {
                 FloatingActionButton(
                     onClick = onAddSubjectClick,
+                    modifier = Modifier.testTag("AddSubjectFab"),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -709,6 +731,15 @@ fun SubjectListContent(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         items(archivedSubjects, key = { it.id }) { subject ->
+                            val subjectTheme = subject.colorTheme?.let { themeName ->
+                                try {
+                                    AppColorTheme.valueOf(themeName)
+                                } catch (_: Exception) {
+                                    null
+                                }
+                            }
+                            val accentColor = subjectTheme?.previewColor ?: MaterialTheme.colorScheme.primary
+
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -725,40 +756,76 @@ fun SubjectListContent(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = subject.name,
-                                            style = MaterialTheme.typography.titleLarge.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 20.sp,
-                                            ),
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(accentColor.copy(alpha = 0.16f)),
+                                            contentAlignment = Alignment.Center,
                                         ) {
-                                            Surface(
-                                                shape = RoundedCornerShape(6.dp),
-                                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                            Icon(
+                                                imageVector = Icons.Default.Book,
+                                                contentDescription = null,
+                                                tint = accentColor,
+                                                modifier = Modifier.size(24.dp),
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(14.dp))
+
+                                        Column {
+                                            Text(
+                                                text = subject.name,
+                                                style = MaterialTheme.typography.titleLarge.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 20.sp,
+                                                ),
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
                                             ) {
-                                                Text(
-                                                    text = "アーカイブ済み",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                                )
-                                            }
-                                            Surface(
-                                                shape = RoundedCornerShape(6.dp),
-                                                color = MaterialTheme.colorScheme.surface,
-                                            ) {
-                                                Text(
-                                                    text = "TTS音声: ${subject.ttsLanguage}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                                )
+                                                if (subjectTheme != null) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = accentColor.copy(alpha = 0.15f),
+                                                    ) {
+                                                        Text(
+                                                            text = subjectTheme.displayName.substringBefore(" ("),
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            color = accentColor,
+                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                        )
+                                                    }
+                                                }
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                                ) {
+                                                    Text(
+                                                        text = "アーカイブ済み",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                    )
+                                                }
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = MaterialTheme.colorScheme.surface,
+                                                ) {
+                                                    Text(
+                                                        text = "TTS音声: ${subject.ttsLanguage}",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -887,6 +954,15 @@ fun SubjectListContent(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         items(subjects, key = { it.id }) { subject ->
+                            val subjectTheme = subject.colorTheme?.let { themeName ->
+                                try {
+                                    AppColorTheme.valueOf(themeName)
+                                } catch (_: Exception) {
+                                    null
+                                }
+                            }
+                            val accentColor = subjectTheme?.previewColor ?: MaterialTheme.colorScheme.primary
+
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -903,25 +979,66 @@ fun SubjectListContent(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = subject.name,
-                                            style = MaterialTheme.typography.titleLarge.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 20.sp,
-                                            ),
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.surface,
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(accentColor.copy(alpha = 0.16f)),
+                                            contentAlignment = Alignment.Center,
                                         ) {
-                                            Text(
-                                                text = "TTS音声: ${subject.ttsLanguage}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                            Icon(
+                                                imageVector = Icons.Default.Book,
+                                                contentDescription = null,
+                                                tint = accentColor,
+                                                modifier = Modifier.size(24.dp),
                                             )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(14.dp))
+
+                                        Column {
+                                            Text(
+                                                text = subject.name,
+                                                style = MaterialTheme.typography.titleLarge.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 20.sp,
+                                                ),
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                if (subjectTheme != null) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = accentColor.copy(alpha = 0.15f),
+                                                    ) {
+                                                        Text(
+                                                            text = subjectTheme.displayName.substringBefore(" ("),
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            color = accentColor,
+                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                        )
+                                                    }
+                                                }
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = MaterialTheme.colorScheme.surface,
+                                                ) {
+                                                    Text(
+                                                        text = "TTS音声: ${subject.ttsLanguage}",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
 
@@ -1052,5 +1169,83 @@ private fun SubjectListContentArchivedPreview() {
             onUnarchiveSubject = {},
             onDeleteSubject = {},
         )
+    }
+}
+
+@Composable
+private fun SubjectColorThemePicker(
+    selectedColorTheme: String?,
+    onColorThemeSelected: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = "カラーテーマ:",
+            style = MaterialTheme.typography.labelMedium,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val isDefaultSelected = selectedColorTheme == null
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(
+                        width = if (isDefaultSelected) 2.5.dp else 1.dp,
+                        color = if (isDefaultSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        shape = CircleShape,
+                    )
+                    .testTag("ColorThemeOption_DEFAULT")
+                    .clickable { onColorThemeSelected(null) },
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isDefaultSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "標準テーマ",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    Text(
+                        text = "標準",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            AppColorTheme.entries.forEach { theme ->
+                val isSelected = selectedColorTheme == theme.name
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(theme.previewColor)
+                        .border(
+                            width = if (isSelected) 2.5.dp else 1.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                            shape = CircleShape,
+                        )
+                        .testTag("ColorThemeOption_${theme.name}")
+                        .clickable { onColorThemeSelected(theme.name) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = theme.displayName,
+                            modifier = Modifier.size(18.dp),
+                            tint = Color.White,
+                        )
+                    }
+                }
+            }
+        }
     }
 }

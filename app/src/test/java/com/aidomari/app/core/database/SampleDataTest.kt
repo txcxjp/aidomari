@@ -57,6 +57,7 @@ class SampleDataTest {
         val subject = subjects.first()
         assertEquals(SampleData.SAMPLE_SUBJECT_NAME, subject.name)
         assertEquals("en-US", subject.ttsLanguage)
+        assertEquals("INDIGO", subject.colorTheme)
         assertFalse(subject.isArchived)
 
         // Query decks for subject

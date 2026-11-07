@@ -231,6 +231,42 @@ class SubjectListScreenTest {
         composeTestRule.onNodeWithText("ロック画面学習を有効にする").assertIsDisplayed()
         composeTestRule.onNodeWithText("出題対象:").assertIsDisplayed()
     }
+
+    @Test
+    fun subjectRow_displaysColorThemeBadge_whenSubjectHasColorTheme() {
+        val subject = Subject(id = "sub-1", name = "歴史", colorTheme = "AMBER")
+        fakeRepository.seedSubjects(listOf(subject))
+
+        composeTestRule.setContent {
+            SubjectListScreen(
+                viewModel = viewModel,
+                onSubjectClick = { _, _ -> },
+            )
+        }
+
+        composeTestRule.onNodeWithText("歴史").assertIsDisplayed()
+        composeTestRule.onNodeWithText("琥珀").assertIsDisplayed()
+    }
+
+    @Test
+    fun addSubjectDialog_displaysColorThemePicker() {
+        composeTestRule.setContent {
+            SubjectListScreen(
+                viewModel = viewModel,
+                onSubjectClick = { _, _ -> },
+            )
+        }
+
+        // Click Add Subject FAB
+        composeTestRule.onNodeWithTag("AddSubjectFab").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("新規教科の作成").assertIsDisplayed()
+        composeTestRule.onNodeWithText("カラーテーマ:").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("ColorThemeOption_DEFAULT").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("標準テーマ").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("ColorThemeOption_INDIGO").assertIsDisplayed()
+    }
 }
 
 private class FakeSubjectScreenRepository : WordsRepository {

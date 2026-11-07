@@ -50,6 +50,30 @@ class SubjectViewModelTest {
     }
 
     @Test
+    fun createSubject_withColorTheme_savesColorTheme() = runTest {
+        viewModel.createSubject("世界史", "ja-JP", "AMBER")
+        advanceUntilIdle()
+
+        assertEquals(1, fakeRepository.subjectsList.size)
+        assertEquals("世界史", fakeRepository.subjectsList[0].name)
+        assertEquals("AMBER", fakeRepository.subjectsList[0].colorTheme)
+    }
+
+    @Test
+    fun updateSubject_updatesColorTheme() = runTest {
+        viewModel.createSubject("数学", "ja-JP", "FOREST")
+        advanceUntilIdle()
+
+        val id = fakeRepository.subjectsList[0].id
+        viewModel.updateSubject(id, "数学II・B", "ja-JP", "SAKURA")
+        advanceUntilIdle()
+
+        val updated = fakeRepository.subjectsList[0]
+        assertEquals("数学II・B", updated.name)
+        assertEquals("SAKURA", updated.colorTheme)
+    }
+
+    @Test
     fun deleteSubject_removesSubjectFromRepository() = runTest {
         viewModel.createSubject("世界史", "ja-JP")
         advanceUntilIdle()

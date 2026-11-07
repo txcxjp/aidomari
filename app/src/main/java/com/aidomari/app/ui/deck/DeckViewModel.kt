@@ -6,6 +6,7 @@ import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.StudySession
+import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
 import com.aidomari.app.domain.util.CardSnoozeCalculator
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +50,9 @@ class DeckViewModel(
     private val _isSubjectArchived = MutableStateFlow(false)
     val isSubjectArchived: StateFlow<Boolean> = _isSubjectArchived.asStateFlow()
 
+    private val _subject = MutableStateFlow<Subject?>(null)
+    val subject: StateFlow<Subject?> = _subject.asStateFlow()
+
     init {
         loadSubjectInfo()
         loadDecks()
@@ -60,8 +64,9 @@ class DeckViewModel(
 
     fun loadSubjectInfo() {
         viewModelScope.launch {
-            val subject = repository.getSubjectById(subjectId)
-            _isSubjectArchived.value = subject?.isArchived == true
+            val s = repository.getSubjectById(subjectId)
+            _subject.value = s
+            _isSubjectArchived.value = s?.isArchived == true
         }
     }
 

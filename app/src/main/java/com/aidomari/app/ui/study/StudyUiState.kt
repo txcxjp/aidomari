@@ -6,6 +6,7 @@ import com.aidomari.app.domain.model.Deck
 data class StudyUiState(
     val isLoading: Boolean = true,
     val deck: Deck? = null,
+    val subject: com.aidomari.app.domain.model.Subject? = null,
     val partIndex: Int = 0,
     val currentCard: Card? = null,
     val nextCard: Card? = null,

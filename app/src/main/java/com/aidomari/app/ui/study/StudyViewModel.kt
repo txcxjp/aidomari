@@ -170,12 +170,14 @@ class StudyViewModel(
             }
             val currentPart = parts.getOrNull(partIndex)
             val hasNextPart = partIndex + 1 < parts.size
+            val currentSubject = repository.getSubjectById(deck.subjectId)
 
             if (currentPart == null || activeCards.isEmpty()) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         deck = deck,
+                        subject = currentSubject,
                         partIndex = partIndex,
                         currentCard = null,
                         isPartCompleted = true,
@@ -225,6 +227,7 @@ class StudyViewModel(
                 it.copy(
                     isLoading = false,
                     deck = deck,
+                    subject = currentSubject,
                     partIndex = partIndex,
                     currentCard = firstCard,
                     nextCard = nextCard,
