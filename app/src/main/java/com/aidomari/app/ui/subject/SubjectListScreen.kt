@@ -553,6 +553,8 @@ fun SubjectListContent(
     onEditSubject: (Subject) -> Unit = {},
     onLockScreenClick: () -> Unit = {},
 ) {
+    var showTopBarMenu by remember { mutableStateOf(false) }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -590,22 +592,6 @@ fun SubjectListContent(
                         }
                     },
                     actions = {
-                        if (archivedSubjects.isNotEmpty()) {
-                            TextButton(
-                                onClick = onSwitchToArchived,
-                                modifier = Modifier.testTag("TopBarArchivedButton"),
-                            ) {
-                                Text(text = "アーカイブ (${archivedSubjects.size})")
-                            }
-                        }
-                        TextButton(onClick = onImportClick) {
-                            Text(text = "インポート")
-                        }
-                        if (subjects.isNotEmpty() || archivedSubjects.isNotEmpty()) {
-                            TextButton(onClick = onExportClick) {
-                                Text(text = "エクスポート")
-                            }
-                        }
                         IconButton(
                             onClick = onLockScreenClick,
                             modifier = Modifier.testTag("LockScreenSettingsButton"),
@@ -623,6 +609,61 @@ fun SubjectListContent(
                                 imageVector = Icons.Default.Palette,
                                 contentDescription = "テーマ設定",
                             )
+                        }
+                        Box {
+                            IconButton(
+                                onClick = { showTopBarMenu = true },
+                                modifier = Modifier.testTag("TopBarMenuButton"),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "メニュー",
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showTopBarMenu,
+                                onDismissRequest = { showTopBarMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(text = "インポート") },
+                                    modifier = Modifier.testTag("MenuImportItem"),
+                                    onClick = {
+                                        showTopBarMenu = false
+                                        onImportClick()
+                                    },
+                                )
+                                if (subjects.isNotEmpty() || archivedSubjects.isNotEmpty()) {
+                                    DropdownMenuItem(
+                                        text = { Text(text = "エクスポート") },
+                                        modifier = Modifier.testTag("MenuExportItem"),
+                                        onClick = {
+                                            showTopBarMenu = false
+                                            onExportClick()
+                                        },
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = {
+                                        val archiveLabel = if (archivedSubjects.isNotEmpty()) {
+                                            "アーカイブ済み教科 (${archivedSubjects.size})"
+                                        } else {
+                                            "アーカイブ済み教科"
+                                        }
+                                        Text(text = archiveLabel)
+                                    },
+                                    modifier = Modifier.testTag("TopBarArchivedButton"),
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Archive,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        showTopBarMenu = false
+                                        onSwitchToArchived()
+                                    },
+                                )
+                            }
                         }
                     },
                 )
@@ -932,50 +973,6 @@ fun SubjectListContent(
                                                     },
                                                 )
                                             }
-                                        }
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        if (archivedSubjects.isNotEmpty()) {
-                            item(key = "archived_section_link") {
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(onClick = onSwitchToArchived)
-                                        .testTag("ArchivedSubjectsLink"),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                                    ),
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(14.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Archive,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                            Text(
-                                                text = "アーカイブされた教科 (${archivedSubjects.size}件)",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium,
-                                            )
                                         }
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
