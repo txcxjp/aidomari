@@ -137,6 +137,45 @@ class LockScreenStudyViewModelTest {
     }
 
     @Test
+    fun targetDaysAgo_whenNoCardOverDaysAgo_fallsBackToOldestStudiedCard() = runTest {
+        preferences.updateConfig(
+            com.aidomari.app.core.lockscreen.LockScreenConfig(
+                isEnabled = true,
+                target = LockScreenTarget.DAYS_AGO,
+                daysThreshold = 7,
+            ),
+        )
+        fakeRepository.cardOverDaysAgo = null
+        val oldestCard = Card(id = "card-oldest", deckId = "deck-1", front = "oldest", back = "最古")
+        fakeRepository.oldestStudiedCard = oldestCard
+
+        viewModel = LockScreenStudyViewModel(fakeRepository, preferences)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("card-oldest", state.card?.id)
+    }
+
+    @Test
+    fun targetDaysAgo_whenNoCardsStudiedAtAll_setsCardToNull() = runTest {
+        preferences.updateConfig(
+            com.aidomari.app.core.lockscreen.LockScreenConfig(
+                isEnabled = true,
+                target = LockScreenTarget.DAYS_AGO,
+                daysThreshold = 7,
+            ),
+        )
+        fakeRepository.cardOverDaysAgo = null
+        fakeRepository.oldestStudiedCard = null
+
+        viewModel = LockScreenStudyViewModel(fakeRepository, preferences)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.card)
+    }
+
+    @Test
     fun markDone_recordsStudyLogWithTrueAndCallsCallback() = runTest {
         val card = Card(id = "card-1", deckId = "deck-1", front = "test", back = "テスト")
         fakeRepository.cards.add(card)
@@ -190,6 +229,7 @@ class LockScreenStudyViewModelTest {
         val bookmarkedCardIds = mutableSetOf<String>()
         val recordedLogs = mutableListOf<Pair<String, Boolean>>()
         var cardOverDaysAgo: Card? = null
+        var oldestStudiedCard: Card? = null
         var lastCutoffTimestamp: Long? = null
 
         override fun getAllSubjects(): Flow<List<Subject>> = MutableStateFlow(subjects)
@@ -228,6 +268,8 @@ class LockScreenStudyViewModelTest {
             lastCutoffTimestamp = cutoffTimestamp
             return cardOverDaysAgo
         }
+
+        override suspend fun getOldestStudiedCard(): Card? = oldestStudiedCard
 
         override suspend fun recordStudyLog(
             cardId: String,

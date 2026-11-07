@@ -204,7 +204,7 @@ fun LockScreenSettingsDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "${config.daysThreshold}日以上前に出題した単語（未学習含む）",
+                        text = "${config.daysThreshold}日以上前に出題した単語",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (config.isEnabled) {
                             MaterialTheme.colorScheme.onSurface

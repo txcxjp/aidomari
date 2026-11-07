@@ -6,6 +6,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.aidomari.app.AidomariApp
@@ -31,6 +32,12 @@ class LockScreenStudyActivity : ComponentActivity() {
 
         setContent {
             val uiState by viewModel.uiState.collectAsState()
+
+            LaunchedEffect(uiState.isLoading, uiState.card) {
+                if (!uiState.isLoading && uiState.card == null) {
+                    finish()
+                }
+            }
 
             BackHandler {
                 finish()

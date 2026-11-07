@@ -138,6 +138,9 @@ class WordsRepositoryImpl(
     override suspend fun getRandomCardOverDaysAgo(cutoffTimestamp: Long): Card? =
         dao.getRandomCardOverDaysAgo(cutoffTimestamp)?.toDomain()
 
+    override suspend fun getOldestStudiedCard(): Card? =
+        dao.getOldestStudiedCard()?.toDomain()
+
     override suspend fun getSession(deckId: String): StudySession? =
         dao.getSession(deckId)?.toDomain()
 

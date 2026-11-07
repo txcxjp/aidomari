@@ -59,6 +59,23 @@ class LockScreenSettingsDialogTest {
     }
 
     @Test
+    fun targetDaysAgo_displaysCorrectLabelWithoutUnstudiedMention() {
+        composeTestRule.setContent {
+            LockScreenSettingsDialog(
+                config = LockScreenConfig(
+                    isEnabled = true,
+                    target = LockScreenTarget.DAYS_AGO,
+                    daysThreshold = 5,
+                ),
+                onConfigChanged = {},
+                onDismissRequest = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText("5日以上前に出題した単語").assertExists()
+    }
+
+    @Test
     fun daysAgoTargetSelected_displaysThresholdChips_andUpdatesThresholdOnSelect() {
         var currentConfig by mutableStateOf(
             LockScreenConfig(
