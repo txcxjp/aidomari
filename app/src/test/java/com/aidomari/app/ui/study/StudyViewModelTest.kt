@@ -546,6 +546,97 @@ class StudyViewModelTest {
     }
 
     @Test
+    fun loadDeckAndPart_withSnoozedCard_doesNotShiftCardsFromNextPart() = runTest {
+        val splitDeck = Deck(
+            id = "deck-split",
+            subjectId = "sub-1",
+            name = "分割テスト",
+            splitSize = 2,
+        )
+        fakeRepository.decks.add(splitDeck)
+        val splitCards = listOf(
+            Card(
+                id = "sc1",
+                deckId = "deck-split",
+                front = "Card 1",
+                back = "1",
+                orderIndex = 0,
+                snoozedUntil = System.currentTimeMillis() + 86400000L,
+                snoozeLevel = 1,
+            ),
+            Card(id = "sc2", deckId = "deck-split", front = "Card 2", back = "2", orderIndex = 1),
+            Card(id = "sc3", deckId = "deck-split", front = "Card 3", back = "3", orderIndex = 2),
+            Card(id = "sc4", deckId = "deck-split", front = "Card 4", back = "4", orderIndex = 3),
+        )
+        fakeRepository.cards.addAll(splitCards)
+
+        // Part 0: sc1 is snoozed, so only sc2 should be presented. sc3 from Part 1 must NOT shift in.
+        viewModel.loadDeckAndPart("deck-split", 0)
+        advanceUntilIdle()
+
+        val part0State = viewModel.uiState.value
+        assertEquals("sc2", part0State.currentCard?.id)
+        assertNull(part0State.nextCard)
+        assertEquals(1, part0State.totalInPart)
+        assertEquals(1, part0State.queueSize)
+        assertTrue(part0State.hasNextPart)
+
+        // Part 1: sc3 and sc4 should be presented without being affected by Part 0's snooze.
+        viewModel.loadDeckAndPart("deck-split", 1)
+        advanceUntilIdle()
+
+        val part1State = viewModel.uiState.value
+        assertEquals("sc3", part1State.currentCard?.id)
+        assertEquals("sc4", part1State.nextCard?.id)
+        assertEquals(2, part1State.totalInPart)
+        assertEquals(2, part1State.queueSize)
+        assertFalse(part1State.hasNextPart)
+    }
+
+    @Test
+    fun restartPart_withSnoozedCard_maintainsCorrectBoundaryAndCount() = runTest {
+        val splitDeck = Deck(
+            id = "deck-split-restart",
+            subjectId = "sub-1",
+            name = "リスタートテスト",
+            splitSize = 2,
+        )
+        fakeRepository.decks.add(splitDeck)
+        val splitCards = listOf(
+            Card(
+                id = "rc1",
+                deckId = "deck-split-restart",
+                front = "Card 1",
+                back = "1",
+                orderIndex = 0,
+                snoozedUntil = System.currentTimeMillis() + 86400000L,
+                snoozeLevel = 1,
+            ),
+            Card(id = "rc2", deckId = "deck-split-restart", front = "Card 2", back = "2", orderIndex = 1),
+            Card(id = "rc3", deckId = "deck-split-restart", front = "Card 3", back = "3", orderIndex = 2),
+        )
+        fakeRepository.cards.addAll(splitCards)
+
+        viewModel.loadDeckAndPart("deck-split-restart", 0)
+        advanceUntilIdle()
+
+        // Answer rc2
+        viewModel.markDone()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isPartCompleted)
+
+        // Restart Part 0
+        viewModel.restartPart()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("rc2", state.currentCard?.id)
+        assertEquals(1, state.totalInPart)
+        assertEquals(1, state.queueSize)
+        assertFalse(state.isPartCompleted)
+    }
+
+    @Test
     fun snoozeCurrentCard_snoozesCardAndAdvancesToNext() = runTest {
         viewModel.loadDeckAndPart("deck-1", 0)
         advanceUntilIdle()
