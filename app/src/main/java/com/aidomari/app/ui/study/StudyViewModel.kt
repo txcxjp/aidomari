@@ -150,9 +150,8 @@ class StudyViewModel(
                     repository.getCardsByDeckSync(deckId)
                 }
             }
-            val activeCards = cards.filterNot { it.isSnoozed }
-            allCards = activeCards
-            cardsMap = activeCards.associateBy { it.id }
+            allCards = cards
+            cardsMap = cards.associateBy { it.id }
 
             val isAnyRandomMode = isRandomMode || isDeckRandomMode
             val parts = if (isAnyRandomMode) {
@@ -161,18 +160,18 @@ class StudyViewModel(
                         partIndex = 0,
                         partNumber = 1,
                         startIndex = 0,
-                        endIndex = activeCards.size,
-                        count = activeCards.size,
+                        endIndex = cards.size,
+                        count = cards.size,
                     ),
                 )
             } else {
-                deck.calculateParts(activeCards.size)
+                deck.calculateParts(cards.size)
             }
             val currentPart = parts.getOrNull(partIndex)
             val hasNextPart = partIndex + 1 < parts.size
             val currentSubject = repository.getSubjectById(deck.subjectId)
 
-            if (currentPart == null || activeCards.isEmpty()) {
+            if (currentPart == null || cards.isEmpty()) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -187,11 +186,34 @@ class StudyViewModel(
                 return@launch
             }
 
-            totalInPart = currentPart.count
-            val partCards = cards.subList(
-                currentPart.startIndex.coerceAtMost(cards.size),
-                currentPart.endIndex.coerceAtMost(cards.size),
-            )
+            val rawPartCards = if (isAnyRandomMode) {
+                cards
+            } else {
+                cards.subList(
+                    currentPart.startIndex.coerceAtMost(cards.size),
+                    currentPart.endIndex.coerceAtMost(cards.size),
+                )
+            }
+            val activePartCards = rawPartCards.filterNot { it.isSnoozed }
+
+            if (activePartCards.isEmpty()) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        deck = deck,
+                        subject = currentSubject,
+                        partIndex = partIndex,
+                        currentCard = null,
+                        isPartCompleted = true,
+                        hasNextPart = hasNextPart,
+                        subjectCards = subjectCards,
+                    )
+                }
+                return@launch
+            }
+
+            totalInPart = activePartCards.size
+            val partCards = activePartCards
 
             // Check if there is an existing non-completed session
             val savedSession = if (isRandomMode) null else repository.getSession(deckId)
@@ -204,9 +226,18 @@ class StudyViewModel(
             queueCardIds.clear()
             retryCardIds.clear()
 
-            if (canResume && savedSession != null) {
-                queueCardIds.addAll(savedSession.queueCardIds)
-                retryCardIds.addAll(savedSession.retryCardIds)
+            if (canResume) {
+                checkNotNull(savedSession)
+                val validQueue = savedSession.queueCardIds.filter { id ->
+                    val card = cardsMap[id]
+                    card != null && !card.isSnoozed
+                }
+                val validRetry = savedSession.retryCardIds.filter { id ->
+                    val card = cardsMap[id]
+                    card != null && !card.isSnoozed
+                }
+                queueCardIds.addAll(validQueue)
+                retryCardIds.addAll(validRetry)
                 completedCount = (totalInPart - (queueCardIds.size + retryCardIds.size)).coerceAtLeast(0)
             } else {
                 val cardIds = if (deck.shuffleMode) {
@@ -320,6 +351,7 @@ class StudyViewModel(
 
     private fun updateCardInState(updatedCard: Card) {
         cardsMap = cardsMap + (updatedCard.id to updatedCard)
+        allCards = allCards.map { if (it.id == updatedCard.id) updatedCard else it }
         _uiState.update { state ->
             val updatedSubjectCards = state.subjectCards.map {
                 if (it.id == updatedCard.id) updatedCard else it
@@ -492,7 +524,8 @@ class StudyViewModel(
 
     fun restartPart() {
         val deck = currentDeck ?: return
-        val parts = if (deck.id.startsWith("random_")) {
+        val isAnyRandomMode = deck.id.startsWith("random_")
+        val parts = if (isAnyRandomMode) {
             listOf(
                 DeckPart(
                     partIndex = 0,
@@ -507,18 +540,24 @@ class StudyViewModel(
         }
         val currentPart = parts.getOrNull(currentPartIndex) ?: return
 
-        val partCards = allCards.subList(
-            currentPart.startIndex.coerceAtMost(allCards.size),
-            currentPart.endIndex.coerceAtMost(allCards.size),
-        )
+        val rawPartCards = if (isAnyRandomMode) {
+            allCards
+        } else {
+            allCards.subList(
+                currentPart.startIndex.coerceAtMost(allCards.size),
+                currentPart.endIndex.coerceAtMost(allCards.size),
+            )
+        }
+        val activePartCards = rawPartCards.filterNot { it.isSnoozed }
 
+        totalInPart = activePartCards.size
         queueCardIds.clear()
         retryCardIds.clear()
 
         val cardIds = if (deck.shuffleMode) {
-            partCards.map { it.id }.shuffled()
+            activePartCards.map { it.id }.shuffled()
         } else {
-            partCards.map { it.id }
+            activePartCards.map { it.id }
         }
         queueCardIds.addAll(cardIds)
         completedCount = 0
