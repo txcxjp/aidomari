@@ -144,7 +144,7 @@ fun SugorokuMapScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFF81D4FA)), // Sea blue background
+                .background(Color(0xFFE8F5E9)), // Warm natural Hokkaido land tone
         ) {
             val containerWidth = constraints.maxWidth.toFloat()
             val containerHeight = constraints.maxHeight.toFloat()
@@ -175,7 +175,7 @@ fun SugorokuMapScreen(
             // Clamp pan offset so camera cannot scroll too far ahead of player (Fog of War)
             fun clampPan(offset: Offset): Offset {
                 if (tileCentersDp.isEmpty()) return offset
-                val allowedScrollStep = (currentStep + 14).coerceAtMost(tileCentersDp.lastIndex)
+                val allowedScrollStep = (currentStep + 16).coerceAtMost(tileCentersDp.lastIndex)
                 val visiblePts = tileCentersDp.subList(0, allowedScrollStep + 1)
                 val minX = visiblePts.minOf { it.x * density }
                 val maxX = visiblePts.maxOf { it.x * density }
@@ -212,12 +212,11 @@ fun SugorokuMapScreen(
                     }
                     .pointerInput(tileCentersDp, zoomScale, panOffset, currentStep) {
                         detectTapGestures { tapOffset ->
-                            // Transform tap to canvas model space
                             val worldX = (tapOffset.x - panOffset.x) / zoomScale
                             val worldY = (tapOffset.y - panOffset.y) / zoomScale
                             val threshold = 34.dp.toPx()
 
-                            val maxVisibleTrackStep = (currentStep + 35).coerceAtMost(allNodes.lastIndex)
+                            val maxVisibleTrackStep = (currentStep + 40).coerceAtMost(allNodes.lastIndex)
                             for (i in 0..maxVisibleTrackStep) {
                                 val ptDp = tileCentersDp[i]
                                 val sx = ptDp.x * density
@@ -232,16 +231,18 @@ fun SugorokuMapScreen(
                         }
                     },
             ) {
-                // The road is visibly drawn far ahead (up to 35 steps ahead) so it never looks cut off!
-                val visibleTrackStep = (currentStep + 35).coerceAtMost(allNodes.lastIndex)
+                // The road is drawn far ahead (up to 40 steps ahead) so it extends off-screen naturally!
+                val visibleTrackStep = (currentStep + 40).coerceAtMost(allNodes.lastIndex)
 
                 // Unified transform: scale and translate applied equally to landscape and tiles
                 withTransform({
                     translate(panOffset.x, panOffset.y)
                     scale(zoomScale, zoomScale, Offset.Zero)
                 }) {
-                    // 1. Natural coastal landscape along the winding track
-                    drawOrganicCoastlineAndLand(
+                    // 1. Natural real geography:
+                    // Hakodate to Lake Onuma (step 0-99) is INLAND (Route 5 passes inland plains & pass).
+                    // Coastline (Uchiura/Volcano Bay) appears when reaching Mori town (~step 100).
+                    drawGeographicalLandscape(
                         tileCentersDp = tileCentersDp,
                         visibleStepCount = visibleTrackStep + 1,
                         density = density,
@@ -459,10 +460,11 @@ fun SugorokuMapScreen(
 }
 
 /**
- * Draws natural coastal landscape around the winding track:
- * Lush green land on the right, sandy beach strip on the left with wave lines.
+ * Draws real Hokkaido geography:
+ * - Steps 0 to 99 (Hakodate to Lake Onuma): INLAND terrain (Route 5 passes inland through Goryokaku, Nanae, and pass to Lake Onuma). Lush greenery on both sides.
+ * - Steps 100+ (Mori town to Yakumo/Oshamambe): Reaches the coast at Uchiura Bay (Volcano Bay). Sea appears on the right!
  */
-private fun DrawScope.drawOrganicCoastlineAndLand(
+private fun DrawScope.drawGeographicalLandscape(
     tileCentersDp: List<Offset>,
     visibleStepCount: Int,
     density: Float,
@@ -470,80 +472,99 @@ private fun DrawScope.drawOrganicCoastlineAndLand(
     if (tileCentersDp.size < 2) return
     val count = visibleStepCount.coerceAtMost(tileCentersDp.size)
 
-    val landColor = Color(0xFFA5D6A7)
+    val grassGreen = Color(0xFFA5D6A7)
+    val forestGreen = Color(0xFF81C784)
+    val seaBlue = Color(0xFF81D4FA)
     val beachColor = Color(0xFFFFF9C4)
-    val waveColor = Color(0xFFE0F7FA)
+    val lakeBlue = Color(0xFF4FC3F7)
 
-    val rightLandPoints = ArrayList<Offset>(count + 2)
-    val beachLinePoints = ArrayList<Offset>(count + 2)
-    val outerDeepLandPoints = ArrayList<Offset>(count + 2)
+    // 1. Draw broad green Hokkaido land corridor around track
+    for (i in 0 until count - 1) {
+        val p1 = tileCentersDp[i]
+        val p2 = tileCentersDp[i + 1]
+        val sx1 = p1.x * density
+        val sy1 = p1.y * density
+        val sx2 = p2.x * density
+        val sy2 = p2.y * density
 
-    for (i in 0 until count) {
-        val ptDp = tileCentersDp[i]
-        val sx = ptDp.x * density
-        val sy = ptDp.y * density
-
-        val nextPtDp = if (i < count - 1) tileCentersDp[i + 1] else tileCentersDp[i]
-        val prevPtDp = if (i > 0) tileCentersDp[i - 1] else tileCentersDp[i]
-        val dirX = nextPtDp.x - prevPtDp.x
-        val dirY = nextPtDp.y - prevPtDp.y
-        val angle = atan2(dirY, dirX)
-        val normalAngle = angle + (Math.PI / 2.0).toFloat()
-
-        val normX = cos(normalAngle)
-        val normY = sin(normalAngle)
-
-        // Seaward beach line on the left (~48dp away from track)
-        beachLinePoints.add(Offset(sx - normX * 48.dp.toPx(), sy - normY * 48.dp.toPx()))
-        // Land edge near track
-        rightLandPoints.add(Offset(sx + normX * 38.dp.toPx(), sy + normY * 38.dp.toPx()))
-        // Deep inland land (+450dp to the right)
-        outerDeepLandPoints.add(Offset(sx + normX * 480.dp.toPx(), sy + normY * 480.dp.toPx()))
+        // Broad landscape swath around the road
+        drawLine(
+            color = grassGreen,
+            start = Offset(sx1, sy1),
+            end = Offset(sx2, sy2),
+            strokeWidth = 320.dp.toPx(),
+            cap = StrokeCap.Round,
+        )
     }
 
-    // 1. Draw broad green Hokkaido landmass on the right
-    if (rightLandPoints.isNotEmpty()) {
-        val landPath = Path()
-        landPath.moveTo(rightLandPoints[0].x, rightLandPoints[0].y)
-        for (i in 1 until rightLandPoints.size) {
-            landPath.lineTo(rightLandPoints[i].x, rightLandPoints[i].y)
-        }
-        for (i in outerDeepLandPoints.indices.reversed()) {
-            landPath.lineTo(outerDeepLandPoints[i].x, outerDeepLandPoints[i].y)
-        }
-        landPath.close()
-        drawPath(landPath, landColor)
-    }
-
-    // 2. Draw sandy beach strip between track and sea
-    if (beachLinePoints.isNotEmpty() && rightLandPoints.isNotEmpty()) {
+    // 2. Coastal section: Volcano Bay appears when reaching Mori town (~step 100)
+    // If visible steps reach step 95+, draw the opening of Volcano Bay on the right
+    if (count > 95) {
+        val coastStartIdx = 95
+        val seaPath = Path()
         val beachPath = Path()
-        beachPath.moveTo(beachLinePoints[0].x, beachLinePoints[0].y)
-        for (i in 1 until beachLinePoints.size) {
-            beachPath.lineTo(beachLinePoints[i].x, beachLinePoints[i].y)
-        }
-        for (i in rightLandPoints.indices.reversed()) {
-            beachPath.lineTo(rightLandPoints[i].x, rightLandPoints[i].y)
-        }
-        beachPath.close()
-        drawPath(beachPath, beachColor)
+        var first = true
 
-        // Wave foam stroke along beach edge
-        val wavePath = Path()
-        wavePath.moveTo(beachLinePoints[0].x, beachLinePoints[0].y)
-        for (i in 1 until beachLinePoints.size) {
-            wavePath.lineTo(beachLinePoints[i].x, beachLinePoints[i].y)
+        for (i in coastStartIdx until count) {
+            val ptDp = tileCentersDp[i]
+            val sx = ptDp.x * density
+            val sy = ptDp.y * density
+
+            val nextPtDp = if (i < count - 1) tileCentersDp[i + 1] else tileCentersDp[i]
+            val prevPtDp = if (i > 0) tileCentersDp[i - 1] else tileCentersDp[i]
+            val dirX = nextPtDp.x - prevPtDp.x
+            val dirY = nextPtDp.y - prevPtDp.y
+            val angle = atan2(dirY, dirX)
+            val normalAngle = angle + (Math.PI / 2.0).toFloat()
+            val normX = cos(normalAngle)
+            val normY = sin(normalAngle)
+
+            // Sea on the right side of the road
+            val beachEdgeX = sx + normX * 42.dp.toPx()
+            val beachEdgeY = sy + normY * 42.dp.toPx()
+            if (first) {
+                beachPath.moveTo(beachEdgeX, beachEdgeY)
+                seaPath.moveTo(beachEdgeX + normX * 10.dp.toPx(), beachEdgeY + normY * 10.dp.toPx())
+                first = false
+            } else {
+                beachPath.lineTo(beachEdgeX, beachEdgeY)
+                seaPath.lineTo(beachEdgeX + normX * 10.dp.toPx(), beachEdgeY + normY * 10.dp.toPx())
+            }
         }
+
         drawPath(
-            wavePath,
-            waveColor,
-            style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round),
+            beachPath,
+            beachColor,
+            style = Stroke(width = 16.dp.toPx(), cap = StrokeCap.Round),
+        )
+        drawPath(
+            seaPath,
+            seaBlue,
+            style = Stroke(width = 240.dp.toPx(), cap = StrokeCap.Round),
+        )
+    }
+
+    // 3. Inland accents for steps 0 to 90 (Goryokaku, Nanae, Lake Onuma)
+    // Draw Lake Onuma near step 70-80
+    if (count > 65) {
+        val onumaPt = tileCentersDp[minOf(75, count - 1)]
+        val ox = onumaPt.x * density - 65.dp.toPx()
+        val oy = onumaPt.y * density
+        drawCircle(
+            color = lakeBlue,
+            radius = 28.dp.toPx(),
+            center = Offset(ox, oy),
+        )
+        drawCircle(
+            color = forestGreen,
+            radius = 6.dp.toPx(),
+            center = Offset(ox - 8.dp.toPx(), oy - 4.dp.toPx()),
         )
     }
 }
 
 /**
- * Draws wooden bridge deck connecting adjacent step centers.
+ * Draws wooden bridge deck between step centers.
  */
 private fun DrawScope.drawConnectingBridges(
     tileCentersDp: List<Offset>,
