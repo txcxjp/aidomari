@@ -8,6 +8,7 @@ import com.aidomari.app.core.database.entity.CardStudyLogEntity
 import com.aidomari.app.core.database.entity.DeckEntity
 import com.aidomari.app.core.database.entity.StudySessionEntity
 import com.aidomari.app.core.database.entity.SubjectEntity
+import com.aidomari.app.core.database.entity.SugorokuProgressEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -571,5 +572,41 @@ class AidomariDaoTest {
         // When current time is 25000L, snoozedCard's snooze has expired -> both cards eligible
         val expiredCard = dao.getRandomCard(nowTimestamp = 25000L)
         assertNotNull(expiredCard)
+    }
+
+    @Test
+    fun sugorokuProgress_saveAndRetrieveFlowAndSync() = runBlocking {
+        // Initially null
+        val initialSync = dao.getSugorokuProgressSync("default_progress")
+        assertEquals(null, initialSync)
+
+        // Save progress
+        val progress = SugorokuProgressEntity(
+            id = "default_progress",
+            currentStepIndex = 5,
+            currentProgressInStep = 0,
+            targetQuestionsPerStep = 1,
+            totalQuestionsAnswered = 5,
+            visitedNodeIdsJson = "[\"node_0000\",\"node_0001\",\"node_0005\"]",
+            updatedAt = 1000L,
+        )
+        dao.saveSugorokuProgress(progress)
+
+        // Sync retrieval
+        val retrievedSync = dao.getSugorokuProgressSync("default_progress")
+        assertNotNull(retrievedSync)
+        assertEquals(5, retrievedSync?.currentStepIndex)
+        assertEquals(0, retrievedSync?.currentProgressInStep)
+        assertEquals(5, retrievedSync?.totalQuestionsAnswered)
+
+        // Flow retrieval
+        val retrievedFlow = dao.getSugorokuProgress("default_progress").first()
+        assertNotNull(retrievedFlow)
+        assertEquals(5, retrievedFlow?.currentStepIndex)
+        assertEquals(0, retrievedFlow?.currentProgressInStep)
+        assertEquals(5, retrievedFlow?.totalQuestionsAnswered)
+
+        val domain = retrievedSync!!.toDomain()
+        assertEquals(setOf("node_0000", "node_0001", "node_0005"), domain.visitedNodeIds)
     }
 }

@@ -11,6 +11,7 @@ import com.aidomari.app.core.database.entity.CardStudyLogEntity
 import com.aidomari.app.core.database.entity.DeckEntity
 import com.aidomari.app.core.database.entity.StudySessionEntity
 import com.aidomari.app.core.database.entity.SubjectEntity
+import com.aidomari.app.core.database.entity.SugorokuProgressEntity
 
 @Database(
     entities = [
@@ -19,8 +20,9 @@ import com.aidomari.app.core.database.entity.SubjectEntity
         CardEntity::class,
         StudySessionEntity::class,
         CardStudyLogEntity::class,
+        SugorokuProgressEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class AidomariDatabase : RoomDatabase() {
@@ -81,6 +83,24 @@ abstract class AidomariDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS sugoroku_progress (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        current_step_index INTEGER NOT NULL DEFAULT 0,
+                        current_progress_in_step INTEGER NOT NULL DEFAULT 0,
+                        target_questions_per_step INTEGER NOT NULL DEFAULT 5,
+                        total_questions_answered INTEGER NOT NULL DEFAULT 0,
+                        visited_node_ids_json TEXT NOT NULL DEFAULT '["node_000"]',
+                        updated_at INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+            }
+        }
+
         @Volatile
         private var instance: AidomariDatabase? = null
 
@@ -95,7 +115,7 @@ abstract class AidomariDatabase : RoomDatabase() {
                 AidomariDatabase::class.java,
                 DATABASE_NAME,
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                 .addCallback(
                     object : RoomDatabase.Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {

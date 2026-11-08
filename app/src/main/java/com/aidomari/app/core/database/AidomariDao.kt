@@ -14,6 +14,7 @@ import com.aidomari.app.core.database.entity.DeckWithCards
 import com.aidomari.app.core.database.entity.StudySessionEntity
 import com.aidomari.app.core.database.entity.SubjectEntity
 import com.aidomari.app.core.database.entity.SubjectWithDecks
+import com.aidomari.app.core.database.entity.SugorokuProgressEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -331,4 +332,14 @@ interface AidomariDao {
 
     @Query("SELECT * FROM card_study_logs ORDER BY studied_at ASC")
     suspend fun getAllStudyLogsSync(): List<CardStudyLogEntity>
+
+    // --- Sugoroku Operations ---
+    @Query("SELECT * FROM sugoroku_progress WHERE id = :id LIMIT 1")
+    fun getSugorokuProgress(id: String = "default_progress"): Flow<SugorokuProgressEntity?>
+
+    @Query("SELECT * FROM sugoroku_progress WHERE id = :id LIMIT 1")
+    suspend fun getSugorokuProgressSync(id: String = "default_progress"): SugorokuProgressEntity?
+
+    @Upsert
+    suspend fun saveSugorokuProgress(progress: SugorokuProgressEntity)
 }
