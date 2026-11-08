@@ -233,7 +233,7 @@ class SubjectListScreenTest {
     }
 
     @Test
-    fun subjectRow_displaysColorThemeBadge_whenSubjectHasColorTheme() {
+    fun subjectRow_doesNotDisplayColorThemeTextBadge() {
         val subject = Subject(id = "sub-1", name = "歴史", colorTheme = "AMBER")
         fakeRepository.seedSubjects(listOf(subject))
 
@@ -245,7 +245,8 @@ class SubjectListScreenTest {
         }
 
         composeTestRule.onNodeWithText("歴史").assertIsDisplayed()
-        composeTestRule.onNodeWithText("琥珀").assertIsDisplayed()
+        // Color theme text badge should NOT be displayed
+        composeTestRule.onNodeWithText("琥珀").assertDoesNotExist()
     }
 
     @Test
