@@ -15,141 +15,92 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.dp
+import com.aidomari.app.domain.model.HokkaidoAct1Route
+import kotlin.math.hypot
 
 /**
- * Data model for fun illustrations placed across the Hokkaido map.
+ * Pre-computed equidistant board game layout for the 2,000 Sugoroku steps.
+ * Each step is strictly equidistant (step distance = 76dp) following the natural
+ * contour of Hokkaido from Hakodate northwards to Soya and Shiretoko.
  */
-data class MapIllustration(
-    val id: String,
-    val emoji: String,
-    val label: String,
-    val x: Float,
-    val y: Float,
-    val minVisibleStep: Int,
-    val maxVisibleStep: Int,
-)
-
-object HokkaidoMapData {
+object HokkaidoBoardTrack {
+    const val STEP_DIST = 76f // 76dp between tile centers
 
     /**
-     * Polygonal contour points representing Hokkaido island (North-up coordinates).
-     * X range: ~380 to 1850, Y range: ~80 to 1920.
-     * Route runs along this coastline from Hakodate (south) up to Soya (north) and Shiretoko (east).
+     * 2,000 equidistant tile center coordinates in board space.
+     * Calculated lazily once.
      */
-    val coastlinePoints: List<Offset> = listOf(
-        // Matsumae / Shirakami Cape (Southmost tip of Oshima peninsula)
-        Offset(380f, 1920f),
-        Offset(420f, 1750f), // Esashi
-        Offset(430f, 1500f), // Setana
-        Offset(400f, 1370f), // Cape Mota
-        Offset(420f, 1330f), // Suttsu
-        Offset(410f, 1180f), // Cape Kamui (Shakotan peninsula)
-        Offset(440f, 1140f), // Cape Shakotan
-        Offset(530f, 1160f), // Yoichi
-        Offset(600f, 1142f), // Otaru
-        Offset(640f, 1130f), // Ishikari
-        // Orolon Line (Sea of Japan coast)
-        Offset(650f, 850f), // Mashike
-        Offset(660f, 758f), // Rumoi
-        Offset(640f, 520f), // Haboro
-        Offset(605f, 303f), // Teshio
-        Offset(575f, 130f), // Wakkanai / Cape Noshappu
-        Offset(643.8f, 80f), // Cape Soya (Northmost point of Japan)
-        // Okhotsk coast
-        Offset(730f, 180f), // Sarufutsu
-        Offset(780f, 240f), // Hamatonbetsu
-        Offset(840f, 330f), // Esashi
-        Offset(920f, 420f), // Oumu
-        Offset(980f, 480f), // Okoppe
-        Offset(1095f, 550f), // Mombetsu
-        Offset(1240f, 610f), // Saroma Lake
-        Offset(1340f, 640f), // Cape Notoro
-        Offset(1370f, 680f), // Abashiri
-        Offset(1440f, 720f), // Shari
-        // Shiretoko Peninsula
-        Offset(1530f, 670f), // Utoro
-        Offset(1600f, 630f), // Shiretoko Pass
-        Offset(1760f, 440f), // Cape Shiretoko tip
-        Offset(1720f, 570f), // Aidomari
-        Offset(1660f, 660f), // Rausu
-        Offset(1640f, 730f), // Shibetsu
-        // Nemuro Peninsula
-        Offset(1850f, 880f), // Cape Nosappu
-        // Pacific Coast
-        Offset(1700f, 940f), // Hamanaka
-        Offset(1550f, 990f), // Kushiro
-        Offset(1420f, 1060f), // Tokachi
-        Offset(1300f, 1160f), // Hiroo
-        Offset(1280f, 1400f), // Cape Erimo
-        Offset(1150f, 1330f), // Urakawa
-        Offset(1050f, 1290f), // Shizunai
-        Offset(880f, 1250f), // Tomakomai
-        Offset(780f, 1390f), // Noboribetsu
-        Offset(750f, 1460f), // Muroran
-        Offset(660f, 1430f), // Date
-        Offset(545f, 1420f), // Oshamambe (Inner Uchiura Bay curve)
-        Offset(575f, 1550f), // Yakumo
-        Offset(615f, 1680f), // Mori
-        Offset(685f, 1820f), // Cape Esan
-        Offset(550f, 1860f), // Hakodate
-        Offset(480f, 1890f), // Kikonai
-    )
+    val tileCenters: List<Offset> by lazy {
+        val rawNodes = HokkaidoAct1Route.nodes
+        if (rawNodes.isEmpty()) return@lazy emptyList()
 
-    /**
-     * Illustrations placed at key locations on Hokkaido.
-     * Revealed progressively as player travels through Act 1.
-     */
-    val illustrations: List<MapIllustration> = listOf(
-        // Hakodate & South
-        MapIllustration("goryokaku", "⭐", "五稜郭", 562f, 1835f, 0, 150),
-        MapIllustration("hakodate_mountain", "⛰️", "函館山", 530f, 1865f, 0, 100),
-        MapIllustration("squid_boat", "🦑", "イカ釣り船", 575f, 1875f, 0, 80),
-        MapIllustration("seagull_south", "🕊️", "カモメ", 525f, 1820f, 0, 120),
-        // Oshima & Volcano Bay
-        MapIllustration("komagatake", "🌋", "駒ヶ岳", 605f, 1710f, 10, 220),
-        MapIllustration("cows_yakumo", "🐄", "八雲牧場", 545f, 1560f, 50, 300),
-        MapIllustration("scallop_bay", "🌊", "噴火湾の波", 610f, 1590f, 40, 280),
-        MapIllustration("crab_oshamambe", "🦀", "かにめし", 525f, 1420f, 100, 360),
-        // Japan Sea Coast
-        MapIllustration("windmills_suttsu", "🌬️", "寿都風車", 400f, 1335f, 160, 420),
-        MapIllustration("dolphin_shakotan", "🐬", "積丹ブルー", 375f, 1220f, 220, 500),
-        MapIllustration("lighthouse_kamui", "🗼", "神威岬灯台", 395f, 1165f, 240, 520),
-        MapIllustration("gaslamp_otaru", "🏮", "小樽ガス灯", 618f, 1150f, 350, 600),
-        // Orolon Line
-        MapIllustration("hamanasu_ishikari", "🌸", "ハマナス", 665f, 1115f, 400, 680),
-        MapIllustration("shrimp_mashike", "🦐", "甘エビ", 625f, 840f, 500, 780),
-        MapIllustration("orolon_bird", "🐧", "オロロン鳥", 610f, 530f, 650, 950),
-        MapIllustration("sarobetsu_flower", "🌼", "サロベツ原野", 635f, 340f, 850, 1100),
-        MapIllustration("rishiri_fuji", "🗻", "利尻富士", 500f, 230f, 900, 1150),
-        MapIllustration("reindeer_horonobe", "🦌", "トナカイ", 625f, 220f, 950, 1200),
-        // North & Okhotsk
-        MapIllustration("monument_soya", "🚩", "日本最北端", 643f, 60f, 1150, 1300),
-        MapIllustration("soya_cow", "🐂", "宗谷黒牛", 680f, 95f, 1180, 1350),
-        MapIllustration("scallop_sarufutsu", "🐚", "猿払ホタテ", 755f, 170f, 1220, 1400),
-        MapIllustration("crab_mombetsu", "🦀", "紋別カニの爪", 1115f, 535f, 1400, 1650),
-        MapIllustration("seal_abashiri", "🦭", "アザラシ", 1355f, 630f, 1550, 1800),
-        // Shiretoko
-        MapIllustration("killer_whale", "🐋", "知床のクジラ", 1700f, 510f, 1750, 1999),
-        MapIllustration("brown_bear", "🐻", "ヒグマ", 1585f, 630f, 1800, 1999),
-    )
+        // 1. Extract directional guide points from raw nodes
+        val guide = mutableListOf<Offset>()
+        guide.add(Offset(rawNodes[0].x, rawNodes[0].y))
+        for (i in 1 until rawNodes.size - 1) {
+            val last = guide.last()
+            val dx = rawNodes[i].x - last.x
+            val dy = rawNodes[i].y - last.y
+            if (hypot(dx, dy) >= 15f) {
+                guide.add(Offset(rawNodes[i].x, rawNodes[i].y))
+            }
+        }
+        guide.add(Offset(rawNodes.last().x, rawNodes.last().y))
+
+        // 2. Cumulative length along guide
+        val cumulative = FloatArray(guide.size)
+        var totalLen = 0f
+        for (i in 0 until guide.size - 1) {
+            val d = hypot(guide[i + 1].x - guide[i].x, guide[i + 1].y - guide[i].y)
+            totalLen += d
+            cumulative[i + 1] = totalLen
+        }
+
+        // 3. Generate 2,000 equidistant steps with step distance of STEP_DIST
+        val points = ArrayList<Offset>(rawNodes.size)
+        var curX = 0f
+        var curY = 0f
+        points.add(Offset(curX, curY))
+
+        var guideIdx = 0
+        val targetStepLenInGuide = if (rawNodes.size > 1) totalLen / (rawNodes.size - 1) else 1f
+
+        for (i in 1 until rawNodes.size) {
+            val targetDist = i * targetStepLenInGuide
+            while (guideIdx < guide.size - 2 && cumulative[guideIdx + 1] < targetDist) {
+                guideIdx++
+            }
+            val dx = guide[guideIdx + 1].x - guide[guideIdx].x
+            val dy = guide[guideIdx + 1].y - guide[guideIdx].y
+            val segLen = hypot(dx, dy)
+            val dirX = if (segLen > 0) dx / segLen else 0f
+            val dirY = if (segLen > 0) dy / segLen else -1f
+
+            curX += dirX * STEP_DIST
+            curY += dirY * STEP_DIST
+            points.add(Offset(curX, curY))
+        }
+
+        points
+    }
 }
 
 /**
- * Detachable small silhouette of Hokkaido placed in the corner of the map.
+ * Detachable small silhouette of Hokkaido in the corner of the map.
  * Shows only the contour of Hokkaido and a pulsing red dot at the player's current location.
  * Does NOT reveal route path, goal, or distant destinations.
  */
 @Composable
 fun HokkaidoMiniMap(
-    playerWorldX: Float,
-    playerWorldY: Float,
+    currentStepIndex: Int,
+    totalSteps: Int,
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
             .shadow(4.dp, RoundedCornerShape(10.dp))
             .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFFE8F5E9).copy(alpha = 0.92f))
+            .background(Color(0xFFE8F5E9).copy(alpha = 0.94f))
             .border(1.5.dp, Color(0xFF81C784), RoundedCornerShape(10.dp))
             .padding(6.dp)
             .size(width = 72.dp, height = 86.dp),
@@ -161,40 +112,66 @@ fun HokkaidoMiniMap(
             val canvasW = size.width
             val canvasH = size.height
 
-            // Coordinate mapping:
-            // World X: 350 to 1850 -> Canvas X
-            // World Y: 60 to 1950  -> Canvas Y
-            val minX = 350f
-            val maxX = 1880f
-            val minY = 60f
-            val maxY = 1950f
+            // Simplified contour points of Hokkaido
+            val contour = listOf(
+                Offset(0.20f, 0.96f), // Matsumae
+                Offset(0.22f, 0.88f), // Esashi
+                Offset(0.21f, 0.65f), // Suttsu
+                Offset(0.23f, 0.58f), // Shakotan
+                Offset(0.32f, 0.56f), // Otaru
+                Offset(0.36f, 0.38f), // Rumoi
+                Offset(0.33f, 0.15f), // Teshio
+                Offset(0.37f, 0.04f), // Soya
+                Offset(0.55f, 0.26f), // Mombetsu
+                Offset(0.74f, 0.35f), // Abashiri
+                Offset(0.92f, 0.22f), // Shiretoko tip
+                Offset(0.88f, 0.36f), // Rausu
+                Offset(0.98f, 0.44f), // Nemuro
+                Offset(0.80f, 0.50f), // Kushiro
+                Offset(0.68f, 0.70f), // Erimo
+                Offset(0.48f, 0.62f), // Tomakomai
+                Offset(0.42f, 0.72f), // Muroran
+                Offset(0.31f, 0.71f), // Oshamambe
+                Offset(0.32f, 0.78f), // Yakumo
+                Offset(0.35f, 0.86f), // Mori
+                Offset(0.30f, 0.92f), // Hakodate
+            )
 
-            fun toCanvasX(wx: Float): Float = ((wx - minX) / (maxX - minX)) * canvasW
-            fun toCanvasY(wy: Float): Float = ((wy - minY) / (maxY - minY)) * canvasH
-
-            // 1. Draw Hokkaido contour polygon
             val path = Path()
-            HokkaidoMapData.coastlinePoints.forEachIndexed { index, point ->
-                val cx = toCanvasX(point.x)
-                val cy = toCanvasY(point.y)
-                if (index == 0) path.moveTo(cx, cy) else path.lineTo(cx, cy)
+            contour.forEachIndexed { idx, pt ->
+                val cx = pt.x * canvasW
+                val cy = pt.y * canvasH
+                if (idx == 0) path.moveTo(cx, cy) else path.lineTo(cx, cy)
             }
             path.close()
             drawPath(path = path, color = landColor)
 
-            // 2. Draw current location pulsing red dot
-            val playerCx = toCanvasX(playerWorldX)
-            val playerCy = toCanvasY(playerWorldY)
+            // Approximate position of player dot based on progress ratio
+            val ratio = (currentStepIndex.toFloat() / totalSteps.coerceAtLeast(1)).coerceIn(0f, 1f)
+            // Interpolate roughly along the coast from Hakodate (0.30, 0.92) to Soya (0.37, 0.04) to Shiretoko (0.88, 0.36)
+            val dotX: Float
+            val dotY: Float
+            if (ratio < 0.6f) {
+                // Moving Hakodate -> Soya
+                val subR = ratio / 0.6f
+                dotX = (0.30f + subR * (0.37f - 0.30f)) * canvasW
+                dotY = (0.92f + subR * (0.04f - 0.92f)) * canvasH
+            } else {
+                // Moving Soya -> Shiretoko
+                val subR = (ratio - 0.6f) / 0.4f
+                dotX = (0.37f + subR * (0.88f - 0.37f)) * canvasW
+                dotY = (0.04f + subR * (0.36f - 0.04f)) * canvasH
+            }
 
             drawCircle(
                 color = currentDotColor,
                 radius = 3.5.dp.toPx(),
-                center = Offset(playerCx, playerCy),
+                center = Offset(dotX, dotY),
             )
             drawCircle(
                 color = Color.White,
                 radius = 1.5.dp.toPx(),
-                center = Offset(playerCx, playerCy),
+                center = Offset(dotX, dotY),
             )
         }
     }
