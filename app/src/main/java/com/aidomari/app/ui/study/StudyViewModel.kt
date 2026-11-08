@@ -110,11 +110,12 @@ class StudyViewModel(
                     val countPart = rest.substringBefore("_")
                     val actualDeckId = rest.substringAfter("_")
                     val questionCount = countPart.toIntOrNull() ?: 10
-                    val deckCards = if (isOnlyLearned) {
+                    val rawDeckCards = if (isOnlyLearned) {
                         repository.getLearnedCardsByDeckSync(actualDeckId)
                     } else {
                         repository.getCardsByDeckSync(actualDeckId)
                     }
+                    val deckCards = rawDeckCards.filterNot { it.isSnoozed }
                     val shuffled = deckCards.shuffled()
                     if (questionCount > 0 && questionCount < shuffled.size) {
                         shuffled.take(questionCount)
@@ -130,11 +131,12 @@ class StudyViewModel(
                     }
                     val countPart = rest.substringBefore("_")
                     val questionCount = countPart.toIntOrNull() ?: 10
-                    val poolCards = if (isOnlyLearned) {
+                    val rawPoolCards = if (isOnlyLearned) {
                         repository.getLearnedCardsBySubjectSync(deck.subjectId)
                     } else {
                         subjectCards
                     }
+                    val poolCards = rawPoolCards.filterNot { it.isSnoozed }
                     val shuffled = poolCards.shuffled()
                     if (questionCount > 0 && questionCount < shuffled.size) {
                         shuffled.take(questionCount)
@@ -181,6 +183,7 @@ class StudyViewModel(
                         currentCard = null,
                         isPartCompleted = true,
                         hasNextPart = false,
+                        isRandomMode = isAnyRandomMode,
                     )
                 }
                 return@launch
@@ -207,6 +210,7 @@ class StudyViewModel(
                         isPartCompleted = true,
                         hasNextPart = hasNextPart,
                         subjectCards = subjectCards,
+                        isRandomMode = isAnyRandomMode,
                     )
                 }
                 return@launch
@@ -270,6 +274,7 @@ class StudyViewModel(
                     isPartCompleted = firstCard == null,
                     hasNextPart = hasNextPart,
                     subjectCards = subjectCards,
+                    isRandomMode = isAnyRandomMode,
                 )
             }
         }
@@ -579,6 +584,11 @@ class StudyViewModel(
         }
 
         saveCurrentSession(isCompleted = false)
+    }
+
+    fun continueRandomStudy() {
+        val deck = currentDeck ?: return
+        loadDeckAndPart(deck.id, 0)
     }
 
     fun onVolumeKey(isUp: Boolean): Boolean {

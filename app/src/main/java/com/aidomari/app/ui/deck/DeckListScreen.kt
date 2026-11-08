@@ -204,9 +204,11 @@ fun DeckListScreen(
     }
 
     if (showRandomQuestionsDialog && allSubjectCards.isNotEmpty()) {
+        val activeSubjectCards = remember(allSubjectCards) { allSubjectCards.filterNot { it.isSnoozed } }
+        val activeLearnedSubjectCards = remember(learnedSubjectCards) { learnedSubjectCards.filterNot { it.isSnoozed } }
         RandomQuestionsDialog(
-            totalCards = allSubjectCards.size,
-            learnedCardsCount = learnedSubjectCards.size,
+            totalCards = activeSubjectCards.size,
+            learnedCardsCount = activeLearnedSubjectCards.size,
             initialCount = randomQuestionCount,
             onDismissRequest = { showRandomQuestionsDialog = false },
             onStartStudy = { count, onlyLearned ->
@@ -222,11 +224,11 @@ fun DeckListScreen(
     if (deckForRandomStudy != null) {
         val targetDeckUi = deckForRandomStudy!!
         RandomQuestionsDialog(
-            totalCards = targetDeckUi.totalCardCount,
-            learnedCardsCount = targetDeckUi.studiedCardCount,
+            totalCards = targetDeckUi.activeCardCount,
+            learnedCardsCount = targetDeckUi.activeStudiedCardCount,
             initialCount = randomQuestionCount,
             title = "「${targetDeckUi.deck.name}」のランダム出題",
-            description = "この単語帳のカード（${targetDeckUi.totalCardCount}枚）からランダムに出題します。出題する問題数を選択してください。",
+            description = "この単語帳のカード（${targetDeckUi.activeCardCount}枚）からランダムに出題します。出題する問題数を選択してください。",
             onDismissRequest = { deckForRandomStudy = null },
             onStartStudy = { count, onlyLearned ->
                 viewModel.setRandomQuestionCount(count)

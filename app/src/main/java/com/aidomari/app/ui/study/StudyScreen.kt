@@ -124,6 +124,7 @@ fun StudyScreen(
         onNavigateToPart = onNavigateToPart,
         onToggleBookmark = { viewModel.toggleBookmark() },
         onRestartPart = { viewModel.restartPart() },
+        onContinueRandomStudy = { viewModel.continueRandomStudy() },
         onFlipCard = { viewModel.flipCard() },
         onMarkDone = { viewModel.markDone() },
         onMarkRetry = { viewModel.markRetry() },
@@ -254,6 +255,7 @@ fun StudyContent(
     onNavigateToPart: (nextPartIndex: Int) -> Unit,
     onToggleBookmark: () -> Unit,
     onRestartPart: () -> Unit,
+    onContinueRandomStudy: () -> Unit = {},
     onFlipCard: () -> Unit,
     onMarkDone: () -> Unit,
     onMarkRetry: () -> Unit,
@@ -320,6 +322,8 @@ fun StudyContent(
                             onNextPart = { onNavigateToPart(uiState.partIndex + 1) },
                             onRestartPart = onRestartPart,
                             onBackToDecks = onNavigateBack,
+                            isRandomMode = uiState.isRandomMode,
+                            onContinueRandomStudy = onContinueRandomStudy,
                         )
                     }
                 }

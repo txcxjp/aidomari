@@ -167,6 +167,49 @@ class StudyScreenTest {
     }
 
     @Test
+    fun studyScreen_randomMode_showsContinueRandomStudyButtonAndContinues() {
+        val manualCards = listOf(
+            Card(id = "m1", deckId = "deck-manual", front = "Manual 1", back = "意味1", orderIndex = 0),
+            Card(id = "m2", deckId = "deck-manual", front = "Manual 2", back = "意味2", orderIndex = 1),
+        )
+        fakeRepository.decks.add(deckWithoutAutoContinue)
+        fakeRepository.cards.addAll(manualCards)
+
+        composeTestRule.setContent {
+            StudyScreen(
+                deckId = "random_deck_1_deck-manual",
+                partIndex = 0,
+                viewModel = viewModel,
+                onNavigateBack = {},
+                onNavigateToPart = {},
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Complete the single random question
+        composeTestRule.runOnUiThread {
+            viewModel.markDone()
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Random completion dialog should be displayed with "続けて出題する"
+        composeTestRule.onNodeWithText("ランダム出題完了！").assertIsDisplayed()
+        composeTestRule.onNodeWithText("続けて出題する").assertIsDisplayed()
+        composeTestRule.onNodeWithText("このパートをもう一度学習").assertIsDisplayed()
+        composeTestRule.onNodeWithText("デッキ一覧に戻る").assertIsDisplayed()
+
+        // Click "続けて出題する"
+        composeTestRule.onNodeWithText("続けて出題する").performClick()
+        composeTestRule.waitForIdle()
+
+        // Dialog should be dismissed and study resumed
+        assertFalse(viewModel.uiState.value.isPartCompleted)
+        assertEquals(1, viewModel.uiState.value.totalInPart)
+    }
+
+    @Test
     fun studyScreen_searchAction_opensSearchDialog() {
         fakeRepository.decks.add(deckWithAutoContinue)
         fakeRepository.cards.addAll(cards)

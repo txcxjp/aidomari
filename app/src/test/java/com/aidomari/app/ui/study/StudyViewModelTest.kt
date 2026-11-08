@@ -739,6 +739,50 @@ class StudyViewModelTest {
         assertEquals("テスト単語帳 (学習済みランダム 10問)", state.deck?.name)
         assertEquals(1, state.totalInPart)
         assertEquals("c2", state.currentCard?.id)
+        assertTrue(state.isRandomMode)
+    }
+
+    @Test
+    fun loadDeckAndPart_randomDeckMode_excludesSnoozedCardsFromPool() = runTest {
+        val snoozedCard = testCards[0].copy(
+            snoozedUntil = System.currentTimeMillis() + 86400000L,
+            snoozeLevel = 1,
+        )
+        fakeRepository.cards.removeIf { it.id == snoozedCard.id }
+        fakeRepository.cards.add(snoozedCard)
+
+        viewModel.loadDeckAndPart("random_deck_-1_deck-1", 0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(2, state.totalInPart)
+        assertEquals(2, state.queueSize)
+        assertTrue(state.isRandomMode)
+        assertFalse(state.currentCard?.id == snoozedCard.id)
+    }
+
+    @Test
+    fun continueRandomStudy_reloadsRandomSession() = runTest {
+        viewModel.loadDeckAndPart("random_deck_1_deck-1", 0)
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.totalInPart)
+        assertFalse(viewModel.uiState.value.isPartCompleted)
+
+        // Complete the random question
+        viewModel.markDone()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isPartCompleted)
+
+        // Continue random study
+        viewModel.continueRandomStudy()
+        advanceUntilIdle()
+
+        val newState = viewModel.uiState.value
+        assertFalse(newState.isPartCompleted)
+        assertEquals(1, newState.totalInPart)
+        assertNotNull(newState.currentCard)
+        assertTrue(newState.isRandomMode)
     }
 
     private class FakeStudyWordsRepository : WordsRepository {
