@@ -15,69 +15,47 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.dp
-import com.aidomari.app.domain.model.HokkaidoAct1Route
-import kotlin.math.hypot
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Pre-computed equidistant board game layout for the 2,000 Sugoroku steps.
- * Each step is strictly equidistant (step distance = 76dp) following the natural
- * contour of Hokkaido from Hakodate northwards to Soya and Shiretoko.
+ * Designed as a winding, snake-like board game track across Hokkaido.
+ * Step distance is strictly 80dp so tiles (58dp) NEVER overlap.
  */
 object HokkaidoBoardTrack {
-    const val STEP_DIST = 76f // 76dp between tile centers
+    const val STEP_DIST_DP = 80f // 80dp strictly between tile centers (58dp tile + 22dp gap)
 
     /**
-     * 2,000 equidistant tile center coordinates in board space.
-     * Calculated lazily once.
+     * 2,000 equidistant tile center coordinates in DP units.
+     * Starts at Hakodate (0, 0), snakes gently left and right, and travels northwards
+     * up the coast towards Soya and then southeast to Shiretoko.
      */
     val tileCenters: List<Offset> by lazy {
-        val rawNodes = HokkaidoAct1Route.nodes
-        if (rawNodes.isEmpty()) return@lazy emptyList()
+        val count = 2000
+        val points = ArrayList<Offset>(count)
+        points.add(Offset(0f, 0f))
 
-        // 1. Extract directional guide points from raw nodes
-        val guide = mutableListOf<Offset>()
-        guide.add(Offset(rawNodes[0].x, rawNodes[0].y))
-        for (i in 1 until rawNodes.size - 1) {
-            val last = guide.last()
-            val dx = rawNodes[i].x - last.x
-            val dy = rawNodes[i].y - last.y
-            if (hypot(dx, dy) >= 15f) {
-                guide.add(Offset(rawNodes[i].x, rawNodes[i].y))
-            }
-        }
-        guide.add(Offset(rawNodes.last().x, rawNodes.last().y))
-
-        // 2. Cumulative length along guide
-        val cumulative = FloatArray(guide.size)
-        var totalLen = 0f
-        for (i in 0 until guide.size - 1) {
-            val d = hypot(guide[i + 1].x - guide[i].x, guide[i + 1].y - guide[i].y)
-            totalLen += d
-            cumulative[i + 1] = totalLen
-        }
-
-        // 3. Generate 2,000 equidistant steps with step distance of STEP_DIST
-        val points = ArrayList<Offset>(rawNodes.size)
         var curX = 0f
         var curY = 0f
-        points.add(Offset(curX, curY))
 
-        var guideIdx = 0
-        val targetStepLenInGuide = if (rawNodes.size > 1) totalLen / (rawNodes.size - 1) else 1f
-
-        for (i in 1 until rawNodes.size) {
-            val targetDist = i * targetStepLenInGuide
-            while (guideIdx < guide.size - 2 && cumulative[guideIdx + 1] < targetDist) {
-                guideIdx++
+        for (i in 0 until count - 1) {
+            // General direction of Hokkaido journey:
+            // 0 - 1218 (Hakodate to Cape Soya): Heading North (-PI/2)
+            // 1218 - 1700 (Soya along Okhotsk to Abashiri): Heading South-East (PI * 0.35)
+            // 1700 - 1999 (Abashiri to Shiretoko): Heading North-East (-PI * 0.35)
+            val baseAngle = when {
+                i < 1218 -> -Math.PI.toFloat() / 2f
+                i < 1700 -> (Math.PI * 0.35).toFloat()
+                else -> (-Math.PI * 0.35).toFloat()
             }
-            val dx = guide[guideIdx + 1].x - guide[guideIdx].x
-            val dy = guide[guideIdx + 1].y - guide[guideIdx].y
-            val segLen = hypot(dx, dy)
-            val dirX = if (segLen > 0) dx / segLen else 0f
-            val dirY = if (segLen > 0) dy / segLen else -1f
 
-            curX += dirX * STEP_DIST
-            curY += dirY * STEP_DIST
+            // Local winding snake S-curves across screen width (swing +- 32 degrees left/right)
+            val snake = sin(i * 0.32f) * 0.55f
+            val angle = baseAngle + snake
+
+            curX += STEP_DIST_DP * cos(angle)
+            curY += STEP_DIST_DP * sin(angle)
             points.add(Offset(curX, curY))
         }
 
@@ -148,16 +126,13 @@ fun HokkaidoMiniMap(
 
             // Approximate position of player dot based on progress ratio
             val ratio = (currentStepIndex.toFloat() / totalSteps.coerceAtLeast(1)).coerceIn(0f, 1f)
-            // Interpolate roughly along the coast from Hakodate (0.30, 0.92) to Soya (0.37, 0.04) to Shiretoko (0.88, 0.36)
             val dotX: Float
             val dotY: Float
             if (ratio < 0.6f) {
-                // Moving Hakodate -> Soya
                 val subR = ratio / 0.6f
                 dotX = (0.30f + subR * (0.37f - 0.30f)) * canvasW
                 dotY = (0.92f + subR * (0.04f - 0.92f)) * canvasH
             } else {
-                // Moving Soya -> Shiretoko
                 val subR = (ratio - 0.6f) / 0.4f
                 dotX = (0.37f + subR * (0.88f - 0.37f)) * canvasW
                 dotY = (0.04f + subR * (0.36f - 0.04f)) * canvasH

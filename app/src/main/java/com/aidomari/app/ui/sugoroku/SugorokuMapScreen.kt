@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -81,17 +82,18 @@ fun SugorokuMapScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val allNodes = HokkaidoAct1Route.nodes
-    val tileCenters = HokkaidoBoardTrack.tileCenters
+    val tileCentersDp = HokkaidoBoardTrack.tileCenters
+    val density = LocalDensity.current.density
 
-    // Scale fixed around 1.0f (substantial ~56dp square tiles, no full-map zoom-out)
+    // Scale fixed around 1.0f (substantial 58dp square tiles, no full-map zoom-out)
     var zoomScale by remember { mutableFloatStateOf(1.0f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
     var hasCenteredInitially by remember { mutableStateOf(false) }
 
     fun centerOnStep(stepIndex: Int, containerWidth: Float, containerHeight: Float) {
-        val pt = tileCenters.getOrNull(stepIndex) ?: Offset.Zero
-        val targetX = pt.x * zoomScale
-        val targetY = pt.y * zoomScale
+        val ptDp = tileCentersDp.getOrNull(stepIndex) ?: Offset.Zero
+        val targetX = ptDp.x * density * zoomScale
+        val targetY = ptDp.y * density * zoomScale
         panOffset = Offset(
             x = containerWidth / 2f - targetX,
             y = containerHeight / 2f - targetY,
@@ -141,7 +143,7 @@ fun SugorokuMapScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFF81D4FA)), // Sea of Japan & Okhotsk blue
+                .background(Color(0xFF81D4FA)), // Sea blue
         ) {
             val containerWidth = constraints.maxWidth.toFloat()
             val containerHeight = constraints.maxHeight.toFloat()
@@ -169,17 +171,17 @@ fun SugorokuMapScreen(
                 label = "player_float_y",
             )
 
-            // Clamp pan offset so camera cannot scroll beyond currentStep + 8 steps (Fog of War)
+            // Clamp pan offset so camera cannot scroll beyond currentStep + 6 steps (Fog of War)
             fun clampPan(offset: Offset): Offset {
-                if (tileCenters.isEmpty()) return offset
-                val allowedMaxStep = (currentStep + 8).coerceAtMost(tileCenters.lastIndex)
-                val visiblePts = tileCenters.subList(0, allowedMaxStep + 1)
-                val minX = visiblePts.minOf { it.x }
-                val maxX = visiblePts.maxOf { it.x }
-                val minY = visiblePts.minOf { it.y }
-                val maxY = visiblePts.maxOf { it.y }
+                if (tileCentersDp.isEmpty()) return offset
+                val allowedMaxStep = (currentStep + 6).coerceAtMost(tileCentersDp.lastIndex)
+                val visiblePts = tileCentersDp.subList(0, allowedMaxStep + 1)
+                val minX = visiblePts.minOf { it.x * density }
+                val maxX = visiblePts.maxOf { it.x * density }
+                val minY = visiblePts.minOf { it.y * density }
+                val maxY = visiblePts.maxOf { it.y * density }
 
-                val margin = 260f // margin around visible bounding box in screen pixels
+                val margin = 260f
                 val screenMinX = containerWidth - (maxX * zoomScale) - margin
                 val screenMaxX = -(minX * zoomScale) + containerWidth + margin
                 val screenMinY = containerHeight - (maxY * zoomScale) - margin
@@ -196,11 +198,6 @@ fun SugorokuMapScreen(
                 return Offset(clampedX, clampedY)
             }
 
-            // Colors for Board & Nature
-            val landColor = Color(0xFFA5D6A7) // Hokkaido lush green
-            val beachColor = Color(0xFFFFF9C4) // Sandy beach strip
-            val waveColor = Color(0xFFE0F7FA).copy(alpha = 0.8f)
-
             // 2D Sugoroku Board Canvas
             Canvas(
                 modifier = Modifier
@@ -208,20 +205,19 @@ fun SugorokuMapScreen(
                     .testTag("SugorokuCanvas")
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
-                            // Strict zoom boundaries: Keep scale large (0.85f to 1.35f), no zooming out
                             zoomScale = (zoomScale * zoom).coerceIn(0.85f, 1.35f)
                             panOffset = clampPan(panOffset + pan)
                         }
                     }
-                    .pointerInput(tileCenters, zoomScale, panOffset, currentStep) {
+                    .pointerInput(tileCentersDp, zoomScale, panOffset, currentStep) {
                         detectTapGestures { tapOffset ->
-                            val maxAllowedStep = (currentStep + 8).coerceAtMost(allNodes.lastIndex)
-                            val threshold = 36.dp.toPx()
+                            val maxAllowedStep = (currentStep + 6).coerceAtMost(allNodes.lastIndex)
+                            val threshold = 34.dp.toPx()
 
                             for (i in 0..maxAllowedStep) {
-                                val pt = tileCenters[i]
-                                val sx = pt.x * zoomScale + panOffset.x
-                                val sy = pt.y * zoomScale + panOffset.y
+                                val ptDp = tileCentersDp[i]
+                                val sx = ptDp.x * density * zoomScale + panOffset.x
+                                val sy = ptDp.y * density * zoomScale + panOffset.y
                                 val dx = tapOffset.x - sx
                                 val dy = tapOffset.y - sy
                                 if (dx * dx + dy * dy <= threshold * threshold) {
@@ -232,46 +228,46 @@ fun SugorokuMapScreen(
                         }
                     },
             ) {
-                val maxAllowedStep = (currentStep + 8).coerceAtMost(allNodes.lastIndex)
+                val maxAllowedStep = (currentStep + 6).coerceAtMost(allNodes.lastIndex)
 
-                // 1. Draw Hokkaido Landmass and Beach along the track
-                drawCoastlineAndLand(
-                    tileCenters = tileCenters,
+                // 1. Draw Organic Coastal Landscape along the winding track
+                drawOrganicCoastlineAndLand(
+                    tileCentersDp = tileCentersDp,
                     maxAllowedStep = maxAllowedStep,
+                    density = density,
                     zoomScale = zoomScale,
                     panOffset = panOffset,
-                    landColor = landColor,
-                    beachColor = beachColor,
-                    waveColor = waveColor,
                 )
 
-                // 2. Draw Wooden Connecting Bridge between steps
+                // 2. Draw Wooden Bridge Connectors between steps
                 drawConnectingBridges(
-                    tileCenters = tileCenters,
+                    tileCentersDp = tileCentersDp,
                     maxAllowedStep = maxAllowedStep,
+                    density = density,
                     zoomScale = zoomScale,
                     panOffset = panOffset,
                 )
 
-                // 3. Draw Equidistant Square Sugoroku Tiles
+                // 3. Draw Non-overlapping 58dp Square Sugoroku Tiles
                 drawSugorokuTiles(
                     nodes = allNodes,
-                    tileCenters = tileCenters,
+                    tileCentersDp = tileCentersDp,
                     currentStep = currentStep,
                     maxAllowedStep = maxAllowedStep,
+                    density = density,
                     zoomScale = zoomScale,
                     panOffset = panOffset,
                 )
 
                 // 4. Draw Cute Traveler Avatar Piece at current step
-                val curPt = tileCenters.getOrNull(currentStep) ?: Offset.Zero
-                val curScreenX = curPt.x * zoomScale + panOffset.x
-                val curScreenY = curPt.y * zoomScale + panOffset.y
+                val curPtDp = tileCentersDp.getOrNull(currentStep) ?: Offset.Zero
+                val curScreenX = curPtDp.x * density * zoomScale + panOffset.x
+                val curScreenY = curPtDp.y * density * zoomScale + panOffset.y
 
                 drawTravelerPiece(
                     x = curScreenX,
                     y = curScreenY + playerFloatY * 1.5f,
-                    shadowY = curScreenY + 22.dp.toPx(),
+                    shadowY = curScreenY + 24.dp.toPx(),
                 )
             }
 
@@ -458,87 +454,85 @@ fun SugorokuMapScreen(
 }
 
 /**
- * Draws the lush green landmass of Hokkaido on the right side of the track,
- * with sandy beach and sea waves along the left side.
+ * Draws natural coastal landscape around the winding track:
+ * Inland lush green on the right, sandy beach strip on the left, with gentle wave lines.
  */
-private fun DrawScope.drawCoastlineAndLand(
-    tileCenters: List<Offset>,
+private fun DrawScope.drawOrganicCoastlineAndLand(
+    tileCentersDp: List<Offset>,
     maxAllowedStep: Int,
+    density: Float,
     zoomScale: Float,
     panOffset: Offset,
-    landColor: Color,
-    beachColor: Color,
-    waveColor: Color,
 ) {
-    if (tileCenters.size < 2) return
-    val count = (maxAllowedStep + 1).coerceAtMost(tileCenters.size)
+    if (tileCentersDp.size < 2) return
+    val count = (maxAllowedStep + 1).coerceAtMost(tileCentersDp.size)
 
-    val landPath = Path()
-    val beachPath = Path()
+    val landColor = Color(0xFFA5D6A7)
+    val beachColor = Color(0xFFFFF9C4)
+    val waveColor = Color(0xFFE0F7FA)
 
-    // Follow the track, expanding land to the right (+normal) and beach to the left (-normal)
-    val rightPoints = ArrayList<Offset>(count)
-    val beachPoints = ArrayList<Offset>(count)
-    val deepLandPoints = ArrayList<Offset>(count)
+    val rightLandPoints = ArrayList<Offset>(count + 2)
+    val beachLinePoints = ArrayList<Offset>(count + 2)
+    val outerDeepLandPoints = ArrayList<Offset>(count + 2)
 
     for (i in 0 until count) {
-        val pt = tileCenters[i]
-        val sx = pt.x * zoomScale + panOffset.x
-        val sy = pt.y * zoomScale + panOffset.y
+        val ptDp = tileCentersDp[i]
+        val sx = ptDp.x * density * zoomScale + panOffset.x
+        val sy = ptDp.y * density * zoomScale + panOffset.y
 
-        // Calculate direction and normal
-        val nextPt = if (i < count - 1) tileCenters[i + 1] else tileCenters[i]
-        val prevPt = if (i > 0) tileCenters[i - 1] else tileCenters[i]
-        val dirX = nextPt.x - prevPt.x
-        val dirY = nextPt.y - prevPt.y
+        val nextPtDp = if (i < count - 1) tileCentersDp[i + 1] else tileCentersDp[i]
+        val prevPtDp = if (i > 0) tileCentersDp[i - 1] else tileCentersDp[i]
+        val dirX = nextPtDp.x - prevPtDp.x
+        val dirY = nextPtDp.y - prevPtDp.y
         val angle = atan2(dirY, dirX)
-        // Right normal (+PI/2): Landward (Inland Hokkaido)
-        val landAngle = angle + (Math.PI / 2.0).toFloat()
+        val normalAngle = angle + (Math.PI / 2.0).toFloat()
 
-        val normX = cos(landAngle)
-        val normY = sin(landAngle)
+        val normX = cos(normalAngle)
+        val normY = sin(normalAngle)
 
-        // Beach line on seaward side (left of track, ~40dp away)
-        beachPoints.add(Offset(sx - normX * 42.dp.toPx(), sy - normY * 42.dp.toPx()))
-        // Land line near track
-        rightPoints.add(Offset(sx + normX * 36.dp.toPx(), sy + normY * 36.dp.toPx()))
-        // Deep inland land (500dp to the right)
-        deepLandPoints.add(Offset(sx + normX * 520.dp.toPx(), sy + normY * 520.dp.toPx()))
+        // Seaward beach line on the left (~46dp away from track)
+        beachLinePoints.add(Offset(sx - normX * 46.dp.toPx(), sy - normY * 46.dp.toPx()))
+        // Land edge near track
+        rightLandPoints.add(Offset(sx + normX * 38.dp.toPx(), sy + normY * 38.dp.toPx()))
+        // Deep inland land (+400dp to the right)
+        outerDeepLandPoints.add(Offset(sx + normX * 420.dp.toPx(), sy + normY * 420.dp.toPx()))
     }
 
-    // 1. Draw broad green Hokkaido landmass
-    if (rightPoints.isNotEmpty()) {
-        landPath.moveTo(rightPoints[0].x, rightPoints[0].y)
-        for (i in 1 until rightPoints.size) {
-            landPath.lineTo(rightPoints[i].x, rightPoints[i].y)
+    // 1. Draw broad green Hokkaido landmass on the right
+    if (rightLandPoints.isNotEmpty()) {
+        val landPath = Path()
+        landPath.moveTo(rightLandPoints[0].x, rightLandPoints[0].y)
+        for (i in 1 until rightLandPoints.size) {
+            landPath.lineTo(rightLandPoints[i].x, rightLandPoints[i].y)
         }
-        for (i in deepLandPoints.indices.reversed()) {
-            landPath.lineTo(deepLandPoints[i].x, deepLandPoints[i].y)
+        for (i in outerDeepLandPoints.indices.reversed()) {
+            landPath.lineTo(outerDeepLandPoints[i].x, outerDeepLandPoints[i].y)
         }
         landPath.close()
         drawPath(landPath, landColor)
     }
 
-    // 2. Draw beach strip along the sea
-    if (beachPoints.isNotEmpty() && rightPoints.isNotEmpty()) {
-        beachPath.moveTo(beachPoints[0].x, beachPoints[0].y)
-        for (i in 1 until beachPoints.size) {
-            beachPath.lineTo(beachPoints[i].x, beachPoints[i].y)
+    // 2. Draw sandy beach strip between track and sea
+    if (beachLinePoints.isNotEmpty() && rightLandPoints.isNotEmpty()) {
+        val beachPath = Path()
+        beachPath.moveTo(beachLinePoints[0].x, beachLinePoints[0].y)
+        for (i in 1 until beachLinePoints.size) {
+            beachPath.lineTo(beachLinePoints[i].x, beachLinePoints[i].y)
         }
-        for (i in rightPoints.indices.reversed()) {
-            beachPath.lineTo(rightPoints[i].x, rightPoints[i].y)
+        for (i in rightLandPoints.indices.reversed()) {
+            beachPath.lineTo(rightLandPoints[i].x, rightLandPoints[i].y)
         }
         beachPath.close()
         drawPath(beachPath, beachColor)
 
-        // Draw foam wave line along outer beach edge
-        val waveStroke = Path()
-        waveStroke.moveTo(beachPoints[0].x, beachPoints[0].y)
-        for (i in 1 until beachPoints.size) {
-            waveStroke.lineTo(beachPoints[i].x, beachPoints[i].y)
+        // Wave foam stroke along beach edge
+        val wavePath = Path()
+        wavePath.moveTo(beachLinePoints[0].x, beachLinePoints[0].y)
+        for (i in 1 until beachLinePoints.size) {
+            wavePath.lineTo(beachLinePoints[i].x, beachLinePoints[i].y)
         }
         drawPath(
-            waveStroke,
+            wavePath,
             waveColor,
             style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round),
         )
@@ -546,28 +540,29 @@ private fun DrawScope.drawCoastlineAndLand(
 }
 
 /**
- * Draws wooden bridge connecting adjacent steps.
+ * Draws wooden bridge deck between step centers.
  */
 private fun DrawScope.drawConnectingBridges(
-    tileCenters: List<Offset>,
+    tileCentersDp: List<Offset>,
     maxAllowedStep: Int,
+    density: Float,
     zoomScale: Float,
     panOffset: Offset,
 ) {
-    val bridgeWidth = 16.dp.toPx()
-    val bridgeColor = Color(0xFFD7CCC8) // Wooden bridge
+    val bridgeWidth = 18.dp.toPx()
+    val bridgeColor = Color(0xFFD7CCC8)
     val bridgeBorderColor = Color(0xFF8D6E63)
 
-    val count = (maxAllowedStep + 1).coerceAtMost(tileCenters.size)
+    val count = (maxAllowedStep + 1).coerceAtMost(tileCentersDp.size)
     for (i in 0 until count - 1) {
-        val p1 = tileCenters[i]
-        val p2 = tileCenters[i + 1]
-        val sx1 = p1.x * zoomScale + panOffset.x
-        val sy1 = p1.y * zoomScale + panOffset.y
-        val sx2 = p2.x * zoomScale + panOffset.x
-        val sy2 = p2.y * zoomScale + panOffset.y
+        val p1 = tileCentersDp[i]
+        val p2 = tileCentersDp[i + 1]
+        val sx1 = p1.x * density * zoomScale + panOffset.x
+        val sy1 = p1.y * density * zoomScale + panOffset.y
+        val sx2 = p2.x * density * zoomScale + panOffset.x
+        val sy2 = p2.y * density * zoomScale + panOffset.y
 
-        // Border line
+        // Border
         drawLine(
             color = bridgeBorderColor,
             start = Offset(sx1, sy1),
@@ -587,94 +582,94 @@ private fun DrawScope.drawConnectingBridges(
 }
 
 /**
- * Draws the substantial, distinct 56dp square Sugoroku tiles with shadows,
- * step numbers, municipality labels, and icons.
+ * Draws the 58dp square Sugoroku tiles.
+ * Tile size is 58dp and step distance is 80dp, guaranteeing a clean 22dp gap without overlapping.
  */
 private fun DrawScope.drawSugorokuTiles(
     nodes: List<SugorokuNode>,
-    tileCenters: List<Offset>,
+    tileCentersDp: List<Offset>,
     currentStep: Int,
     maxAllowedStep: Int,
+    density: Float,
     zoomScale: Float,
     panOffset: Offset,
 ) {
-    val tileSize = 54.dp.toPx()
-    val cornerRadius = CornerRadius(12.dp.toPx(), 12.dp.toPx())
+    val tileSizePx = 58.dp.toPx() * zoomScale
+    val cornerRadius = CornerRadius(13.dp.toPx() * zoomScale, 13.dp.toPx() * zoomScale)
 
     val labelPaint = Paint().apply {
         color = android.graphics.Color.rgb(33, 33, 33)
-        textSize = 11.dp.toPx()
+        textSize = 11.5.dp.toPx() * zoomScale
         isAntiAlias = true
         typeface = Typeface.DEFAULT_BOLD
         textAlign = Paint.Align.CENTER
     }
 
     val stepNumberPaint = Paint().apply {
-        color = android.graphics.Color.rgb(117, 117, 117)
-        textSize = 8.5.dp.toPx()
+        color = android.graphics.Color.rgb(120, 144, 156)
+        textSize = 8.5.dp.toPx() * zoomScale
         isAntiAlias = true
         typeface = Typeface.DEFAULT_BOLD
         textAlign = Paint.Align.CENTER
     }
 
     val iconPaint = Paint().apply {
-        textSize = 14.dp.toPx()
+        textSize = 14.dp.toPx() * zoomScale
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
     }
 
-    val count = (maxAllowedStep + 1).coerceAtMost(tileCenters.size)
+    val count = (maxAllowedStep + 1).coerceAtMost(tileCentersDp.size)
     for (i in 0 until count) {
         val node = nodes[i]
-        val pt = tileCenters[i]
-        val cx = pt.x * zoomScale + panOffset.x
-        val cy = pt.y * zoomScale + panOffset.y
+        val ptDp = tileCentersDp[i]
+        val cx = ptDp.x * density * zoomScale + panOffset.x
+        val cy = ptDp.y * density * zoomScale + panOffset.y
 
-        val half = tileSize / 2f
+        val half = tileSizePx / 2f
         val left = cx - half
         val top = cy - half
 
         val isVisited = i < currentStep
         val isCurrent = i == currentStep
 
-        // 1. Drop shadow beneath tile
+        // 1. Soft drop shadow beneath tile
         drawRoundRect(
-            color = Color(0x33000000),
-            topLeft = Offset(left + 2.dp.toPx(), top + 3.dp.toPx()),
-            size = Size(tileSize, tileSize),
+            color = Color(0x38000000),
+            topLeft = Offset(left + 2.dp.toPx() * zoomScale, top + 3.dp.toPx() * zoomScale),
+            size = Size(tileSizePx, tileSizePx),
             cornerRadius = cornerRadius,
         )
 
         // 2. Tile background & border colors
         val (bgColor, borderColor, borderWidth) = when {
-            isCurrent -> Triple(Color(0xFFFFD54F), Color(0xFFFF6F00), 3.dp.toPx())
-            isVisited -> Triple(Color(0xFFFFB74D), Color(0xFFE65100), 2.dp.toPx())
-            node.type == SugorokuNodeType.SCENIC_SPOT -> Triple(Color(0xFFFFF9C4), Color(0xFFFBC02D), 2.5.dp.toPx())
-            else -> Triple(Color(0xFFFFFFFF), Color(0xFF90A4AE), 1.8.dp.toPx())
+            isCurrent -> Triple(Color(0xFFFFF176), Color(0xFFF57F17), 3.dp.toPx() * zoomScale)
+            isVisited -> Triple(Color(0xFFFFE0B2), Color(0xFFFB8C00), 2.dp.toPx() * zoomScale)
+            node.type == SugorokuNodeType.SCENIC_SPOT -> Triple(Color(0xFFFFF9C4), Color(0xFFFBC02D), 2.5.dp.toPx() * zoomScale)
+            else -> Triple(Color(0xFFFFFFFF), Color(0xFFB0BEC5), 1.8.dp.toPx() * zoomScale)
         }
 
         // Draw tile body
         drawRoundRect(
             color = bgColor,
             topLeft = Offset(left, top),
-            size = Size(tileSize, tileSize),
+            size = Size(tileSizePx, tileSizePx),
             cornerRadius = cornerRadius,
         )
         // Draw tile border
         drawRoundRect(
             color = borderColor,
             topLeft = Offset(left, top),
-            size = Size(tileSize, tileSize),
+            size = Size(tileSizePx, tileSizePx),
             cornerRadius = cornerRadius,
             style = Stroke(width = borderWidth),
         )
 
         // 3. Tile Contents: Step number on top
-        val stepNumStr = "#${i + 1}"
         drawContext.canvas.nativeCanvas.drawText(
-            stepNumStr,
+            "#${i + 1}",
             cx,
-            top + 12.dp.toPx(),
+            top + 13.dp.toPx() * zoomScale,
             stepNumberPaint,
         )
 
@@ -683,7 +678,7 @@ private fun DrawScope.drawSugorokuTiles(
         drawContext.canvas.nativeCanvas.drawText(
             displayName,
             cx,
-            top + 28.dp.toPx(),
+            top + 30.dp.toPx() * zoomScale,
             labelPaint,
         )
 
@@ -699,7 +694,7 @@ private fun DrawScope.drawSugorokuTiles(
         drawContext.canvas.nativeCanvas.drawText(
             iconStr,
             cx,
-            top + 45.dp.toPx(),
+            top + 48.dp.toPx() * zoomScale,
             iconPaint,
         )
     }
