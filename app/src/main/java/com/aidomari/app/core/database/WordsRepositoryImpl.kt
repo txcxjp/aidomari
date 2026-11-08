@@ -5,6 +5,7 @@ import com.aidomari.app.core.database.entity.CardStudyLogEntity
 import com.aidomari.app.core.database.entity.DeckEntity
 import com.aidomari.app.core.database.entity.StudySessionEntity
 import com.aidomari.app.core.database.entity.SubjectEntity
+import com.aidomari.app.core.database.entity.SugorokuProgressEntity
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
@@ -12,6 +13,7 @@ import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.PastDayGroup
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
+import com.aidomari.app.domain.model.SugorokuProgress
 import com.aidomari.app.domain.repository.WordsRepository
 import com.aidomari.app.domain.util.CardSnoozeCalculator
 import com.aidomari.app.domain.util.PastDayDecksCalculator
@@ -255,6 +257,28 @@ class WordsRepositoryImpl(
 
     override suspend fun getAllStudyLogsSync(): List<CardStudyLog> =
         dao.getAllStudyLogsSync().map { it.toDomain() }
+
+    // Sugoroku (北海道すごろくマップ)
+    override fun getSugorokuProgress(): Flow<SugorokuProgress> =
+        dao.getSugorokuProgress().map { entity ->
+            entity?.toDomain() ?: SugorokuProgress()
+        }
+
+    override suspend fun getSugorokuProgressSync(): SugorokuProgress =
+        dao.getSugorokuProgressSync()?.toDomain() ?: SugorokuProgress().also {
+            saveSugorokuProgress(it)
+        }
+
+    override suspend fun saveSugorokuProgress(progress: SugorokuProgress) {
+        dao.saveSugorokuProgress(SugorokuProgressEntity.fromDomain(progress))
+    }
+
+    override suspend fun recordSugorokuProgress(questionsDelta: Int): SugorokuProgress {
+        val current = getSugorokuProgressSync()
+        val updated = current.advanceByQuestions(questionsDelta)
+        saveSugorokuProgress(updated)
+        return updated
+    }
 
     // --- Mappers ---
     private fun SubjectEntity.toDomain() = Subject(

@@ -7,8 +7,10 @@ import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.PastDayGroup
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
+import com.aidomari.app.domain.model.SugorokuProgress
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import java.util.UUID
 
 interface WordsRepository {
@@ -109,4 +111,10 @@ interface WordsRepository {
     suspend fun getLatestLogsForDeckSync(deckId: String): List<CardStudyLog> = emptyList()
     fun getAllStudyLogsFlow(): Flow<List<CardStudyLog>> = emptyFlow()
     suspend fun getAllStudyLogsSync(): List<CardStudyLog> = emptyList()
+
+    // Sugoroku (北海道すごろくマップ)
+    fun getSugorokuProgress(): Flow<SugorokuProgress> = flowOf(SugorokuProgress())
+    suspend fun getSugorokuProgressSync(): SugorokuProgress = SugorokuProgress()
+    suspend fun saveSugorokuProgress(progress: SugorokuProgress) {}
+    suspend fun recordSugorokuProgress(questionsDelta: Int = 1): SugorokuProgress = SugorokuProgress()
 }
