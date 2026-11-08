@@ -28,6 +28,8 @@ import com.aidomari.app.ui.study.StudyScreen
 import com.aidomari.app.ui.study.StudyViewModel
 import com.aidomari.app.ui.subject.SubjectListScreen
 import com.aidomari.app.ui.subject.SubjectViewModel
+import com.aidomari.app.ui.sugoroku.SugorokuMapScreen
+import com.aidomari.app.ui.sugoroku.SugorokuMapViewModel
 import com.aidomari.app.ui.theme.AidomariTheme
 import com.aidomari.app.ui.theme.AppColorTheme
 import com.aidomari.app.ui.theme.LocalThemeConfig
@@ -83,6 +85,17 @@ fun AidomariNavHost(
                 onCalendarClick = {
                     navController.navigate("calendar")
                 },
+                onSugorokuMapClick = {
+                    navController.navigate("sugoroku_map")
+                },
+            )
+        }
+
+        composable("sugoroku_map") {
+            val mapViewModel = remember { SugorokuMapViewModel(repository) }
+            SugorokuMapScreen(
+                viewModel = mapViewModel,
+                onBack = { navController.popBackStack() },
             )
         }
 
