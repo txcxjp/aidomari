@@ -47,6 +47,10 @@ class SugorokuMapViewModel(
         _uiState.update { it.copy(selectedNode = node) }
     }
 
+    fun clearSelectedNode() {
+        selectNode(null)
+    }
+
     fun advanceProgress(questionsDelta: Int = 1) {
         viewModelScope.launch {
             repository.recordSugorokuProgress(questionsDelta)
