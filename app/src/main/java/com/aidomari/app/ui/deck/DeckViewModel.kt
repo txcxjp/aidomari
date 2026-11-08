@@ -196,6 +196,9 @@ class DeckViewModel(
 
                     val latestLogs = repository.getLatestLogsForDeckSync(deck.id)
                     val learnedCardCount = latestLogs.count { it.isCorrect }
+                    val activeCards = cards.filterNot { it.isSnoozed }
+                    val activeCardIds = activeCards.map { it.id }.toSet()
+                    val activeStudiedCardCount = latestLogs.count { activeCardIds.contains(it.cardId) }
 
                     DeckWithPartsUiModel(
                         deck = deck,
@@ -203,6 +206,8 @@ class DeckViewModel(
                         totalCardCount = cards.size,
                         learnedCardCount = learnedCardCount,
                         studiedCardCount = latestLogs.size,
+                        activeCardCount = activeCards.size,
+                        activeStudiedCardCount = activeStudiedCardCount,
                     )
                 }
                 _decksWithParts.value = uiModels

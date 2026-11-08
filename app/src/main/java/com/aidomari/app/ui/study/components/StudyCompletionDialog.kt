@@ -32,7 +32,16 @@ fun StudyCompletionDialog(
     onNextPart: () -> Unit,
     onRestartPart: () -> Unit,
     onBackToDecks: () -> Unit,
+    isRandomMode: Boolean = false,
+    onContinueRandomStudy: (() -> Unit)? = null,
 ) {
+    val titleText = if (isRandomMode) "ランダム出題完了！" else "学習完了！"
+    val messageText = if (isRandomMode) {
+        "全 $totalCards 単語のランダム出題が完了しました。"
+    } else {
+        "$partName の全 $totalCards 単語の学習が完了しました。"
+    }
+
     AlertDialog(
         onDismissRequest = { /* Modal dialog */ },
         icon = {
@@ -44,7 +53,7 @@ fun StudyCompletionDialog(
         },
         title = {
             Text(
-                text = "学習完了！",
+                text = titleText,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
@@ -57,7 +66,7 @@ fun StudyCompletionDialog(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    text = "$partName の全 $totalCards 単語の学習が完了しました。",
+                    text = messageText,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                 )
@@ -68,7 +77,15 @@ fun StudyCompletionDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                if (hasNextPart) {
+                if (isRandomMode && onContinueRandomStudy != null) {
+                    Button(
+                        onClick = onContinueRandomStudy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(text = "続けて出題する")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                } else if (hasNextPart) {
                     Button(
                         onClick = onNextPart,
                         modifier = Modifier.fillMaxWidth(),
@@ -110,6 +127,23 @@ private fun StudyCompletionDialogPreview() {
             onNextPart = {},
             onRestartPart = {},
             onBackToDecks = {},
+        )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun StudyCompletionDialog_Random_Preview() {
+    AidomariTheme {
+        StudyCompletionDialog(
+            partName = "Part 1",
+            totalCards = 10,
+            hasNextPart = false,
+            onNextPart = {},
+            onRestartPart = {},
+            onBackToDecks = {},
+            isRandomMode = true,
+            onContinueRandomStudy = {},
         )
     }
 }

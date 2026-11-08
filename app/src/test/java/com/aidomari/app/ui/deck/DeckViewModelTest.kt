@@ -469,6 +469,37 @@ class DeckViewModelTest {
         assertEquals(1, models[0].learnedCardCount)
     }
 
+    @Test
+    fun loadDecks_withSnoozedCards_calculatesActiveCountsExcludingSnooze() = runTest {
+        val testDeck = Deck(id = "d-snooze", subjectId = "sub-1", name = "スヌーズデッキ", splitSize = 50)
+        fakeRepository.decksList.add(testDeck)
+        val now = System.currentTimeMillis()
+        fakeRepository.cardsList.addAll(
+            listOf(
+                Card(id = "sc1", deckId = "d-snooze", front = "A", back = "あ"),
+                Card(id = "sc2", deckId = "d-snooze", front = "B", back = "い", snoozedUntil = now + 86400000L, snoozeLevel = 1),
+            ),
+        )
+        fakeRepository.studyLogs.addAll(
+            listOf(
+                CardStudyLog(id = "sl1", cardId = "sc1", isCorrect = true),
+                CardStudyLog(id = "sl2", cardId = "sc2", isCorrect = true),
+            ),
+        )
+        fakeRepository.triggerDecksUpdate()
+
+        viewModel.loadDecks()
+        advanceUntilIdle()
+
+        val models = viewModel.decksWithParts.value
+        val model = models.find { it.deck.id == "d-snooze" }!!
+        assertEquals(2, model.totalCardCount)
+        assertEquals(2, model.studiedCardCount)
+        // Active counts must exclude the snoozed card
+        assertEquals(1, model.activeCardCount)
+        assertEquals(1, model.activeStudiedCardCount)
+    }
+
     private class FakeDeckRepository : WordsRepository {
         val subjectsList = mutableListOf<Subject>()
         val decksList = mutableListOf<Deck>()
