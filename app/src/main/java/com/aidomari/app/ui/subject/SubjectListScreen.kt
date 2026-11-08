@@ -803,20 +803,6 @@ fun SubjectListContent(
                                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                                 verticalAlignment = Alignment.CenterVertically,
                                             ) {
-                                                if (subjectTheme != null) {
-                                                    Surface(
-                                                        shape = RoundedCornerShape(6.dp),
-                                                        color = accentColor.copy(alpha = 0.15f),
-                                                    ) {
-                                                        Text(
-                                                            text = subjectTheme.displayName.substringBefore(" ("),
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            fontWeight = FontWeight.SemiBold,
-                                                            color = accentColor,
-                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                                        )
-                                                    }
-                                                }
                                                 Surface(
                                                     shape = RoundedCornerShape(6.dp),
                                                     color = MaterialTheme.colorScheme.secondaryContainer,
@@ -825,17 +811,6 @@ fun SubjectListContent(
                                                         text = "アーカイブ済み",
                                                         style = MaterialTheme.typography.labelSmall,
                                                         color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                                    )
-                                                }
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = MaterialTheme.colorScheme.surface,
-                                                ) {
-                                                    Text(
-                                                        text = "TTS音声: ${subject.ttsLanguage}",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.primary,
                                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                                     )
                                                 }
@@ -1013,46 +988,13 @@ fun SubjectListContent(
 
                                         Spacer(modifier = Modifier.width(14.dp))
 
-                                        Column {
-                                            Text(
-                                                text = subject.name,
-                                                style = MaterialTheme.typography.titleLarge.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 20.sp,
-                                                ),
-                                            )
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                            Row(
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                            ) {
-                                                if (subjectTheme != null) {
-                                                    Surface(
-                                                        shape = RoundedCornerShape(6.dp),
-                                                        color = accentColor.copy(alpha = 0.15f),
-                                                    ) {
-                                                        Text(
-                                                            text = subjectTheme.displayName.substringBefore(" ("),
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            fontWeight = FontWeight.SemiBold,
-                                                            color = accentColor,
-                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                                        )
-                                                    }
-                                                }
-                                                Surface(
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = MaterialTheme.colorScheme.surface,
-                                                ) {
-                                                    Text(
-                                                        text = "TTS音声: ${subject.ttsLanguage}",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                                    )
-                                                }
-                                            }
-                                        }
+                                        Text(
+                                            text = subject.name,
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 20.sp,
+                                            ),
+                                        )
                                     }
 
                                     Row(verticalAlignment = Alignment.CenterVertically) {
