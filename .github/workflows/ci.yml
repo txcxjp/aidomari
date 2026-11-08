@@ -32,10 +32,10 @@ jobs:
           gradle-version: '8.10.2'
 
       - name: Run Spotless Check
-        run: ./gradlew spotlessCheck --stacktrace
+        run: gradle spotlessCheck --stacktrace
 
       - name: Run Android Lint
-        run: ./gradlew lintDebug --stacktrace
+        run: gradle lintDebug --stacktrace
 
       - name: Upload Lint Report
         if: always()
@@ -66,7 +66,7 @@ jobs:
           gradle-version: '8.10.2'
 
       - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+        run: gradle testDebugUnitTest --stacktrace
 
       - name: Upload Test Results
         if: always()
@@ -98,7 +98,7 @@ jobs:
           gradle-version: '8.10.2'
 
       - name: Assemble Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: gradle assembleDebug --stacktrace
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
