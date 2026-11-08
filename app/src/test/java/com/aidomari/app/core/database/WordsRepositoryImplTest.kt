@@ -38,8 +38,8 @@ class WordsRepositoryImplTest {
         val progress = repository.getSugorokuProgressSync()
         assertEquals(0, progress.currentStepIndex)
         assertEquals(0, progress.currentProgressInStep)
-        assertEquals(5, progress.targetQuestionsPerStep)
-        assertEquals(setOf("node_000"), progress.visitedNodeIds)
+        assertEquals(1, progress.targetQuestionsPerStep)
+        assertEquals(setOf("node_0000"), progress.visitedNodeIds)
 
         // Verify it was persisted
         val secondCall = repository.getSugorokuProgressSync()
@@ -52,23 +52,24 @@ class WordsRepositoryImplTest {
         val initial = repository.getSugorokuProgress().first()
         assertEquals(0, initial.currentStepIndex)
 
-        // Advance by 3 questions (no node step advance yet, currentProgressInStep = 3)
-        val p1 = repository.recordSugorokuProgress(3)
-        assertEquals(0, p1.currentStepIndex)
-        assertEquals(3, p1.currentProgressInStep)
-        assertEquals(3, p1.totalQuestionsAnswered)
+        // Advance by 1 question (advances to step 1)
+        val p1 = repository.recordSugorokuProgress(1)
+        assertEquals(1, p1.currentStepIndex)
+        assertEquals(0, p1.currentProgressInStep)
+        assertEquals(1, p1.totalQuestionsAnswered)
+        assertTrue(p1.visitedNodeIds.contains("node_0001"))
 
-        // Advance by 2 more questions (total 5 -> should advance to step 1)
+        // Advance by 2 more questions (advances to step 3)
         val p2 = repository.recordSugorokuProgress(2)
-        assertEquals(1, p2.currentStepIndex)
+        assertEquals(3, p2.currentStepIndex)
         assertEquals(0, p2.currentProgressInStep)
-        assertEquals(5, p2.totalQuestionsAnswered)
-        assertTrue(p2.visitedNodeIds.contains("node_001"))
+        assertEquals(3, p2.totalQuestionsAnswered)
+        assertTrue(p2.visitedNodeIds.contains("node_0003"))
 
         // Flow should reflect updated progress
         val flowValue = repository.getSugorokuProgress().first()
-        assertEquals(1, flowValue.currentStepIndex)
+        assertEquals(3, flowValue.currentStepIndex)
         assertEquals(0, flowValue.currentProgressInStep)
-        assertEquals(5, flowValue.totalQuestionsAnswered)
+        assertEquals(3, flowValue.totalQuestionsAnswered)
     }
 }

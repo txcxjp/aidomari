@@ -584,10 +584,10 @@ class AidomariDaoTest {
         val progress = SugorokuProgressEntity(
             id = "default_progress",
             currentStepIndex = 5,
-            currentProgressInStep = 2,
-            targetQuestionsPerStep = 5,
-            totalQuestionsAnswered = 27,
-            visitedNodeIdsJson = "[\"node_000\",\"node_001\",\"node_005\"]",
+            currentProgressInStep = 0,
+            targetQuestionsPerStep = 1,
+            totalQuestionsAnswered = 5,
+            visitedNodeIdsJson = "[\"node_0000\",\"node_0001\",\"node_0005\"]",
             updatedAt = 1000L,
         )
         dao.saveSugorokuProgress(progress)
@@ -596,17 +596,17 @@ class AidomariDaoTest {
         val retrievedSync = dao.getSugorokuProgressSync("default_progress")
         assertNotNull(retrievedSync)
         assertEquals(5, retrievedSync?.currentStepIndex)
-        assertEquals(2, retrievedSync?.currentProgressInStep)
-        assertEquals(27, retrievedSync?.totalQuestionsAnswered)
+        assertEquals(0, retrievedSync?.currentProgressInStep)
+        assertEquals(5, retrievedSync?.totalQuestionsAnswered)
 
         // Flow retrieval
         val retrievedFlow = dao.getSugorokuProgress("default_progress").first()
         assertNotNull(retrievedFlow)
         assertEquals(5, retrievedFlow?.currentStepIndex)
-        assertEquals(2, retrievedFlow?.currentProgressInStep)
-        assertEquals(27, retrievedFlow?.totalQuestionsAnswered)
+        assertEquals(0, retrievedFlow?.currentProgressInStep)
+        assertEquals(5, retrievedFlow?.totalQuestionsAnswered)
 
         val domain = retrievedSync!!.toDomain()
-        assertEquals(setOf("node_000", "node_001", "node_005"), domain.visitedNodeIds)
+        assertEquals(setOf("node_0000", "node_0001", "node_0005"), domain.visitedNodeIds)
     }
 }

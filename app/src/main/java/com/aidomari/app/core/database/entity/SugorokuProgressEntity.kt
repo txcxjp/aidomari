@@ -14,11 +14,11 @@ data class SugorokuProgressEntity(
     @ColumnInfo(name = "current_progress_in_step")
     val currentProgressInStep: Int = 0,
     @ColumnInfo(name = "target_questions_per_step")
-    val targetQuestionsPerStep: Int = 5,
+    val targetQuestionsPerStep: Int = 1,
     @ColumnInfo(name = "total_questions_answered")
     val totalQuestionsAnswered: Int = 0,
     @ColumnInfo(name = "visited_node_ids_json")
-    val visitedNodeIdsJson: String = "[\"node_000\"]",
+    val visitedNodeIdsJson: String = "[\"node_0000\"]",
     @ColumnInfo(name = "updated_at")
     val updatedAt: Long = System.currentTimeMillis(),
 ) {
@@ -39,7 +39,7 @@ data class SugorokuProgressEntity(
             currentProgressInStep = currentProgressInStep,
             targetQuestionsPerStep = targetQuestionsPerStep,
             totalQuestionsAnswered = totalQuestionsAnswered,
-            visitedNodeIds = visitedIds.ifEmpty { setOf("node_000") },
+            visitedNodeIds = visitedIds.ifEmpty { setOf("node_0000") },
             updatedAt = updatedAt,
         )
     }

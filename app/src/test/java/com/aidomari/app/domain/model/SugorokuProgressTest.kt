@@ -14,9 +14,9 @@ class SugorokuProgressTest {
         assertEquals("default_progress", progress.id)
         assertEquals(0, progress.currentStepIndex)
         assertEquals(0, progress.currentProgressInStep)
-        assertEquals(5, progress.targetQuestionsPerStep)
+        assertEquals(1, progress.targetQuestionsPerStep)
         assertEquals(0, progress.totalQuestionsAnswered)
-        assertEquals(setOf("node_000"), progress.visitedNodeIds)
+        assertEquals(setOf("node_0000"), progress.visitedNodeIds)
         assertEquals(0f, progress.progressRatioInStep, 0.001f)
     }
 
@@ -43,56 +43,56 @@ class SugorokuProgressTest {
     }
 
     @Test
-    fun advanceByQuestions_subStepIncrementsProgressOnly() {
+    fun advanceByQuestions_oneQuestionAdvancesOneStepByDefault() {
+        val initial = SugorokuProgress(targetQuestionsPerStep = 1)
+        val advanced = initial.advanceByQuestions(1)
+
+        assertEquals(1, advanced.currentStepIndex)
+        assertEquals(0, advanced.currentProgressInStep)
+        assertEquals(1, advanced.totalQuestionsAnswered)
+        assertTrue(advanced.visitedNodeIds.contains("node_0000"))
+        assertTrue(advanced.visitedNodeIds.contains("node_0001"))
+    }
+
+    @Test
+    fun advanceByQuestions_subStepIncrementsProgressOnlyWhenTargetGreaterThanOne() {
         val initial = SugorokuProgress(targetQuestionsPerStep = 5)
         val advanced = initial.advanceByQuestions(3)
 
         assertEquals(0, advanced.currentStepIndex)
         assertEquals(3, advanced.currentProgressInStep)
         assertEquals(3, advanced.totalQuestionsAnswered)
-        assertEquals(setOf("node_000"), advanced.visitedNodeIds)
-    }
-
-    @Test
-    fun advanceByQuestions_exactStep_advancesOneStepAndResetsRemainder() {
-        val initial = SugorokuProgress(targetQuestionsPerStep = 5)
-        val advanced = initial.advanceByQuestions(5)
-
-        assertEquals(1, advanced.currentStepIndex)
-        assertEquals(0, advanced.currentProgressInStep)
-        assertEquals(5, advanced.totalQuestionsAnswered)
-        assertTrue(advanced.visitedNodeIds.contains("node_000"))
-        assertTrue(advanced.visitedNodeIds.contains("node_001"))
+        assertEquals(setOf("node_0000"), advanced.visitedNodeIds)
     }
 
     @Test
     fun advanceByQuestions_multiStep_advancesMultipleAndCollectsAllVisitedNodes() {
-        val initial = SugorokuProgress(targetQuestionsPerStep = 5)
-        val advanced = initial.advanceByQuestions(12) // 2 steps (5*2) + 2 remainder
+        val initial = SugorokuProgress(targetQuestionsPerStep = 1)
+        val advanced = initial.advanceByQuestions(3) // 3 steps
 
-        assertEquals(2, advanced.currentStepIndex)
-        assertEquals(2, advanced.currentProgressInStep)
-        assertEquals(12, advanced.totalQuestionsAnswered)
-        assertTrue(advanced.visitedNodeIds.contains("node_000"))
-        assertTrue(advanced.visitedNodeIds.contains("node_001"))
-        assertTrue(advanced.visitedNodeIds.contains("node_002"))
-        assertFalse(advanced.visitedNodeIds.contains("node_003"))
+        assertEquals(3, advanced.currentStepIndex)
+        assertEquals(0, advanced.currentProgressInStep)
+        assertEquals(3, advanced.totalQuestionsAnswered)
+        assertTrue(advanced.visitedNodeIds.contains("node_0000"))
+        assertTrue(advanced.visitedNodeIds.contains("node_0001"))
+        assertTrue(advanced.visitedNodeIds.contains("node_0002"))
+        assertTrue(advanced.visitedNodeIds.contains("node_0003"))
+        assertFalse(advanced.visitedNodeIds.contains("node_0004"))
     }
 
     @Test
     fun advanceByQuestions_capsAtGoal() {
         val initial = SugorokuProgress(
-            currentStepIndex = 111,
-            currentProgressInStep = 3,
-            targetQuestionsPerStep = 5,
+            currentStepIndex = 1995,
+            currentProgressInStep = 0,
+            targetQuestionsPerStep = 1,
         )
-        // Need 2 more for step 112 (相泊ゴール)
         val advanced = initial.advanceByQuestions(100)
 
-        assertEquals(112, advanced.currentStepIndex)
+        assertEquals(1999, advanced.currentStepIndex)
         assertEquals(0, advanced.currentProgressInStep)
         assertEquals(100, advanced.totalQuestionsAnswered)
-        assertTrue(advanced.visitedNodeIds.contains("node_112"))
+        assertTrue(advanced.visitedNodeIds.contains("node_1999"))
     }
 
     @Test
@@ -100,10 +100,10 @@ class SugorokuProgressTest {
         val domain = SugorokuProgress(
             id = "test_progress",
             currentStepIndex = 10,
-            currentProgressInStep = 3,
-            targetQuestionsPerStep = 5,
-            totalQuestionsAnswered = 53,
-            visitedNodeIds = setOf("node_000", "node_001", "node_005", "node_010"),
+            currentProgressInStep = 0,
+            targetQuestionsPerStep = 1,
+            totalQuestionsAnswered = 10,
+            visitedNodeIds = setOf("node_0000", "node_0001", "node_0005", "node_0010"),
             updatedAt = 123456789L,
         )
 
@@ -126,6 +126,6 @@ class SugorokuProgressTest {
             visitedNodeIdsJson = "",
         )
         val domain = malformedEntity.toDomain()
-        assertEquals(setOf("node_000"), domain.visitedNodeIds)
+        assertEquals(setOf("node_0000"), domain.visitedNodeIds)
     }
 }

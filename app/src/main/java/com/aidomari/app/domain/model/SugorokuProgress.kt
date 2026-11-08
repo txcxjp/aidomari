@@ -4,9 +4,9 @@ data class SugorokuProgress(
     val id: String = "default_progress",
     val currentStepIndex: Int = 0,
     val currentProgressInStep: Int = 0,
-    val targetQuestionsPerStep: Int = 5,
+    val targetQuestionsPerStep: Int = 1,
     val totalQuestionsAnswered: Int = 0,
-    val visitedNodeIds: Set<String> = setOf("node_000"),
+    val visitedNodeIds: Set<String> = setOf("node_0000"),
     val updatedAt: Long = System.currentTimeMillis(),
 ) {
     val progressRatioInStep: Float
