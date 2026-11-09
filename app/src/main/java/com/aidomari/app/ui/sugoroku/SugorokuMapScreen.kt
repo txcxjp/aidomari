@@ -392,7 +392,11 @@ fun SugorokuMapContent(
                             )
                         }
                         Text(
-                            text = "${currentNode.municipality} を旅しています",
+                            text = if (currentNode.roadName.isNotEmpty()) {
+                                "${currentNode.municipality}・${currentNode.roadName}"
+                            } else {
+                                "${currentNode.municipality} を旅しています"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -514,7 +518,11 @@ fun SugorokuMapContent(
             text = {
                 Column {
                     Text(
-                        text = "自治体: ${node.municipality}",
+                        text = if (node.roadName.isNotEmpty()) {
+                            "自治体: ${node.municipality} (${node.roadName})"
+                        } else {
+                            "自治体: ${node.municipality}"
+                        },
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
                     )

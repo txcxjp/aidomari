@@ -9,4 +9,5 @@ data class SugorokuNode(
     val x: Float,
     val y: Float,
     val description: String = "",
+    val roadName: String = "",
 )
