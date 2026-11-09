@@ -8,8 +8,8 @@ plugins {
 }
 
 val ciRunNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
-val buildVersionCode = ciRunNumber ?: 1
-val buildVersionName = if (ciRunNumber != null) "2.0.0.$ciRunNumber" else "2.0.0-dev"
+val buildVersionCode = ciRunNumber ?: 9000
+val buildVersionName = if (ciRunNumber != null) "2.0.0.$ciRunNumber" else "2.0.0-local"
 
 android {
     namespace = "com.aidomari.app"
