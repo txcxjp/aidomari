@@ -145,4 +145,22 @@ class SugorokuMapScreenshotTest {
 
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_debug_zoomed_out.png")
     }
+
+    @Test
+    fun captureSugorokuMap_step1999_aidomari() {
+        val aidomariNode = HokkaidoAct1Route.goalNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = 1999),
+                    currentNode = aidomariNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step1999_aidomari.png")
+    }
 }
