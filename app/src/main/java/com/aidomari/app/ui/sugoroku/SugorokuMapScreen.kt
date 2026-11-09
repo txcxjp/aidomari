@@ -57,6 +57,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -82,6 +83,24 @@ fun SugorokuMapScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    SugorokuMapContent(
+        uiState = uiState,
+        onBack = onBack,
+        onSelectNode = { viewModel.selectNode(it) },
+        onDismissDialog = { viewModel.clearSelectedNode() },
+        modifier = modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SugorokuMapContent(
+    uiState: SugorokuMapUiState,
+    onBack: () -> Unit,
+    onSelectNode: (SugorokuNode) -> Unit,
+    onDismissDialog: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val allNodes = HokkaidoAct1Route.nodes
     val tileCentersDp = HokkaidoBoardTrack.tileCenters
     val density = LocalDensity.current.density
@@ -91,16 +110,6 @@ fun SugorokuMapScreen(
     var panOffset by remember { mutableStateOf(Offset.Zero) }
     var hasCenteredInitially by remember { mutableStateOf(false) }
     var isDebugScrollUnlocked by remember { mutableStateOf(false) }
-
-    fun centerOnStep(stepIndex: Int, containerWidth: Float, containerHeight: Float) {
-        val ptDp = tileCentersDp.getOrNull(stepIndex) ?: Offset.Zero
-        val targetX = ptDp.x * density * zoomScale
-        val targetY = ptDp.y * density * zoomScale
-        panOffset = Offset(
-            x = containerWidth / 2f - targetX,
-            y = containerHeight / 2f - targetY,
-        )
-    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -157,7 +166,7 @@ fun SugorokuMapScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFFE8F5E9)), // Warm natural Hokkaido land tone
+                .background(Color(0xFF81D4FA)), // Calm blue ocean as base backdrop
         ) {
             val containerWidth = constraints.maxWidth.toFloat()
             val containerHeight = constraints.maxHeight.toFloat()
@@ -165,28 +174,8 @@ fun SugorokuMapScreen(
             val currentStep = uiState.progress.currentStepIndex
             val currentNode = uiState.currentNode
 
-            // Centering on initial load
-            LaunchedEffect(currentStep, containerWidth, containerHeight) {
-                if (!hasCenteredInitially && containerWidth > 0 && containerHeight > 0) {
-                    centerOnStep(currentStep, containerWidth, containerHeight)
-                    hasCenteredInitially = true
-                }
-            }
-
-            // Floating breathing animation for player piece
-            val infiniteTransition = rememberInfiniteTransition(label = "player_piece_anim")
-            val playerFloatY by infiniteTransition.animateFloat(
-                initialValue = -3f,
-                targetValue = 3f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(1000),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-                label = "player_float_y",
-            )
-
             // Clamp pan offset so camera cannot scroll too far ahead of player (Fog of War)
-            fun clampPan(offset: Offset): Offset {
+            fun clampPan(offset: Offset, scale: Float): Offset {
                 if (tileCentersDp.isEmpty()) return offset
                 val (minX, maxX, minY, maxY) = if (isDebugScrollUnlocked) {
                     listOf(
@@ -207,10 +196,10 @@ fun SugorokuMapScreen(
                 }
 
                 val margin = if (isDebugScrollUnlocked) 600f else 320f
-                val screenMinX = containerWidth - (maxX * zoomScale) - margin
-                val screenMaxX = -(minX * zoomScale) + containerWidth + margin
-                val screenMinY = containerHeight - (maxY * zoomScale) - margin
-                val screenMaxY = -(minY * zoomScale) + containerHeight + margin
+                val screenMinX = containerWidth - (maxX * scale) - margin
+                val screenMaxX = -(minX * scale) + containerWidth + margin
+                val screenMinY = containerHeight - (maxY * scale) - margin
+                val screenMaxY = -(minY * scale) + containerHeight + margin
 
                 val clampedX = offset.x.coerceIn(
                     minOf(screenMinX, screenMaxX),
@@ -223,15 +212,55 @@ fun SugorokuMapScreen(
                 return Offset(clampedX, clampedY)
             }
 
+            fun centerOnStep(stepIndex: Int) {
+                val ptDp = tileCentersDp.getOrNull(stepIndex) ?: Offset.Zero
+                val targetX = ptDp.x * density * zoomScale
+                val targetY = ptDp.y * density * zoomScale
+                val newPan = Offset(
+                    x = containerWidth / 2f - targetX,
+                    y = containerHeight / 2f - targetY,
+                )
+                panOffset = clampPan(newPan, zoomScale)
+            }
+
+            // Smooth zoom centered at screen pivot point (pinch centroid or screen center)
+            fun zoomAt(pivot: Offset, factor: Float, panDelta: Offset = Offset.Zero) {
+                val oldScale = zoomScale
+                val newScale = (oldScale * factor).coerceIn(0.75f, 1.45f)
+                val scaleRatio = newScale / oldScale
+                val targetPan = pivot - (pivot - panOffset) * scaleRatio + panDelta
+                zoomScale = newScale
+                panOffset = clampPan(targetPan, newScale)
+            }
+
+            // Centering on initial load
+            LaunchedEffect(currentStep, containerWidth, containerHeight) {
+                if (!hasCenteredInitially && containerWidth > 0 && containerHeight > 0) {
+                    centerOnStep(currentStep)
+                    hasCenteredInitially = true
+                }
+            }
+
+            // Floating breathing animation for player piece
+            val infiniteTransition = rememberInfiniteTransition(label = "player_piece_anim")
+            val playerFloatY by infiniteTransition.animateFloat(
+                initialValue = -3f,
+                targetValue = 3f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1000),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+                label = "player_float_y",
+            )
+
             // 2D Sugoroku Board Canvas
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag("SugorokuCanvas")
                     .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            zoomScale = (zoomScale * zoom).coerceIn(0.75f, 1.45f)
-                            panOffset = clampPan(panOffset + pan)
+                        detectTransformGestures { centroid, pan, zoom, _ ->
+                            zoomAt(centroid, zoom, pan)
                         }
                     }
                     .pointerInput(tileCentersDp, zoomScale, panOffset, currentStep, isDebugScrollUnlocked) {
@@ -252,7 +281,7 @@ fun SugorokuMapScreen(
                                 val dx = worldX - sx
                                 val dy = worldY - sy
                                 if (dx * dx + dy * dy <= threshold * threshold) {
-                                    viewModel.selectNode(allNodes[i])
+                                    onSelectNode(allNodes[i])
                                     break
                                 }
                             }
@@ -391,7 +420,7 @@ fun SugorokuMapScreen(
             ) {
                 FloatingActionButton(
                     onClick = {
-                        centerOnStep(currentStep, containerWidth, containerHeight)
+                        centerOnStep(currentStep)
                     },
                     modifier = Modifier
                         .size(46.dp)
@@ -408,7 +437,7 @@ fun SugorokuMapScreen(
 
                 FloatingActionButton(
                     onClick = {
-                        zoomScale = (zoomScale * 1.15f).coerceIn(0.75f, 1.45f)
+                        zoomAt(Offset(containerWidth / 2f, containerHeight / 2f), 1.20f)
                     },
                     modifier = Modifier.size(42.dp),
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -423,7 +452,7 @@ fun SugorokuMapScreen(
 
                 FloatingActionButton(
                     onClick = {
-                        zoomScale = (zoomScale / 1.15f).coerceIn(0.75f, 1.45f)
+                        zoomAt(Offset(containerWidth / 2f, containerHeight / 2f), 1f / 1.20f)
                     },
                     modifier = Modifier.size(42.dp),
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -443,7 +472,7 @@ fun SugorokuMapScreen(
     uiState.selectedNode?.let { node ->
         val isReached = node.stepIndex <= uiState.progress.currentStepIndex
         AlertDialog(
-            onDismissRequest = { viewModel.clearSelectedNode() },
+            onDismissRequest = onDismissDialog,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -483,7 +512,7 @@ fun SugorokuMapScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.clearSelectedNode() }) {
+                TextButton(onClick = onDismissDialog) {
                     Text("閉じる")
                 }
             },
@@ -512,86 +541,18 @@ private fun DrawScope.drawGeographicalLandscape(
     val count = visibleStepCount.coerceAtMost(tileCentersDp.size)
 
     val grassGreen = Color(0xFFA5D6A7)
-    val forestGreen = Color(0xFF81C784)
-    val seaBlue = Color(0xFF81D4FA)
     val beachColor = Color(0xFFFFF9C4)
+    val waveColor = Color(0x70FFFFFF)
     val lakeBlue = Color(0xFF4FC3F7)
 
-    // 1. Draw broad green Hokkaido land corridor around track
-    for (i in 0 until count - 1) {
-        val p1 = tileCentersDp[i]
-        val p2 = tileCentersDp[i + 1]
-        val sx1 = p1.x * density
-        val sy1 = p1.y * density
-        val sx2 = p2.x * density
-        val sy2 = p2.y * density
+    val leftPoints = ArrayList<Offset>(count)
+    val rightPoints = ArrayList<Offset>(count)
+    val leftCoastFlags = BooleanArray(count)
+    val rightCoastFlags = BooleanArray(count)
 
-        drawLine(
-            color = grassGreen,
-            start = Offset(sx1, sy1),
-            end = Offset(sx2, sy2),
-            strokeWidth = 320.dp.toPx(),
-            cap = StrokeCap.Round,
-        )
-    }
+    val coastalThreshold = 180.dp.toPx()
 
-    // 2. Coastal Seas:
-    // Hakodate Port (Left sea)
-    drawCoastalSea(tileCentersDp, 0, minOf(16, count), isSeaOnRight = false, density, beachColor, seaBlue)
-
-    // Volcano Bay (Mori to Oshamambe, Right sea)
-    drawCoastalSea(tileCentersDp, 56, minOf(186, count), isSeaOnRight = true, density, beachColor, seaBlue)
-
-    // Sea of Japan & Orolon line (Suttsu to Wakkanai, Left sea)
-    drawCoastalSea(tileCentersDp, 221, minOf(1207, count), isSeaOnRight = false, density, beachColor, seaBlue)
-
-    // Okhotsk Sea (Soya Cape to Shari, Right sea)
-    drawCoastalSea(tileCentersDp, 1207, minOf(1849, count), isSeaOnRight = true, density, beachColor, seaBlue)
-
-    // Shiretoko Utoro (Left sea)
-    drawCoastalSea(tileCentersDp, 1849, minOf(1894, count), isSeaOnRight = false, density, beachColor, seaBlue)
-
-    // Nemuro Strait (Rausu to Aidomari, Right sea)
-    drawCoastalSea(tileCentersDp, 1934, minOf(2000, count), isSeaOnRight = true, density, beachColor, seaBlue)
-
-    // 3. Lake Onuma inland accent (near step 32)
-    if (count > 25) {
-        val onumaPt = tileCentersDp[minOf(32, count - 1)]
-        val ox = onumaPt.x * density + 65.dp.toPx()
-        val oy = onumaPt.y * density
-        drawCircle(
-            color = lakeBlue,
-            radius = 28.dp.toPx(),
-            center = Offset(ox, oy),
-        )
-        drawCircle(
-            color = forestGreen,
-            radius = 6.dp.toPx(),
-            center = Offset(ox - 8.dp.toPx(), oy - 4.dp.toPx()),
-        )
-    }
-}
-
-/**
- * Common helper to draw coastal beach and open sea smoothly along a track section.
- */
-private fun DrawScope.drawCoastalSea(
-    tileCentersDp: List<Offset>,
-    startIdx: Int,
-    endIdx: Int,
-    isSeaOnRight: Boolean,
-    density: Float,
-    beachColor: Color,
-    seaColor: Color,
-) {
-    if (startIdx >= endIdx || startIdx >= tileCentersDp.size) return
-    val seaPath = Path()
-    val beachPath = Path()
-    var first = true
-
-    val sign = if (isSeaOnRight) 1.0f else -1.0f
-
-    for (i in startIdx until endIdx) {
+    for (i in 0 until count) {
         val ptDp = tileCentersDp[i]
         val sx = ptDp.x * density
         val sy = ptDp.y * density
@@ -601,33 +562,140 @@ private fun DrawScope.drawCoastalSea(
         val dirX = nextPtDp.x - prevPtDp.x
         val dirY = nextPtDp.y - prevPtDp.y
         val angle = atan2(dirY, dirX)
-        val normalAngle = angle + (Math.PI / 2.0).toFloat() * sign
-        val normX = cos(normalAngle)
-        val normY = sin(normalAngle)
 
-        val beachEdgeX = sx + normX * 42.dp.toPx()
-        val beachEdgeY = sy + normY * 42.dp.toPx()
+        val leftNormX = cos(angle - Math.PI.toFloat() / 2f)
+        val leftNormY = sin(angle - Math.PI.toFloat() / 2f)
+        val rightNormX = cos(angle + Math.PI.toFloat() / 2f)
+        val rightNormY = sin(angle + Math.PI.toFloat() / 2f)
 
-        if (first) {
-            beachPath.moveTo(beachEdgeX, beachEdgeY)
-            seaPath.moveTo(beachEdgeX + normX * 12.dp.toPx(), beachEdgeY + normY * 12.dp.toPx())
-            first = false
+        val leftDist = getCoastDistance(i, isLeft = true)
+        val rightDist = getCoastDistance(i, isLeft = false)
+
+        leftPoints.add(Offset(sx + leftNormX * leftDist, sy + leftNormY * leftDist))
+        rightPoints.add(Offset(sx + rightNormX * rightDist, sy + rightNormY * rightDist))
+
+        // Coastline line includes the smooth transitional boundary turning toward the horizon
+        leftCoastFlags[i] = leftDist <= inlandWidthThreshold(i, isLeft = true)
+        rightCoastFlags[i] = rightDist <= inlandWidthThreshold(i, isLeft = false)
+    }
+
+    // 1. Draw broad green Hokkaido land polygon
+    val landPath = Path()
+    if (leftPoints.isNotEmpty()) {
+        landPath.moveTo(leftPoints[0].x, leftPoints[0].y)
+        for (i in 1 until count) {
+            landPath.lineTo(leftPoints[i].x, leftPoints[i].y)
+        }
+        for (i in count - 1 downTo 0) {
+            landPath.lineTo(rightPoints[i].x, rightPoints[i].y)
+        }
+        landPath.close()
+    }
+    drawPath(landPath, color = grassGreen)
+
+    // 2. Coastal beaches and shoreline waves along the sea side
+    drawCoastlineBeaches(leftPoints, leftCoastFlags, beachColor, waveColor)
+    drawCoastlineBeaches(rightPoints, rightCoastFlags, beachColor, waveColor)
+
+    // 3. Lake Onuma inland accent (near step 32)
+    if (count > 25) {
+        val onumaPt = tileCentersDp[minOf(32, count - 1)]
+        val ox = onumaPt.x * density + 65.dp.toPx()
+        val oy = onumaPt.y * density
+        drawCircle(
+            color = lakeBlue,
+            radius = 32.dp.toPx(),
+            center = Offset(ox, oy),
+        )
+        drawCircle(
+            color = grassGreen,
+            radius = 7.dp.toPx(),
+            center = Offset(ox - 8.dp.toPx(), oy - 4.dp.toPx()),
+        )
+    }
+}
+
+private fun inlandWidthThreshold(step: Int, isLeft: Boolean): Float {
+    // If the step is part of the coastline corridor or the transition curve to the horizon, include it
+    return 750f * 3f
+}
+
+private fun getCoastDistance(
+    step: Int,
+    isLeft: Boolean,
+): Float {
+    val coastal = 48f * 3f // 48dp * density approx, standard tile radius 29dp + 19dp beach
+    val inland = 850f * 3f
+
+    fun lerpDist(a: Float, b: Float, t: Float) = a + (b - a) * t
+
+    return if (isLeft) {
+        when (step) {
+            in 0..13 -> coastal
+            14 -> lerpDist(coastal, inland, 0.40f)
+            15 -> lerpDist(coastal, inland, 0.80f)
+            in 16..219 -> inland
+            220 -> lerpDist(inland, coastal, 0.50f)
+            in 221..1205 -> coastal
+            1206 -> lerpDist(coastal, inland, 0.50f)
+            in 1207..1847 -> inland
+            1848 -> lerpDist(inland, coastal, 0.50f)
+            in 1849..1892 -> coastal
+            1893 -> lerpDist(coastal, inland, 0.50f)
+            else -> inland
+        }
+    } else {
+        when (step) {
+            in 0..54 -> inland
+            55 -> lerpDist(inland, coastal, 0.50f)
+            in 56..184 -> coastal
+            185 -> lerpDist(coastal, inland, 0.50f)
+            in 186..1205 -> inland
+            1206 -> lerpDist(inland, coastal, 0.50f)
+            in 1207..1847 -> coastal
+            1848 -> lerpDist(coastal, inland, 0.50f)
+            in 1849..1932 -> inland
+            1933 -> lerpDist(inland, coastal, 0.50f)
+            in 1934..1999 -> coastal
+            else -> inland
+        }
+    }
+}
+
+private fun DrawScope.drawCoastlineBeaches(
+    points: List<Offset>,
+    coastFlags: BooleanArray,
+    beachColor: Color,
+    waveColor: Color,
+) {
+    var inSegment = false
+    val beachPath = Path()
+
+    for (i in points.indices) {
+        if (coastFlags[i]) {
+            if (!inSegment) {
+                beachPath.moveTo(points[i].x, points[i].y)
+                inSegment = true
+            } else {
+                beachPath.lineTo(points[i].x, points[i].y)
+            }
         } else {
-            beachPath.lineTo(beachEdgeX, beachEdgeY)
-            seaPath.lineTo(beachEdgeX + normX * 12.dp.toPx(), beachEdgeY + normY * 12.dp.toPx())
+            inSegment = false
         }
     }
 
-    drawPath(
-        beachPath,
-        beachColor,
-        style = Stroke(width = 16.dp.toPx(), cap = StrokeCap.Round),
-    )
-    drawPath(
-        seaPath,
-        seaColor,
-        style = Stroke(width = 280.dp.toPx(), cap = StrokeCap.Round),
-    )
+    if (!beachPath.isEmpty) {
+        drawPath(
+            path = beachPath,
+            color = beachColor,
+            style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+        )
+        drawPath(
+            path = beachPath,
+            color = waveColor,
+            style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+        )
+    }
 }
 
 /**
@@ -760,17 +828,61 @@ private fun DrawScope.drawSugorokuTiles(
             stepNumberPaint,
         )
 
-        // Tile Contents: Name label in center
-        val displayName = if (node.name.length > 4) node.name.take(4) else node.name
-        drawContext.canvas.nativeCanvas.drawText(
-            displayName,
-            cx,
-            top + 28.dp.toPx(),
-            labelPaint,
-        )
+        if (isCurrent) {
+            // For current tile: player avatar stands inside tile.
+            // Draw a crisp floating location pill badge beneath tile so text is never obscured!
+            val badgeText = node.name
+            val badgePaint = Paint().apply {
+                color = android.graphics.Color.rgb(33, 33, 33)
+                textSize = 10.dp.toPx()
+                isAntiAlias = true
+                typeface = Typeface.DEFAULT_BOLD
+                textAlign = Paint.Align.CENTER
+            }
+            val textWidth = badgePaint.measureText(badgeText)
+            val badgeWidth = textWidth + 14.dp.toPx()
+            val badgeHeight = 18.dp.toPx()
+            val badgeLeft = cx - badgeWidth / 2f
+            val badgeTop = top + tileSizePx + 4.dp.toPx()
 
-        // Tile Contents: Icon on bottom (only if not current step, to avoid overlap with piece)
-        if (!isCurrent) {
+            // Badge shadow & white pill background
+            drawRoundRect(
+                color = Color(0x33000000),
+                topLeft = Offset(badgeLeft + 1.dp.toPx(), badgeTop + 1.5.dp.toPx()),
+                size = Size(badgeWidth, badgeHeight),
+                cornerRadius = CornerRadius(9.dp.toPx(), 9.dp.toPx()),
+            )
+            drawRoundRect(
+                color = Color(0xFFFFFFFF),
+                topLeft = Offset(badgeLeft, badgeTop),
+                size = Size(badgeWidth, badgeHeight),
+                cornerRadius = CornerRadius(9.dp.toPx(), 9.dp.toPx()),
+            )
+            drawRoundRect(
+                color = Color(0xFFF57F17),
+                topLeft = Offset(badgeLeft, badgeTop),
+                size = Size(badgeWidth, badgeHeight),
+                cornerRadius = CornerRadius(9.dp.toPx(), 9.dp.toPx()),
+                style = Stroke(width = 1.2.dp.toPx()),
+            )
+            drawContext.canvas.nativeCanvas.drawText(
+                badgeText,
+                cx,
+                badgeTop + 13.dp.toPx(),
+                badgePaint,
+            )
+        } else {
+            // Normal tile: name in center (with automatic multi-line wrapping so names are never truncated)
+            drawTileLabel(
+                text = node.name,
+                cx = cx,
+                cy = top + 28.dp.toPx(),
+                maxTextWidthPx = 48.dp.toPx(),
+                baseTextSizePx = 11.dp.toPx(),
+                paint = labelPaint,
+            )
+
+            // Tile Contents: Icon on bottom
             val iconStr = when (node.type) {
                 SugorokuNodeType.START_HAKODATE -> "🎌"
                 SugorokuNodeType.GOAL_AIDOMARI -> "🏁"
@@ -787,6 +899,51 @@ private fun DrawScope.drawSugorokuTiles(
             )
         }
     }
+}
+
+/**
+ * Draws tile label text gracefully without truncation, wrapping into 2 lines if needed.
+ */
+private fun DrawScope.drawTileLabel(
+    text: String,
+    cx: Float,
+    cy: Float,
+    maxTextWidthPx: Float,
+    baseTextSizePx: Float,
+    paint: Paint,
+) {
+    paint.textSize = baseTextSizePx
+    val textWidth = paint.measureText(text)
+    if (textWidth <= maxTextWidthPx) {
+        drawContext.canvas.nativeCanvas.drawText(text, cx, cy, paint)
+    } else if (text.length >= 4) {
+        val (line1, line2) = splitJapaneseTileName(text)
+        paint.textSize = (baseTextSizePx * 0.82f).coerceAtLeast(8.dp.toPx())
+        val lineHeight = paint.fontSpacing * 0.88f
+        drawContext.canvas.nativeCanvas.drawText(line1, cx, cy - lineHeight * 0.42f, paint)
+        drawContext.canvas.nativeCanvas.drawText(line2, cx, cy + lineHeight * 0.58f, paint)
+    } else {
+        paint.textSize = baseTextSizePx * (maxTextWidthPx / textWidth)
+        drawContext.canvas.nativeCanvas.drawText(text, cx, cy, paint)
+    }
+}
+
+/**
+ * Gracefully splits Japanese landmark and street names at natural word boundaries.
+ */
+private fun splitJapaneseTileName(text: String): Pair<String, String> {
+    val keywords = listOf(
+        "タワー前", "交差点", "公園前", "駅前通", "本町通", "温泉街", "市街地",
+        "タワー", "公園", "駅前", "本町", "温泉", "案内所", "展望台", "灯台", "漁港", "海岸", "通り", "神社", "寺院", "岬",
+    )
+    for (kw in keywords) {
+        val idx = text.indexOf(kw)
+        if (idx in 2..4) {
+            return Pair(text.substring(0, idx), text.substring(idx))
+        }
+    }
+    val mid = (text.length + 1) / 2
+    return Pair(text.substring(0, mid), text.substring(mid))
 }
 
 /**
