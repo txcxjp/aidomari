@@ -57,6 +57,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -71,7 +72,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aidomari.app.domain.model.HighwayCategory
 import com.aidomari.app.domain.model.HokkaidoAct1Route
+import com.aidomari.app.domain.model.HokkaidoRoadNetwork
 import com.aidomari.app.domain.model.SugorokuNode
 import com.aidomari.app.domain.model.SugorokuNodeType
 
@@ -324,7 +327,14 @@ fun SugorokuMapContent(
                         density = density,
                     )
 
-                    // 2. Connected Travel Road along the verified travel route
+                    // 2. Real Highway Network: actual national and prefectural roads drawn directly onto land
+                    drawHokkaidoRoadNetwork(
+                        worldScale = HokkaidoBoardTrack.WORLD_SCALE,
+                        density = density,
+                        zoomScale = zoomScale,
+                    )
+
+                    // 3. Connected Travel Road along the verified travel route
                     drawConnectingRoads(
                         tileCentersDp = tileCentersDp,
                         visibleStepCount = visibleTrackStep + 1,
@@ -573,6 +583,88 @@ private fun DrawScope.drawHokkaidoRealLandscape(
             drawPath(path = path, color = waveColor, style = Stroke(width = 1.5.dp.toPx() / scaleFactor))
             // 4. Clean coastline border
             drawPath(path = path, color = borderColor, style = Stroke(width = 0.8.dp.toPx() / scaleFactor))
+        }
+    }
+}
+
+/**
+ * Draws the real highway network across Hokkaido directly on the landmass.
+ * Roads are rendered with authentic asphalt surfaces, borders, and centerlines.
+ */
+private fun DrawScope.drawHokkaidoRoadNetwork(
+    worldScale: Float,
+    density: Float,
+    zoomScale: Float,
+) {
+    val scaleFactor = worldScale * density
+
+    for (segment in HokkaidoRoadNetwork.segments) {
+        if (segment.waypoints.size < 2) continue
+
+        val roadPath = Path().apply {
+            val first = segment.waypoints[0]
+            moveTo(first.x * scaleFactor, first.y * scaleFactor)
+            for (i in 1 until segment.waypoints.size) {
+                val pt = segment.waypoints[i]
+                lineTo(pt.x * scaleFactor, pt.y * scaleFactor)
+            }
+        }
+
+        // When zoomed out to wide prefecture view, draw crisp high-visibility lines
+        if (zoomScale < 0.05f) {
+            val strokeWidth = when (segment.category) {
+                HighwayCategory.NATIONAL_HIGHWAY -> 2.5.dp.toPx() / zoomScale
+                HighwayCategory.SCENIC_ROAD -> 2.0.dp.toPx() / zoomScale
+                HighwayCategory.PREFECTURAL_ROAD -> 1.5.dp.toPx() / zoomScale
+            }
+            val roadColor = when (segment.category) {
+                HighwayCategory.NATIONAL_HIGHWAY -> Color(0xFF1565C0) // Crisp blue highway
+                HighwayCategory.SCENIC_ROAD -> Color(0xFF00897B) // Scenic teal
+                HighwayCategory.PREFECTURAL_ROAD -> Color(0xFF546E7A) // Slate grey
+            }
+            drawPath(
+                path = roadPath,
+                color = roadColor,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
+        } else {
+            // Local / zoomed-in view: draw realistic asphalt highway with roadbed
+            val borderWidth = when (segment.category) {
+                HighwayCategory.NATIONAL_HIGHWAY -> 16.dp.toPx()
+                HighwayCategory.SCENIC_ROAD -> 14.dp.toPx()
+                HighwayCategory.PREFECTURAL_ROAD -> 12.dp.toPx()
+            }
+            val surfaceWidth = when (segment.category) {
+                HighwayCategory.NATIONAL_HIGHWAY -> 12.dp.toPx()
+                HighwayCategory.SCENIC_ROAD -> 10.dp.toPx()
+                HighwayCategory.PREFECTURAL_ROAD -> 8.dp.toPx()
+            }
+
+            // 1. Road bed / border
+            drawPath(
+                path = roadPath,
+                color = Color(0xFF37474F), // Dark slate roadbed
+                style = Stroke(width = borderWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
+            // 2. Clean asphalt surface
+            drawPath(
+                path = roadPath,
+                color = Color(0xFFCFD8DC), // Cool grey asphalt
+                style = Stroke(width = surfaceWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
+            // 3. Center line for National Highways
+            if (segment.category == HighwayCategory.NATIONAL_HIGHWAY) {
+                drawPath(
+                    path = roadPath,
+                    color = Color.White.copy(alpha = 0.85f),
+                    style = Stroke(
+                        width = 1.5.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx())),
+                    ),
+                )
+            }
         }
     }
 }

@@ -77,6 +77,32 @@ class SugorokuMapScreenshotTest {
     }
 
     @Test
+    fun captureSugorokuMap_step250_suttsu_area() {
+        val suttsuNode = HokkaidoAct1Route.getNodeByStepIndex(250) ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = 250),
+                    currentNode = suttsuNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        // Unlock scroll restriction
+        composeTestRule.onNodeWithTag("DebugScrollLockButton").performClick()
+        composeTestRule.waitForIdle()
+
+        // Zoom out 3 times to see highway network around Suttsu/Motsuta/Raiden
+        repeat(3) {
+            composeTestRule.onNodeWithContentDescription("縮小").performClick()
+            composeTestRule.waitForIdle()
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step250_suttsu_area.png")
+    }
+
+    @Test
     fun captureSugorokuMap_step1162_noshappu() {
         val noshappuNode = HokkaidoAct1Route.getNodeByStepIndex(1162) ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
