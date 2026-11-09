@@ -77,6 +77,24 @@ class SugorokuMapScreenshotTest {
     }
 
     @Test
+    fun captureSugorokuMap_step1162_noshappu() {
+        val noshappuNode = HokkaidoAct1Route.getNodeByStepIndex(1162) ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = 1162),
+                    currentNode = noshappuNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step1162_noshappu.png")
+    }
+
+    @Test
     fun captureSugorokuMap_step1218_soya() {
         val soyaNode = HokkaidoAct1Route.getNodeByStepIndex(1218) ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
