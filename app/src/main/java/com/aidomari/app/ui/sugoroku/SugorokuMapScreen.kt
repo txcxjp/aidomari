@@ -67,12 +67,14 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.domain.model.HighwayCategory
+import com.aidomari.app.domain.model.HighwaySegment
 import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.HokkaidoRoadNetwork
 import com.aidomari.app.domain.model.SugorokuNode
@@ -107,6 +109,7 @@ fun SugorokuMapContent(
     val allNodes = HokkaidoAct1Route.nodes
     val tileCentersDp = HokkaidoBoardTrack.tileCenters
     val density = LocalDensity.current.density
+    val context = LocalContext.current
 
     // Pre-parse official Wikipedia SVG Hokkaido paths
     val donanPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3039_D).toPath() }
@@ -115,6 +118,23 @@ fun SugorokuMapContent(
     val dotoPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3047_D).toPath() }
     val okushiriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3037_D).toPath() }
     val hokkaidoPaths = remember { listOf(donanPath, dohokuPath, doouPath, dotoPath, okushiriPath) }
+
+    // Pre-load 34,000+ real GIS high-density highway network paths (built once in memory)
+    val highDensityRoadSegments = remember(context) { HokkaidoRoadNetwork.getHighDensitySegments(context) }
+    val worldScaleFactor = HokkaidoBoardTrack.WORLD_SCALE * density
+    val cachedHighwayPaths = remember(highDensityRoadSegments, worldScaleFactor) {
+        highDensityRoadSegments.map { segment ->
+            val p = Path()
+            if (segment.waypoints.isNotEmpty()) {
+                p.moveTo(segment.waypoints[0].x * worldScaleFactor, segment.waypoints[0].y * worldScaleFactor)
+                for (i in 1 until segment.waypoints.size) {
+                    val pt = segment.waypoints[i]
+                    p.lineTo(pt.x * worldScaleFactor, pt.y * worldScaleFactor)
+                }
+            }
+            segment to p
+        }
+    }
 
     // Unified zoom scale: applied uniformly to entire canvas via withTransform
     var zoomScale by remember { mutableFloatStateOf(1.0f) }
@@ -329,8 +349,7 @@ fun SugorokuMapContent(
 
                     // 2. Real Highway Network: actual national and prefectural roads drawn directly onto land
                     drawHokkaidoRoadNetwork(
-                        worldScale = HokkaidoBoardTrack.WORLD_SCALE,
-                        density = density,
+                        highwayPaths = cachedHighwayPaths,
                         zoomScale = zoomScale,
                     )
 
@@ -589,26 +608,14 @@ private fun DrawScope.drawHokkaidoRealLandscape(
 
 /**
  * Draws the real highway network across Hokkaido directly on the landmass.
- * Roads are rendered with authentic asphalt surfaces, borders, and centerlines.
+ * Over 34,000 real GIS points render authentic curved asphalt highways, borders, and centerlines.
  */
 private fun DrawScope.drawHokkaidoRoadNetwork(
-    worldScale: Float,
-    density: Float,
+    highwayPaths: List<Pair<HighwaySegment, Path>>,
     zoomScale: Float,
 ) {
-    val scaleFactor = worldScale * density
-
-    for (segment in HokkaidoRoadNetwork.segments) {
+    for ((segment, roadPath) in highwayPaths) {
         if (segment.waypoints.size < 2) continue
-
-        val roadPath = Path().apply {
-            val first = segment.waypoints[0]
-            moveTo(first.x * scaleFactor, first.y * scaleFactor)
-            for (i in 1 until segment.waypoints.size) {
-                val pt = segment.waypoints[i]
-                lineTo(pt.x * scaleFactor, pt.y * scaleFactor)
-            }
-        }
 
         // When zoomed out to wide prefecture view, draw crisp high-visibility lines
         if (zoomScale < 0.05f) {

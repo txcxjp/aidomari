@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.HokkaidoRoadNetwork
@@ -58,6 +59,19 @@ fun HokkaidoMiniMap(
     val dotoPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3047_D).toPath() }
     val okushiriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3037_D).toPath() }
 
+    val context = LocalContext.current
+    val segments = remember(context) { HokkaidoRoadNetwork.getHighDensitySegments(context) }
+    val miniMapRoadPaths = remember(segments) {
+        segments.filter { it.waypoints.size >= 2 }.map { seg ->
+            Path().apply {
+                moveTo(seg.waypoints[0].x, seg.waypoints[0].y)
+                for (i in 1 until seg.waypoints.size) {
+                    lineTo(seg.waypoints[i].x, seg.waypoints[i].y)
+                }
+            }
+        }
+    }
+
     Box(
         modifier = modifier
             .shadow(4.dp, RoundedCornerShape(10.dp))
@@ -84,22 +98,14 @@ fun HokkaidoMiniMap(
                     drawPath(path = path, color = landBorderColor, style = Stroke(width = 1f))
                 }
 
-                // Highway network lines on mini-map
-                val miniRoadColor = Color(0xFF1565C0).copy(alpha = 0.5f)
-                HokkaidoRoadNetwork.segments.forEach { segment ->
-                    if (segment.waypoints.size >= 2) {
-                        val roadPath = Path().apply {
-                            moveTo(segment.waypoints[0].x, segment.waypoints[0].y)
-                            for (i in 1 until segment.waypoints.size) {
-                                lineTo(segment.waypoints[i].x, segment.waypoints[i].y)
-                            }
-                        }
-                        drawPath(
-                            path = roadPath,
-                            color = miniRoadColor,
-                            style = Stroke(width = 1.2f, cap = StrokeCap.Round, join = StrokeJoin.Round),
-                        )
-                    }
+                // 34,000+ Real GIS Highway network lines on mini-map
+                val miniRoadColor = Color(0xFF1565C0).copy(alpha = 0.6f)
+                miniMapRoadPaths.forEach { roadPath ->
+                    drawPath(
+                        path = roadPath,
+                        color = miniRoadColor,
+                        style = Stroke(width = 0.9f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+                    )
                 }
             }
 
