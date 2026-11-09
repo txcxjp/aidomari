@@ -18,25 +18,27 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
+import com.aidomari.app.domain.model.HokkaidoAct1Route
 import kotlin.math.cos
 import kotlin.math.sin
 
 /**
  * Pre-computed equidistant board game layout for the 2,000 Sugoroku steps.
  * Step distance is strictly 80dp (58dp tile + 22dp gap) so tiles NEVER overlap.
+ * Real geographic progression reflects Hokkaido's distinct road directions:
+ * - Hakodate to Mori: inland north
+ * - Mori to Oshamambe: Uchiura (Volcano) Bay arc
+ * - Kuromatsunai to Sea of Japan: west pass
+ * - Shakotan Peninsula loop: jutting northwest to Kamui Cape, folding east to Yoichi
+ * - Otaru to Ishikari & Orolon line: long straight north along Sea of Japan
+ * - Soya Cape: northernmost tip
+ * - Okhotsk coast: sweeping southeast run to Abashiri & Shari
+ * - Shiretoko Pass: mountain hairpin descent
+ * - Aidomari: northeast coastal terminus
  */
 object HokkaidoBoardTrack {
     const val STEP_DIST_DP = 80f // 80dp strictly between tile centers
 
-    /**
-     * 2,000 equidistant tile center coordinates in DP units.
-     * Follows the real journey of Act 1:
-     * - Step 0 to 99: Hakodate inland via Goryokaku and Nanae over the pass to Lake Onuma
-     * - Step 100 to 250: Reaches the coast at Mori town, heading along Uchiura Bay (Volcano Bay)
-     * - Step 250 to 1218: Passes Kuromatsunai to Sea of Japan and heads north along Orolon line
-     * - Step 1218 to 1700: Soya Cape along Okhotsk coast
-     * - Step 1700 to 1999: Shiretoko pass to Aidomari terminus
-     */
     val tileCenters: List<Offset> by lazy {
         val count = 2000
         val points = ArrayList<Offset>(count)
@@ -47,13 +49,39 @@ object HokkaidoBoardTrack {
 
         for (i in 0 until count - 1) {
             val baseAngle = when {
-                i < 1218 -> -Math.PI.toFloat() / 2f
-                i < 1700 -> (Math.PI * 0.35).toFloat()
-                else -> (-Math.PI * 0.35).toFloat()
+                // 1. Hakodate to Lake Onuma (0..55): Inland north
+                i < 56 -> -Math.PI.toFloat() / 2f
+                // 2. Mori to Oshamambe (56..185): Uchiura (Volcano) Bay arc
+                i < 86 -> (-Math.PI * 0.58).toFloat() // Rounding Mt. Komagatake
+                i < 141 -> (-Math.PI * 0.65).toFloat() // Yakumo: northwest bay coast
+                i < 186 -> (-Math.PI * 0.35).toFloat() // Oshamambe: curving northeast at bay apex
+                // 3. Kuromatsunai to Suttsu (186..220): Inland watershed west to Sea of Japan
+                i < 221 -> (-Math.PI * 0.75).toFloat()
+                // 4. Suttsu, Shimamaki, Raiden coast to Iwanai (221..380): Sea of Japan cliffs north
+                i < 381 -> (-Math.PI * 0.48).toFloat()
+                // 5. Shakotan Peninsula loop (381..505): Dramatic northwest jut, then folding east
+                i < 475 -> (-Math.PI * 0.70).toFloat() // Jutting northwest to Kamui Cape
+                i < 506 -> (Math.PI * 0.15).toFloat() // Folding southeast to Yoichi
+                // 6. Yoichi to Otaru (506..600): Ishikari Bay coast east/northeast
+                i < 601 -> (-Math.PI * 0.20).toFloat()
+                // 7. Ishikari to Hamamasu & Ofuyu (601..690): Heading north-northeast
+                i < 691 -> (-Math.PI * 0.40).toFloat()
+                // 8. Orolon line: Mashike, Rumoi, Haboro, Teshio, Sarobetsu to Wakkanai (691..1161)
+                i < 1162 -> (-Math.PI * 0.47).toFloat() // Monumental straight coastal run north
+                // 9. Wakkanai to Soya Cape (1162..1218): Heading east to northernmost point
+                i < 1219 -> (-Math.PI * 0.05).toFloat()
+                // 10. Okhotsk line: Soya, Sarufutsu, Esashi, Monbetsu, Saroma, Abashiri to Shari (1219..1848)
+                i < 1849 -> (Math.PI * 0.28).toFloat() // Grand southeast coastal descent
+                // 11. Shari to Shiretoko Utoro (1849..1893): Northeast approach to World Heritage Shiretoko
+                i < 1894 -> (-Math.PI * 0.22).toFloat()
+                // 12. Shiretoko Pass (1894..1933): Hairpin descent from 738m summit
+                i < 1934 -> (Math.PI * 0.12).toFloat()
+                // 13. Rausu to Aidomari terminus (1934..1999): Northeast coastal road end
+                else -> (-Math.PI * 0.25).toFloat()
             }
 
-            // Local winding snake S-curves across screen width (swing +- 34 degrees left/right)
-            val snake = sin(i * 0.34f) * 0.60f
+            // Gentle rhythmic snake wave keeping tiles within comfortable width
+            val snake = sin(i * 0.32f) * 0.25f
             val angle = baseAngle + snake
 
             curX += STEP_DIST_DP * cos(angle)
@@ -110,26 +138,10 @@ fun HokkaidoMiniMap(
                 }
             }
 
-            // Accurate position of player dot in SVG coordinates:
-            // Hakodate station: (X ~ 156f, Y ~ 335f)
-            // Mori town: (X ~ 162f, Y ~ 308f)
-            // Soya Cape: (X ~ 205f, Y ~ 28f)
-            // Aidomari (Shiretoko): (X ~ 478f, Y ~ 124f)
-            val ratio = (currentStepIndex.toFloat() / totalSteps.coerceAtLeast(1)).coerceIn(0f, 1f)
-            val svgX: Float
-            val svgY: Float
-
-            if (ratio < 0.61f) {
-                // Moving Hakodate (156, 335) -> Soya (205, 28)
-                val subR = ratio / 0.61f
-                svgX = 156f + subR * (205f - 156f)
-                svgY = 335f + subR * (28f - 335f)
-            } else {
-                // Moving Soya (205, 28) -> Shiretoko / Aidomari (478, 124)
-                val subR = (ratio - 0.61f) / 0.39f
-                svgX = 205f + subR * (478f - 205f)
-                svgY = 28f + subR * (124f - 28f)
-            }
+            // Accurate position of player dot sampled directly from current node's real SVG coordinates:
+            val node = HokkaidoAct1Route.getNodeByStepIndex(currentStepIndex)
+            val svgX = node?.x ?: 115.0f
+            val svgY = node?.y ?: 311.0f
 
             val dotCanvasX = svgX * scaleX
             val dotCanvasY = svgY * scaleY

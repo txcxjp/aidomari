@@ -90,6 +90,7 @@ fun SugorokuMapScreen(
     var zoomScale by remember { mutableFloatStateOf(1.0f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
     var hasCenteredInitially by remember { mutableStateOf(false) }
+    var isDebugScrollUnlocked by remember { mutableStateOf(false) }
 
     fun centerOnStep(stepIndex: Int, containerWidth: Float, containerHeight: Float) {
         val ptDp = tileCentersDp.getOrNull(stepIndex) ?: Offset.Zero
@@ -131,6 +132,18 @@ fun SugorokuMapScreen(
                     }
                 },
                 actions = {
+                    // Temporary debug toggle for developer inspection across all 2,000 nodes
+                    IconButton(
+                        onClick = { isDebugScrollUnlocked = !isDebugScrollUnlocked },
+                        modifier = Modifier.testTag("DebugScrollLockButton"),
+                    ) {
+                        Text(
+                            text = if (isDebugScrollUnlocked) "🔓全域" else "🔒制限",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isDebugScrollUnlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                        )
+                    }
                     Text(
                         text = "🗾",
                         fontSize = 22.sp,
@@ -175,14 +188,25 @@ fun SugorokuMapScreen(
             // Clamp pan offset so camera cannot scroll too far ahead of player (Fog of War)
             fun clampPan(offset: Offset): Offset {
                 if (tileCentersDp.isEmpty()) return offset
-                val allowedScrollStep = (currentStep + 16).coerceAtMost(tileCentersDp.lastIndex)
-                val visiblePts = tileCentersDp.subList(0, allowedScrollStep + 1)
-                val minX = visiblePts.minOf { it.x * density }
-                val maxX = visiblePts.maxOf { it.x * density }
-                val minY = visiblePts.minOf { it.y * density }
-                val maxY = visiblePts.maxOf { it.y * density }
+                val (minX, maxX, minY, maxY) = if (isDebugScrollUnlocked) {
+                    listOf(
+                        tileCentersDp.minOf { it.x * density },
+                        tileCentersDp.maxOf { it.x * density },
+                        tileCentersDp.minOf { it.y * density },
+                        tileCentersDp.maxOf { it.y * density },
+                    )
+                } else {
+                    val allowedScrollStep = (currentStep + 16).coerceAtMost(tileCentersDp.lastIndex)
+                    val visiblePts = tileCentersDp.subList(0, allowedScrollStep + 1)
+                    listOf(
+                        visiblePts.minOf { it.x * density },
+                        visiblePts.maxOf { it.x * density },
+                        visiblePts.minOf { it.y * density },
+                        visiblePts.maxOf { it.y * density },
+                    )
+                }
 
-                val margin = 320f
+                val margin = if (isDebugScrollUnlocked) 600f else 320f
                 val screenMinX = containerWidth - (maxX * zoomScale) - margin
                 val screenMaxX = -(minX * zoomScale) + containerWidth + margin
                 val screenMinY = containerHeight - (maxY * zoomScale) - margin
@@ -210,13 +234,17 @@ fun SugorokuMapScreen(
                             panOffset = clampPan(panOffset + pan)
                         }
                     }
-                    .pointerInput(tileCentersDp, zoomScale, panOffset, currentStep) {
+                    .pointerInput(tileCentersDp, zoomScale, panOffset, currentStep, isDebugScrollUnlocked) {
                         detectTapGestures { tapOffset ->
                             val worldX = (tapOffset.x - panOffset.x) / zoomScale
                             val worldY = (tapOffset.y - panOffset.y) / zoomScale
                             val threshold = 34.dp.toPx()
 
-                            val maxVisibleTrackStep = (currentStep + 40).coerceAtMost(allNodes.lastIndex)
+                            val maxVisibleTrackStep = if (isDebugScrollUnlocked) {
+                                allNodes.lastIndex
+                            } else {
+                                (currentStep + 40).coerceAtMost(allNodes.lastIndex)
+                            }
                             for (i in 0..maxVisibleTrackStep) {
                                 val ptDp = tileCentersDp[i]
                                 val sx = ptDp.x * density
@@ -231,8 +259,12 @@ fun SugorokuMapScreen(
                         }
                     },
             ) {
-                // The road is drawn far ahead (up to 40 steps ahead) so it extends off-screen naturally!
-                val visibleTrackStep = (currentStep + 40).coerceAtMost(allNodes.lastIndex)
+                // The road is drawn far ahead (up to 40 steps ahead, or entire route in debug) so it extends off-screen naturally!
+                val visibleTrackStep = if (isDebugScrollUnlocked) {
+                    allNodes.lastIndex
+                } else {
+                    (currentStep + 40).coerceAtMost(allNodes.lastIndex)
+                }
 
                 // Unified transform: scale and translate applied equally to landscape and tiles
                 withTransform({
@@ -461,8 +493,15 @@ fun SugorokuMapScreen(
 
 /**
  * Draws real Hokkaido geography:
- * - Steps 0 to 99 (Hakodate to Lake Onuma): INLAND terrain (Route 5 passes inland through Goryokaku, Nanae, and pass to Lake Onuma). Lush greenery on both sides.
- * - Steps 100+ (Mori town to Yakumo/Oshamambe): Reaches the coast at Uchiura Bay (Volcano Bay). Sea appears on the right!
+ * - Steps 0 to 15 (Hakodate city): Hakodate Port & Bay on the LEFT (west).
+ * - Steps 16 to 55 (Nanae to Lake Onuma pass): INLAND lush countryside & Lake Onuma.
+ * - Steps 56 to 185 (Mori, Yakumo, Oshamambe): Uchiura (Volcano) Bay on the RIGHT (east)!
+ * - Steps 186 to 220 (Kuromatsunai pass): INLAND beech forest watershed.
+ * - Steps 221 to 1206 (Suttsu, Shakotan, Otaru, Orolon line to Wakkanai): Sea of Japan on the LEFT!
+ * - Steps 1207 to 1848 (Soya Cape to Abashiri & Shari): Sea of Okhotsk on the RIGHT!
+ * - Steps 1849 to 1893 (Shiretoko Utoro): Sea of Okhotsk on the LEFT.
+ * - Steps 1894 to 1933 (Shiretoko Pass): Alpine mountain summit road around Mt. Rausu.
+ * - Steps 1934 to 1999 (Rausu to Aidomari terminus): Nemuro Strait on the RIGHT (facing Kunashiri Island)!
  */
 private fun DrawScope.drawGeographicalLandscape(
     tileCentersDp: List<Offset>,
@@ -487,7 +526,6 @@ private fun DrawScope.drawGeographicalLandscape(
         val sx2 = p2.x * density
         val sy2 = p2.y * density
 
-        // Broad landscape swath around the road
         drawLine(
             color = grassGreen,
             start = Offset(sx1, sy1),
@@ -497,58 +535,29 @@ private fun DrawScope.drawGeographicalLandscape(
         )
     }
 
-    // 2. Coastal section: Volcano Bay appears when reaching Mori town (~step 100)
-    // If visible steps reach step 95+, draw the opening of Volcano Bay on the right
-    if (count > 95) {
-        val coastStartIdx = 95
-        val seaPath = Path()
-        val beachPath = Path()
-        var first = true
+    // 2. Coastal Seas:
+    // Hakodate Port (Left sea)
+    drawCoastalSea(tileCentersDp, 0, minOf(16, count), isSeaOnRight = false, density, beachColor, seaBlue)
 
-        for (i in coastStartIdx until count) {
-            val ptDp = tileCentersDp[i]
-            val sx = ptDp.x * density
-            val sy = ptDp.y * density
+    // Volcano Bay (Mori to Oshamambe, Right sea)
+    drawCoastalSea(tileCentersDp, 56, minOf(186, count), isSeaOnRight = true, density, beachColor, seaBlue)
 
-            val nextPtDp = if (i < count - 1) tileCentersDp[i + 1] else tileCentersDp[i]
-            val prevPtDp = if (i > 0) tileCentersDp[i - 1] else tileCentersDp[i]
-            val dirX = nextPtDp.x - prevPtDp.x
-            val dirY = nextPtDp.y - prevPtDp.y
-            val angle = atan2(dirY, dirX)
-            val normalAngle = angle + (Math.PI / 2.0).toFloat()
-            val normX = cos(normalAngle)
-            val normY = sin(normalAngle)
+    // Sea of Japan & Orolon line (Suttsu to Wakkanai, Left sea)
+    drawCoastalSea(tileCentersDp, 221, minOf(1207, count), isSeaOnRight = false, density, beachColor, seaBlue)
 
-            // Sea on the right side of the road
-            val beachEdgeX = sx + normX * 42.dp.toPx()
-            val beachEdgeY = sy + normY * 42.dp.toPx()
-            if (first) {
-                beachPath.moveTo(beachEdgeX, beachEdgeY)
-                seaPath.moveTo(beachEdgeX + normX * 10.dp.toPx(), beachEdgeY + normY * 10.dp.toPx())
-                first = false
-            } else {
-                beachPath.lineTo(beachEdgeX, beachEdgeY)
-                seaPath.lineTo(beachEdgeX + normX * 10.dp.toPx(), beachEdgeY + normY * 10.dp.toPx())
-            }
-        }
+    // Okhotsk Sea (Soya Cape to Shari, Right sea)
+    drawCoastalSea(tileCentersDp, 1207, minOf(1849, count), isSeaOnRight = true, density, beachColor, seaBlue)
 
-        drawPath(
-            beachPath,
-            beachColor,
-            style = Stroke(width = 16.dp.toPx(), cap = StrokeCap.Round),
-        )
-        drawPath(
-            seaPath,
-            seaBlue,
-            style = Stroke(width = 240.dp.toPx(), cap = StrokeCap.Round),
-        )
-    }
+    // Shiretoko Utoro (Left sea)
+    drawCoastalSea(tileCentersDp, 1849, minOf(1894, count), isSeaOnRight = false, density, beachColor, seaBlue)
 
-    // 3. Inland accents for steps 0 to 90 (Goryokaku, Nanae, Lake Onuma)
-    // Draw Lake Onuma near step 70-80
-    if (count > 65) {
-        val onumaPt = tileCentersDp[minOf(75, count - 1)]
-        val ox = onumaPt.x * density - 65.dp.toPx()
+    // Nemuro Strait (Rausu to Aidomari, Right sea)
+    drawCoastalSea(tileCentersDp, 1934, minOf(2000, count), isSeaOnRight = true, density, beachColor, seaBlue)
+
+    // 3. Lake Onuma inland accent (near step 32)
+    if (count > 25) {
+        val onumaPt = tileCentersDp[minOf(32, count - 1)]
+        val ox = onumaPt.x * density + 65.dp.toPx()
         val oy = onumaPt.y * density
         drawCircle(
             color = lakeBlue,
@@ -561,6 +570,64 @@ private fun DrawScope.drawGeographicalLandscape(
             center = Offset(ox - 8.dp.toPx(), oy - 4.dp.toPx()),
         )
     }
+}
+
+/**
+ * Common helper to draw coastal beach and open sea smoothly along a track section.
+ */
+private fun DrawScope.drawCoastalSea(
+    tileCentersDp: List<Offset>,
+    startIdx: Int,
+    endIdx: Int,
+    isSeaOnRight: Boolean,
+    density: Float,
+    beachColor: Color,
+    seaColor: Color,
+) {
+    if (startIdx >= endIdx || startIdx >= tileCentersDp.size) return
+    val seaPath = Path()
+    val beachPath = Path()
+    var first = true
+
+    val sign = if (isSeaOnRight) 1.0f else -1.0f
+
+    for (i in startIdx until endIdx) {
+        val ptDp = tileCentersDp[i]
+        val sx = ptDp.x * density
+        val sy = ptDp.y * density
+
+        val nextPtDp = if (i < tileCentersDp.lastIndex) tileCentersDp[i + 1] else tileCentersDp[i]
+        val prevPtDp = if (i > 0) tileCentersDp[i - 1] else tileCentersDp[i]
+        val dirX = nextPtDp.x - prevPtDp.x
+        val dirY = nextPtDp.y - prevPtDp.y
+        val angle = atan2(dirY, dirX)
+        val normalAngle = angle + (Math.PI / 2.0).toFloat() * sign
+        val normX = cos(normalAngle)
+        val normY = sin(normalAngle)
+
+        val beachEdgeX = sx + normX * 42.dp.toPx()
+        val beachEdgeY = sy + normY * 42.dp.toPx()
+
+        if (first) {
+            beachPath.moveTo(beachEdgeX, beachEdgeY)
+            seaPath.moveTo(beachEdgeX + normX * 12.dp.toPx(), beachEdgeY + normY * 12.dp.toPx())
+            first = false
+        } else {
+            beachPath.lineTo(beachEdgeX, beachEdgeY)
+            seaPath.lineTo(beachEdgeX + normX * 12.dp.toPx(), beachEdgeY + normY * 12.dp.toPx())
+        }
+    }
+
+    drawPath(
+        beachPath,
+        beachColor,
+        style = Stroke(width = 16.dp.toPx(), cap = StrokeCap.Round),
+    )
+    drawPath(
+        seaPath,
+        seaColor,
+        style = Stroke(width = 280.dp.toPx(), cap = StrokeCap.Round),
+    )
 }
 
 /**
