@@ -2,6 +2,7 @@ package com.aidomari.app.ui.sugoroku
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import com.aidomari.app.domain.model.HokkaidoAct1Route
@@ -73,5 +74,31 @@ class SugorokuMapScreenshotTest {
         }
         composeTestRule.waitForIdle()
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step10.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_debugZoomedOut() {
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = 0),
+                    currentNode = HokkaidoAct1Route.startNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        // Unlock scroll restriction
+        composeTestRule.onNodeWithTag("DebugScrollLockButton").performClick()
+        composeTestRule.waitForIdle()
+
+        // Click zoom out button multiple times to verify unlimited zoom out in debug mode
+        repeat(7) {
+            composeTestRule.onNodeWithContentDescription("縮小").performClick()
+            composeTestRule.waitForIdle()
+        }
+
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_debug_zoomed_out.png")
     }
 }

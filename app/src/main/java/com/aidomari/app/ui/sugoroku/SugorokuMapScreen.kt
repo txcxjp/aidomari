@@ -195,7 +195,7 @@ fun SugorokuMapContent(
                     )
                 }
 
-                val margin = if (isDebugScrollUnlocked) 600f else 320f
+                val margin = if (isDebugScrollUnlocked) 2500f else 320f
                 val screenMinX = containerWidth - (maxX * scale) - margin
                 val screenMaxX = -(minX * scale) + containerWidth + margin
                 val screenMinY = containerHeight - (maxY * scale) - margin
@@ -226,7 +226,9 @@ fun SugorokuMapContent(
             // Smooth zoom centered at screen pivot point (pinch centroid or screen center)
             fun zoomAt(pivot: Offset, factor: Float, panDelta: Offset = Offset.Zero) {
                 val oldScale = zoomScale
-                val newScale = (oldScale * factor).coerceIn(0.75f, 1.45f)
+                val minScale = if (isDebugScrollUnlocked) 0.08f else 0.55f
+                val maxScale = 1.60f
+                val newScale = (oldScale * factor).coerceIn(minScale, maxScale)
                 val scaleRatio = newScale / oldScale
                 val targetPan = pivot - (pivot - panOffset) * scaleRatio + panDelta
                 zoomScale = newScale
