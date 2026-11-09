@@ -77,6 +77,50 @@ class SugorokuMapScreenshotTest {
     }
 
     @Test
+    fun captureSugorokuMap_step1218_soya() {
+        val soyaNode = HokkaidoAct1Route.getNodeByStepIndex(1218) ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = 1218),
+                    currentNode = soyaNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step1218_soya.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step1218_soya_wide() {
+        val soyaNode = HokkaidoAct1Route.getNodeByStepIndex(1218) ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = 1218),
+                    currentNode = soyaNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        // Unlock scroll restriction
+        composeTestRule.onNodeWithTag("DebugScrollLockButton").performClick()
+        composeTestRule.waitForIdle()
+
+        // Zoom out to see Soya Cape coastline
+        repeat(6) {
+            composeTestRule.onNodeWithContentDescription("縮小").performClick()
+            composeTestRule.waitForIdle()
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step1218_soya_wide.png")
+    }
+
+    @Test
     fun captureSugorokuMap_debugZoomedOut() {
         composeTestRule.setContent {
             SugorokuMapContent(
@@ -93,8 +137,8 @@ class SugorokuMapScreenshotTest {
         composeTestRule.onNodeWithTag("DebugScrollLockButton").performClick()
         composeTestRule.waitForIdle()
 
-        // Click zoom out button multiple times to verify unlimited zoom out in debug mode
-        repeat(7) {
+        // Click zoom out button multiple times to reach minScale and see full Hokkaido
+        repeat(30) {
             composeTestRule.onNodeWithContentDescription("縮小").performClick()
             composeTestRule.waitForIdle()
         }
