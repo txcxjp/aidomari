@@ -84,7 +84,7 @@ class HokkaidoAct1RouteTest {
     @Test
     fun anchors_areCorrectlyDefinedAndMonotonic() {
         val anchors = HokkaidoAct1Route.anchors
-        assertEquals(92, anchors.size)
+        assertEquals(221, anchors.size)
         assertEquals(0, anchors.first().stepIndex)
         assertEquals(1999, anchors.last().stepIndex)
 
@@ -94,6 +94,27 @@ class HokkaidoAct1RouteTest {
                 anchors[i].stepIndex < anchors[i + 1].stepIndex
             )
         }
+    }
+
+    @Test
+    fun allCapesAndLighthouses_areAnchors() {
+        HokkaidoAct1Route.routeNodes.forEach { node ->
+            if (node.name.contains("岬") || node.name.contains("灯台")) {
+                assertTrue(
+                    "Cape or lighthouse node ${node.stepIndex} (${node.name}) must be an anchor",
+                    node.isAnchor
+                )
+            }
+        }
+    }
+
+    @Test
+    fun removedObsoleteAnchors_areNotAnchors() {
+        val anchorStepSet = HokkaidoAct1Route.anchors.map { it.stepIndex }.toSet()
+        // Step 785 (明元町) and Step 820 (中央町) must not be anchors
+        assertTrue("Step 785 (明元町) should not be an anchor", 785 !in anchorStepSet)
+        assertTrue("Step 820 (中央町) should not be an anchor", 820 !in anchorStepSet)
+        assertTrue("Step 566 (小樽ドリームビーチ) should not be an anchor", 566 !in anchorStepSet)
     }
 
     @Test
