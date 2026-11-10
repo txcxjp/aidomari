@@ -17,4 +17,6 @@ local.properties
 /release
 __pycache__/
 *.pyc
+scripts/osm_hokkaido_raw_roads.json
+
 
