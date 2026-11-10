@@ -111,13 +111,14 @@ fun SugorokuMapContent(
     val density = LocalDensity.current.density
     val context = LocalContext.current
 
-    // Pre-parse official Wikipedia SVG Hokkaido paths
-    val donanPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3039_D).toPath() }
-    val dohokuPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3041_D).toPath() }
-    val doouPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3043_D).toPath() }
-    val dotoPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3047_D).toPath() }
-    val okushiriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3037_D).toPath() }
-    val hokkaidoPaths = remember { listOf(donanPath, dohokuPath, doouPath, dotoPath, okushiriPath) }
+    // Pre-parse official GSI Hokkaido coastline paths
+    val mainlandPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.MAINLAND_D).toPath() }
+    val okushiriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.OKUSHIRI_D).toPath() }
+    val rishiriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.RISHIRI_D).toPath() }
+    val rebunPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.REBUN_D).toPath() }
+    val teuriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.TEURI_D).toPath() }
+    val yagishiriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.YAGISHIRI_D).toPath() }
+    val hokkaidoPaths = remember { listOf(mainlandPath, okushiriPath, rishiriPath, rebunPath, teuriPath, yagishiriPath) }
 
     // Pre-load 34,000+ real GIS high-density highway network paths (built once in memory)
     val highDensityRoadSegments = remember(context) { HokkaidoRoadNetwork.getHighDensitySegments(context) }

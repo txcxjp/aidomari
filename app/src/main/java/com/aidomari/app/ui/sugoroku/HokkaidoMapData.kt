@@ -52,12 +52,14 @@ fun HokkaidoMiniMap(
     totalSteps: Int,
     modifier: Modifier = Modifier,
 ) {
-    // Parse SVG paths directly from Wikipedia standard SVG
-    val donanPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3039_D).toPath() }
-    val dohokuPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3041_D).toPath() }
-    val doouPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3043_D).toPath() }
-    val dotoPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3047_D).toPath() }
-    val okushiriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.PATH3037_D).toPath() }
+    // Parse SVG paths directly from Geospatial Information Authority of Japan (GSI)
+    val mainlandPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.MAINLAND_D).toPath() }
+    val okushiriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.OKUSHIRI_D).toPath() }
+    val rishiriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.RISHIRI_D).toPath() }
+    val rebunPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.REBUN_D).toPath() }
+    val teuriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.TEURI_D).toPath() }
+    val yagishiriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.YAGISHIRI_D).toPath() }
+    val hokkaidoPaths = remember { listOf(mainlandPath, okushiriPath, rishiriPath, rebunPath, teuriPath, yagishiriPath) }
 
     val context = LocalContext.current
     val segments = remember(context) { HokkaidoRoadNetwork.getHighDensitySegments(context) }
@@ -91,9 +93,9 @@ fun HokkaidoMiniMap(
             val scaleX = canvasW / HokkaidoSvgPaths.SVG_WIDTH
             val scaleY = canvasH / HokkaidoSvgPaths.SVG_HEIGHT
 
-            // Scale Wikipedia SVG path directly onto canvas
+            // Scale GSI SVG paths directly onto canvas
             scale(scaleX, scaleY, pivot = Offset.Zero) {
-                listOf(donanPath, dohokuPath, doouPath, dotoPath, okushiriPath).forEach { path ->
+                hokkaidoPaths.forEach { path ->
                     drawPath(path = path, color = landColor)
                     drawPath(path = path, color = landBorderColor, style = Stroke(width = 1f))
                 }
