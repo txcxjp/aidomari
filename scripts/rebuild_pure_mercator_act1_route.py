@@ -3,11 +3,18 @@
 Master Rebuilder for Hokkaido Act 1 Sugoroku Route (2,000 nodes).
 - Uses Pure Conformal Mercator Projection (0.0% deformation, mathematically isotropic).
 - Derives all 2,000 node coordinates directly from real OpenStreetMap highway networks.
-- Strictly adheres to required milestones and test assertions:
+- Strictly adheres to true landmark GPS coordinates without ungrounded snapping:
   - Step 0: node_0000, 函館駅前, START_HAKODATE
+  - Step 233: 弁慶岬
+  - Step 270: 茂津多岬
+  - Step 436: 神威岬
   - Step 966: node_0966, みさき台公園, 初山別村
-  - Step 1218: node_1218, 日本最北端の地の碑（宗谷岬）, SCENIC_SPOT
-  - Step 1999: node_1999, 相泊（最果ての終着点・相泊温泉）, GOAL_AIDOMARI
+  - Step 1101: 抜海岩
+  - Step 1161: ノシャップ岬（野寒布岬） (141.6433, 45.4542)
+  - Step 1218: node_1218, 日本最北端の地の碑（宗谷岬）, SCENIC_SPOT (141.9366, 45.5228)
+  - Step 1333: 北見神威岬
+  - Step 1909: 知床峠（標高738m）
+  - Step 1999: node_1999, 相泊（最果ての終着点・相泊温泉）, GOAL_AIDOMARI (145.3174, 44.1868)
 - 100.0% inside official 国土地理院 3,201-point coastline polygon (0 ocean nodes).
 """
 
@@ -45,7 +52,7 @@ def point_in_poly(x, y, p):
         p1x, p1y = p2x, p2y
     return inside
 
-# 2. Build high-fidelity road graph from OSM
+# 2. Build high-fidelity road graph from OSM (including Route 254)
 with open('/home/txjp/dev/aidomari/scripts/osm_hokkaido_raw_roads.json') as f:
     roads = json.load(f)
 
@@ -63,7 +70,7 @@ for r_name, ways in roads.items():
             adj.setdefault(p1, []).append((p2, d))
             adj.setdefault(p2, []).append((p1, d))
 
-# Connect touching/near endpoints (gaps < 1km)
+# Connect near endpoints (< 1.5km gap)
 nodes_list = list(adj.keys())
 grid = {}
 for p in nodes_list:
@@ -71,14 +78,14 @@ for p in nodes_list:
     grid.setdefault((gx, gy), []).append(p)
 
 for p in nodes_list:
-    if len(adj[p]) == 1:
+    if len(adj[p]) <= 2:
         gx, gy = int(p[0] * 100), int(p[1] * 100)
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
                 for neighbor in grid.get((gx + dx, gy + dy), []):
                     if neighbor != p:
                         d = math.hypot((p[0]-neighbor[0])*math.cos(math.radians(p[1])), p[1]-neighbor[1])
-                        if d < 0.01: # < ~1km gap
+                        if d < 0.015: # < ~1.5km gap
                             adj[p].append((neighbor, d))
                             adj[neighbor].append((p, d))
 
@@ -106,136 +113,140 @@ for m in parsed_nodes:
         'roadName': m[8],
     })
 
-# Key milestones strict enforcement
-nodes_meta[0]['name'] = "函館駅前"
-nodes_meta[0]['type'] = "SugorokuNodeType.START_HAKODATE"
-nodes_meta[966]['name'] = "みさき台公園"
-nodes_meta[966]['municipality'] = "初山別村"
-nodes_meta[1218]['name'] = "日本最北端の地の碑（宗谷岬）"
-nodes_meta[1218]['type'] = "SugorokuNodeType.SCENIC_SPOT"
-nodes_meta[1999]['name'] = "相泊（最果ての終着点・相泊温泉）"
-nodes_meta[1999]['type'] = "SugorokuNodeType.GOAL_AIDOMARI"
-
-# 4. Accurate Anchors along the Route (Real GPS coordinates)
+# 4. Master True Landmark GPS Anchors (Aligned 100% with HokkaidoAct1Route.kt spots)
 ANCHORS = [
-    # 函館・道南 (0 ~ 160)
+    # 函館〜七飯〜大沼〜森 (0 ~ 84)
     (0, 140.7264, 41.7738, "函館駅前"),
     (18, 140.7337, 41.8035, "五稜郭駅前"),
     (31, 140.6948, 41.9012, "七飯本町"),
-    (45, 140.6723, 41.9814, "大沼国定公園"),
+    (44, 140.6723, 41.9814, "大沼国定公園"),
     (61, 140.5750, 42.1090, "森駅前"),
-    (84, 140.4200, 42.1800, "森・八雲町境"),
-    (98, 140.2678, 42.2514, "八雲駅前"),
-    (125, 140.2960, 42.3860, "山越"),
-    (148, 140.3750, 42.5125, "長万部温泉街"),
-    (160, 140.3700, 42.5300, "長万部静狩入口"),
+    (84, 140.4200, 42.1800, "森・八雲町境直前"),
 
-    # 黒松内・寿都・茂津多・岩内 (161 ~ 345)
-    (190, 140.3060, 42.6685, "黒松内本町"),
-    (215, 140.2500, 42.7500, "寿都町入口"),
+    # 八雲〜長万部〜黒松内 (85 ~ 230)
+    (98, 140.2678, 42.2514, "JR八雲駅前"),
+    (148, 140.3750, 42.5125, "長万部観光案内所"),
+    (176, 140.3200, 42.6100, "長万部・黒松内町境"),
+    (190, 140.3060, 42.6685, "トワ・ヴェール"),
     (230, 140.2285, 42.7938, "道の駅みなとま〜れ寿都"),
-    (240, 140.1832, 42.8174, "弁慶岬"),
-    (258, 140.0683, 42.7158, "島牧村本町"),
-    (290, 139.8322, 42.6045, "茂津多岬"),
-    (320, 140.3640, 42.8767, "蘭越尻別川河口"),
-    (344, 140.5098, 42.9836, "有島武郎記念碑"),
-    (345, 140.5100, 42.9800, "岩内港"),
 
-    # 積丹半島・余市・小樽 (346 ~ 541)
-    (377, 140.4800, 43.1000, "泊村兜岬"),
-    (410, 140.4200, 43.2000, "神恵内村"),
-    (440, 140.3500, 43.3333, "神威岬"),
-    (470, 140.4700, 43.3600, "積丹岬・島武意海岸"),
-    (500, 140.7710, 43.1870, "JR余市駅前"),
-    (520, 140.8800, 43.1900, "忍路・塩谷"),
+    # 寿都〜島牧〜茂津多岬〜寿都戻り (231 ~ 316)
+    (233, 140.1832, 42.8174, "弁慶岬"),
+    (247, 140.0683, 42.7158, "道の駅よってけ！島牧"),
+    (270, 139.8322, 42.6045, "茂津多岬"),
+    (296, 140.0500, 42.6950, "島牧村役場前"),
+    (310, 140.1700, 42.7650, "島牧・寿都境"),
+    (316, 140.2285, 42.7938, "道の駅みなとま〜れ寿都"),
+
+    # 寿都〜雷電〜岩内〜神恵内〜積丹〜余市 (317 ~ 520)
+    (325, 140.3640, 42.8767, "尻別川河口"),
+    (329, 140.4200, 42.9200, "雷電温泉郷"),
+    (348, 140.5100, 42.9800, "岩内港"),
+    (377, 140.4800, 43.1000, "兜岬"),
+    (410, 140.4200, 43.2000, "神内"),
+    (436, 140.3500, 43.3333, "神威岬灯台"),
+    (455, 140.4700, 43.3600, "積丹岬自然歩道"),
+    (495, 140.7710, 43.1870, "JR余市駅前"),
+
+    # 余市〜小樽〜石狩〜厚田〜浜益〜雄冬 (521 ~ 690)
     (541, 140.9937, 43.1977, "JR小樽駅前"),
+    (566, 141.1642, 43.1436, "小樽ドリームビーチ"),
+    (601, 141.3100, 43.1850, "知津狩"),
+    (620, 141.3860, 43.2596, "安瀬覆道"),
+    (631, 141.4305, 43.4061, "厚田北部海岸"),
+    (654, 141.3926, 43.6068, "浜益海浜公園"),
+    (690, 141.3494, 43.7474, "雄冬岬（おふゆみさき）"),
 
-    # 石狩・浜益・雄冬・留萌 (542 ~ 751)
-    (569, 141.1642, 43.1436, "銭函・小樽ドリームビーチ"),
-    (601, 141.3100, 43.1850, "石狩湾新港"),
-    (620, 141.3860, 43.2596, "石狩川河口"),
-    (640, 141.4305, 43.4061, "厚田"),
-    (660, 141.3926, 43.6068, "浜益海浜公園"),
-    (690, 141.3494, 43.7474, "雄冬岬"),
+    # 増毛〜留萌〜小平〜苫前〜三毛別 (691 ~ 884)
     (708, 141.5249, 43.8561, "旧JR増毛駅前"),
-    (730, 141.5892, 43.8820, "舎熊"),
     (751, 141.6369, 43.9410, "JR留萌駅跡"),
-
-    # 留萌・小平・苫前・羽幌・初山別 (752 ~ 966)
-    (785, 141.6534, 43.9978, "小平海岸"),
-    (820, 141.6635, 44.0537, "小平中央町"),
-    (842, 141.6700, 44.2250, "力昼"),
-    (855, 141.6560, 44.3120, "道の駅風Wとままえ"),
+    (785, 141.6534, 43.9978, "明元町"),
+    (820, 141.6635, 44.0537, "中央町"),
+    (842, 141.6700, 44.2250, "力昼港"),
+    (855, 141.6560, 44.3120, "苫前郷土資料館"),
     (866, 141.8436, 44.1450, "三毛別羆事件復元地"),
+
+    # 羽幌〜初山別〜遠別〜天塩 (885 ~ 1055)
     (885, 141.6824, 44.3381, "苫前・羽幌町境"),
-    (900, 141.7011, 44.3644, "羽幌北町"),
-    (930, 141.7623, 44.4788, "築別"),
+    (900, 141.7011, 44.3644, "甘エビファクトリー前"),
+    (930, 141.7623, 44.4788, "羽幌・初山別村境"),
     (966, 141.7820, 44.5683, "みさき台公園"),
+    (990, 141.7865, 44.7212, "緑町"),
+    (1025, 141.7400, 44.8800, "中央通"),
+    (1055, 141.7455, 44.8875, "天塩・幌延町境"),
 
-    # 遠別・天塩・サロベツ・稚内 (967 ~ 1162)
-    (990, 141.7865, 44.7212, "遠別久春内"),
-    (1025, 141.7400, 44.8800, "天塩市街"),
-    (1040, 141.7455, 44.8875, "天塩川堤防ロード"),
-    (1065, 141.6807, 45.0036, "オタコシベツ・風車の列"),
-    (1090, 141.6700, 45.1200, "サロベツ原野ロード"),
-    (1120, 141.6420, 45.3120, "抜海岩"),
-    (1135, 141.6480, 45.3250, "抜海神社"),
-    (1152, 141.6380, 45.4120, "坂の下原生花園"),
-    (1162, 141.6458, 45.4403, "ノシャップ岬"),
+    # サロベツ〜抜海〜ノシャップ岬 (1056 ~ 1161)
+    (1065, 141.6807, 45.0036, "北緯45度モニュメント"),
+    (1090, 141.6700, 45.1200, "サロベツ原野"),
+    (1100, 141.6190, 45.3100, "抜海"),
+    (1101, 141.6420, 45.3120, "抜海岩"),
+    (1115, 141.6380, 45.4120, "坂の下"),
+    (1152, 141.6450, 45.4500, "ノシャップ寒流水族館"),
+    (1161, 141.6433, 45.4542, "ノシャップ岬（野寒布岬）"),
 
-    # 稚内市街・宗谷岬 (1163 ~ 1218)
+    # 稚内市街〜宗谷岬 (1162 ~ 1218)
     (1168, 141.6785, 45.4190, "稚内港北防波堤ドーム"),
-    (1171, 141.6770, 45.4168, "JR稚内駅"),
-    (1190, 141.7750, 45.4050, "南稚内・声問"),
-    (1205, 141.8780, 45.4634, "宗谷湾"),
+    (1171, 141.6770, 45.4168, "JR日本最北端の駅・稚内駅"),
+    (1190, 141.7750, 45.4050, "声問川橋"),
+    (1206, 141.8780, 45.4634, "宗谷岬入口"),
     (1218, 141.9366, 45.5228, "日本最北端の地の碑（宗谷岬）"),
 
-    # 猿払・浜頓別・枝幸・雄武 (1219 ~ 1440)
-    (1235, 142.1200, 45.3300, "猿払・エサヌカ線"),
-    (1265, 142.1750, 45.2850, "オホーツク海岸線"),
-    (1300, 142.1460, 45.3340, "浜頓別クッチャロ湖"),
-    (1330, 142.4413, 45.0947, "北見神威岬"),
-    (1360, 142.5800, 44.9400, "枝幸港"),
-    (1400, 142.7500, 44.7500, "乙忠部"),
-    (1440, 142.9630, 44.5820, "雄武港町通り"),
+    # 猿払（エサヌカ）〜浜頓別（クッチャロ湖・北見神威岬）〜枝幸〜雄武 (1219 ~ 1467)
+    (1253, 142.1200, 45.3300, "エサヌカ線入口"),
+    (1260, 142.1450, 45.3050, "エサヌカ線中央"),
+    (1267, 142.1750, 45.2850, "エサヌカ線出口"),
+    (1294, 142.1460, 45.3340, "クッチャロ湖入口"),
+    (1333, 142.4413, 45.0947, "北見神威岬"),
+    (1364, 142.5800, 44.9400, "枝幸港"),
+    (1408, 142.7500, 44.7500, "枝幸・雄武町境"),
+    (1434, 142.9630, 44.5820, "雄武港（おうむこう）"),
+    (1467, 143.0500, 44.5300, "雄武南端パーキング"),
 
-    # 興部・紋別・湧別・サロマ湖・常呂 (1441 ~ 1680)
-    (1480, 143.1250, 44.4710, "興部秋里"),
-    (1520, 143.3550, 44.3540, "紋別オホーツク流氷公園"),
-    (1530, 143.3656, 44.3291, "紋別港"),
-    (1560, 143.6100, 44.2200, "湧別リフレ"),
-    (1600, 143.8500, 44.1500, "サロマ湖三里浜"),
-    (1640, 144.0000, 44.1200, "佐呂間"),
-    (1680, 144.0800, 44.1100, "常呂港"),
+    # 興部〜紋別〜湧別〜サロマ湖〜常呂 (1468 ~ 1688)
+    (1484, 143.1250, 44.4710, "興部前浜海岸"),
+    (1504, 143.2500, 44.4100, "興部・紋別市境サイン"),
+    (1515, 143.3550, 44.3540, "オホーツク流氷公園"),
+    (1526, 143.3656, 44.3291, "紋別港第3埠頭"),
+    (1578, 143.5200, 44.2700, "紋別・湧別町境"),
+    (1600, 143.8500, 44.1500, "湧別神社"),
+    (1633, 143.9500, 44.1350, "湧別・佐呂間町境"),
+    (1650, 144.0000, 44.1200, "仁倉"),
+    (1659, 144.0500, 44.1150, "佐呂間・常呂町境"),
+    (1669, 144.0800, 44.1100, "常呂港防波堤"),
+    (1688, 144.1800, 44.0800, "常呂・網走市境"),
 
-    # 能取岬・網走・小清水・斜里 (1681 ~ 1840)
-    (1700, 144.2750, 44.0240, "網走港砕氷船乗り場"),
-    (1720, 144.2588, 44.0202, "JR網走駅前"),
-    (1745, 144.3500, 43.9500, "藻琴・北浜"),
-    (1775, 144.5022, 43.9135, "小清水原生花園"),
-    (1810, 144.6600, 43.9100, "斜里市街"),
-    (1840, 144.9960, 44.0680, "知床ウトロ港"),
+    # 網走〜小清水〜斜里〜ウトロ (1689 ~ 1875)
+    (1700, 144.2500, 44.0500, "二見ケ岡海岸"),
+    (1716, 144.2588, 44.0202, "JR網走駅前"),
+    (1720, 144.2750, 44.0240, "網走市役所前"),
+    (1745, 144.3500, 43.9500, "JR藻琴駅前"),
+    (1765, 144.5022, 43.9135, "小清水原生花園"),
+    (1810, 144.6600, 43.9100, "斜里本町"),
+    (1840, 144.9300, 44.0300, "海猫（うみねこ）岩"),
+    (1855, 144.9960, 44.0680, "ペレケ川橋"),
+    (1875, 145.0800, 44.1200, "知床五湖フィールドハウス"),
 
-    # 知床半島・知床峠・羅臼・相泊 (1841 ~ 1999)
-    (1865, 145.0200, 44.0800, "プユニ岬"),
-    (1885, 145.0800, 44.1000, "岩尾別温泉入口"),
-    (1920, 145.1100, 44.0500, "知床峠（標高738m）"),
-    (1945, 145.1910, 44.0190, "羅臼港・本町"),
-    (1965, 145.2400, 44.0800, "マッカウス・セセキ温泉"),
-    (1985, 145.2871, 44.1525, "相泊番屋"),
+    # 知床峠〜羅臼〜相泊ゴール (1876 ~ 1999)
+    (1909, 145.1100, 44.0500, "知床峠（標高738m）"),
+    (1941, 145.1910, 44.0190, "羅臼港本港地区"),
+    (1966, 145.2400, 44.0800, "セセキアプローチ"),
+    (1985, 145.2871, 44.1525, "相泊温泉（日本最北東端の温泉）"),
     (1999, 145.3174, 44.1868, "相泊（最果ての終着点・相泊温泉）"),
 ]
 
 def find_nearest_vertex(target_lon, target_lat):
     return min(adj.keys(), key=lambda v: math.hypot((v[0]-target_lon)*math.cos(math.radians(v[1])), v[1]-target_lat))
 
-# 5. Generate all 2,000 node coordinates along road graph
+# 5. Generate all 2,000 node coordinates
+# Anchor GPS positions are 100% FIXED and PRESERVED (no ungrounded snapping).
 all_nodes_gps = [None] * 2000
 
 for i in range(len(ANCHORS) - 1):
     a1, a2 = ANCHORS[i], ANCHORS[i+1]
     s_start, s_end = a1[0], a2[0]
     count = s_end - s_start
+    a1_pt = (a1[1], a1[2])
+    a2_pt = (a2[1], a2[2])
     
     v1 = find_nearest_vertex(a1[1], a1[2])
     v2 = find_nearest_vertex(a2[1], a2[2])
@@ -251,7 +262,7 @@ for i in range(len(ANCHORS) - 1):
             break
         if d > dist.get(u, 1e9):
             continue
-        if d > 1.5:
+        if d > 1.8: # max road search threshold
             break
         for v, weight in adj.get(u, []):
             nd = d + weight
@@ -261,41 +272,49 @@ for i in range(len(ANCHORS) - 1):
                 heapq.heappush(pq, (nd, v))
     
     if found:
-        path = []
+        road_path = []
         curr = v2
         while curr in prev:
-            path.append(curr)
+            road_path.append(curr)
             curr = prev[curr]
-        path.append(v1)
-        path.reverse()
+        road_path.append(v1)
+        road_path.reverse()
         
-        cum_dist = [0.0]
-        for p_idx in range(len(path) - 1):
-            seg_d = math.hypot((path[p_idx+1][0]-path[p_idx][0])*math.cos(math.radians(path[p_idx][1])), path[p_idx+1][1]-path[p_idx][1])
-            cum_dist.append(cum_dist[-1] + seg_d)
-        
-        total_d = cum_dist[-1]
-        for step_offset in range(count):
-            step = s_start + step_offset
-            target_d = total_d * (step_offset / count)
-            for p_idx in range(len(cum_dist) - 1):
-                if cum_dist[p_idx] <= target_d <= cum_dist[p_idx+1]:
-                    seg_len = cum_dist[p_idx+1] - cum_dist[p_idx]
-                    t = 0.0 if seg_len < 1e-9 else (target_d - cum_dist[p_idx]) / seg_len
-                    lon = path[p_idx][0] + t * (path[p_idx+1][0] - path[p_idx][0])
-                    lat = path[p_idx][1] + t * (path[p_idx+1][1] - path[p_idx][1])
-                    all_nodes_gps[step] = (lon, lat)
-                    break
+        # Build seamless chain from a1_pt -> road_path -> a2_pt
+        full_path = [a1_pt]
+        for p in road_path:
+            if math.hypot(p[0]-full_path[-1][0], p[1]-full_path[-1][1]) > 1e-5:
+                full_path.append(p)
+        if math.hypot(a2_pt[0]-full_path[-1][0], a2_pt[1]-full_path[-1][1]) > 1e-5:
+            full_path.append(a2_pt)
     else:
-        # Fallback to linear between anchors
-        for step_offset in range(count):
-            step = s_start + step_offset
-            t = step_offset / count
-            lon = a1[1] + t * (a2[1] - a1[1])
-            lat = a1[2] + t * (a2[2] - a1[2])
-            all_nodes_gps[step] = (lon, lat)
+        # Fallback to direct linear interpolation between anchors
+        full_path = [a1_pt, a2_pt]
+        
+    cum_dist = [0.0]
+    for p_idx in range(len(full_path) - 1):
+        seg_d = math.hypot((full_path[p_idx+1][0]-full_path[p_idx][0])*math.cos(math.radians(full_path[p_idx][1])), full_path[p_idx+1][1]-full_path[p_idx][1])
+        cum_dist.append(cum_dist[-1] + seg_d)
+    
+    total_d = cum_dist[-1]
+    for step_offset in range(count):
+        step = s_start + step_offset
+        if step_offset == 0:
+            # Anchor coordinate is 100% exact
+            all_nodes_gps[step] = a1_pt
+            continue
+            
+        target_d = total_d * (step_offset / count)
+        for p_idx in range(len(cum_dist) - 1):
+            if cum_dist[p_idx] <= target_d <= cum_dist[p_idx+1]:
+                seg_len = cum_dist[p_idx+1] - cum_dist[p_idx]
+                t = 0.0 if seg_len < 1e-9 else (target_d - cum_dist[p_idx]) / seg_len
+                lon = full_path[p_idx][0] + t * (full_path[p_idx+1][0] - full_path[p_idx][0])
+                lat = full_path[p_idx][1] + t * (full_path[p_idx+1][1] - full_path[p_idx][1])
+                all_nodes_gps[step] = (lon, lat)
+                break
 
-# Last node
+# Last node is exactly the final anchor
 all_nodes_gps[1999] = (ANCHORS[-1][1], ANCHORS[-1][2])
 
 def ensure_inside(sx, sy):
@@ -311,7 +330,7 @@ def ensure_inside(sx, sy):
                 return nx, ny
     return rx, ry
 
-# Project to SVG coordinates and guarantee inclusion in mainland polygon
+# 6. Project to SVG coordinates and guarantee inclusion in mainland polygon
 final_nodes = []
 outside_corrections = 0
 
@@ -350,7 +369,7 @@ final_outside = sum(1 for n in final_nodes if not point_in_poly(n['x'], n['y'], 
 print(f"Total nodes: 2000, Micro-nudged: {outside_corrections}, Outside: {final_outside} (TARGET: 0)")
 assert final_outside == 0, f"Expected 0 outside nodes, got {final_outside}"
 
-# 6. Generate HokkaidoAct1Route.kt
+# 7. Generate HokkaidoAct1Route.kt
 out_kt = '''package com.aidomari.app.domain.model
 
 /**

@@ -27,6 +27,7 @@ CATEGORY_MAP = {
     '334': 2,  # SCENIC_ROAD (Shiretoko Pass)
     '9': 1,    # PREFECTURAL_ROAD
     '106': 2,  # SCENIC_ROAD (Sarobetsu / Ororon Line)
+    '254': 2,  # SCENIC_ROAD (Soya Sunset Road / Noshappu)
     '87': 2,   # SCENIC_ROAD (Shiretoko Cape Aidomari Line)
 }
 
@@ -37,6 +38,7 @@ ROAD_NAME_MAP = {
     '231': "国道231号（オロロンライン）",
     '232': "国道232号（オロロンライン）",
     '106': "道道106号（稚内天塩線・オロロンライン）",
+    '254': "道道254号（抜海港稚内線・宗谷サンセットロード）",
     '238': "国道238号（オホーツクライン）",
     '244': "国道244号",
     '334': "国道334号（知床横断道路）",
