@@ -10,4 +10,5 @@ data class SugorokuNode(
     val y: Float,
     val description: String = "",
     val roadName: String = "",
+    val isAnchor: Boolean = false,
 )

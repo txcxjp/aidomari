@@ -80,4 +80,54 @@ class HokkaidoAct1RouteTest {
 
         assertNull(HokkaidoAct1Route.getNodeById("non_existent_node"))
     }
+
+    @Test
+    fun anchors_areCorrectlyDefinedAndMonotonic() {
+        val anchors = HokkaidoAct1Route.anchors
+        assertEquals(92, anchors.size)
+        assertEquals(0, anchors.first().stepIndex)
+        assertEquals(1999, anchors.last().stepIndex)
+
+        for (i in 0 until anchors.size - 1) {
+            assertTrue(
+                "Anchors must be strictly monotonic: ${anchors[i].stepIndex} < ${anchors[i+1].stepIndex}",
+                anchors[i].stepIndex < anchors[i + 1].stepIndex
+            )
+        }
+    }
+
+    @Test
+    fun anchorNodes_haveIsAnchorFlagCorrectlySet() {
+        val anchorStepSet = HokkaidoAct1Route.anchors.map { it.stepIndex }.toSet()
+        HokkaidoAct1Route.routeNodes.forEach { node ->
+            if (node.stepIndex in anchorStepSet) {
+                assertTrue("Node ${node.stepIndex} should have isAnchor == true", node.isAnchor)
+            } else {
+                assertTrue("Node ${node.stepIndex} should have isAnchor == false", !node.isAnchor)
+            }
+        }
+    }
+
+    @Test
+    fun interpolatedNodes_areCollinearBetweenAnchors() {
+        val anchors = HokkaidoAct1Route.anchors
+        for (i in 0 until anchors.size - 1) {
+            val a1 = anchors[i]
+            val a2 = anchors[i + 1]
+            val count = a2.stepIndex - a1.stepIndex
+
+            for (offset in 0..count) {
+                val step = a1.stepIndex + offset
+                val node = HokkaidoAct1Route.getNodeByStepIndex(step)
+                assertNotNull(node)
+
+                val t = offset.toFloat() / count.toFloat()
+                val expectedX = a1.x + t * (a2.x - a1.x)
+                val expectedY = a1.y + t * (a2.y - a1.y)
+
+                assertEquals("X for step $step should match lerp", expectedX, node!!.x, 0.01f)
+                assertEquals("Y for step $step should match lerp", expectedY, node.y, 0.01f)
+            }
+        }
+    }
 }

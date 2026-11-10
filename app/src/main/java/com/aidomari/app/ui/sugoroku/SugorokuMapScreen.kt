@@ -530,13 +530,15 @@ fun SugorokuMapContent(
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = when (node.type) {
-                            SugorokuNodeType.START_HAKODATE -> "🎌 "
-                            SugorokuNodeType.GOAL_AIDOMARI -> "🏁 "
-                            SugorokuNodeType.SCENIC_SPOT -> "✨ "
-                            SugorokuNodeType.TOWN_CENTER -> "🏘️ "
-                            SugorokuNodeType.REST_AREA -> "☕ "
-                            SugorokuNodeType.NORMAL -> "👣 "
+                        text = when {
+                            node.type == SugorokuNodeType.START_HAKODATE -> "🎌 "
+                            node.type == SugorokuNodeType.GOAL_AIDOMARI -> "🏁 "
+                            node.isAnchor -> "⚓ [アンカー] "
+                            node.type == SugorokuNodeType.SCENIC_SPOT -> "✨ "
+                            node.type == SugorokuNodeType.TOWN_CENTER -> "🏘️ "
+                            node.type == SugorokuNodeType.REST_AREA -> "☕ "
+                            node.type == SugorokuNodeType.NORMAL -> "👣 "
+                            else -> "・ "
                         },
                     )
                     Text(
@@ -862,7 +864,9 @@ private fun DrawScope.drawSugorokuTiles(
         // 2. Tile background & border colors
         val (bgColor, borderColor, borderWidth) = when {
             isCurrent -> Triple(Color(0xFFFFF176), Color(0xFFF57F17), 3.dp.toPx())
+            isVisited && node.isAnchor -> Triple(Color(0xFFE1BEE7), Color(0xFF8E24AA), 2.5.dp.toPx())
             isVisited -> Triple(Color(0xFFFFE0B2), Color(0xFFFB8C00), 1.8.dp.toPx())
+            node.isAnchor -> Triple(Color(0xFFEDE7F6), Color(0xFF7B1FA2), 2.5.dp.toPx())
             node.type == SugorokuNodeType.SCENIC_SPOT -> Triple(Color(0xFFFFF9C4), Color(0xFFFBC02D), 2.2.dp.toPx())
             else -> Triple(Color(0xFFFFFFFF), Color(0xFFB0BEC5), 1.5.dp.toPx())
         }
@@ -938,13 +942,15 @@ private fun DrawScope.drawSugorokuTiles(
             )
 
             // Tile Contents: Icon on bottom
-            val iconStr = when (node.type) {
-                SugorokuNodeType.START_HAKODATE -> "🎌"
-                SugorokuNodeType.GOAL_AIDOMARI -> "🏁"
-                SugorokuNodeType.SCENIC_SPOT -> "⭐"
-                SugorokuNodeType.TOWN_CENTER -> "🏘️"
-                SugorokuNodeType.REST_AREA -> "♨️"
-                SugorokuNodeType.NORMAL -> if (isVisited) "👣" else "・"
+            val iconStr = when {
+                node.type == SugorokuNodeType.START_HAKODATE -> "🎌"
+                node.type == SugorokuNodeType.GOAL_AIDOMARI -> "🏁"
+                node.isAnchor -> "⚓"
+                node.type == SugorokuNodeType.SCENIC_SPOT -> "⭐"
+                node.type == SugorokuNodeType.TOWN_CENTER -> "🏘️"
+                node.type == SugorokuNodeType.REST_AREA -> "♨️"
+                node.type == SugorokuNodeType.NORMAL -> if (isVisited) "👣" else "・"
+                else -> "・"
             }
             drawContext.canvas.nativeCanvas.drawText(
                 iconStr,
