@@ -10,9 +10,9 @@ class HokkaidoAct1RouteTest {
 
     @Test
     fun route_hasExactCuratedNodes() {
-        assertEquals(167, HokkaidoAct1Route.totalNodes)
-        assertEquals(167, HokkaidoAct1Route.routeNodes.size)
-        assertEquals(166, HokkaidoAct1Route.maxStepIndex)
+        assertEquals(168, HokkaidoAct1Route.totalNodes)
+        assertEquals(168, HokkaidoAct1Route.routeNodes.size)
+        assertEquals(167, HokkaidoAct1Route.maxStepIndex)
     }
 
     @Test
@@ -32,7 +32,7 @@ class HokkaidoAct1RouteTest {
     fun goalNode_isAidomari() {
         val goalNode = HokkaidoAct1Route.goalNode
         assertEquals("aidomari_bridge", goalNode.id)
-        assertEquals(166, goalNode.stepIndex)
+        assertEquals(167, goalNode.stepIndex)
         assertEquals("相泊橋", goalNode.name)
         assertEquals("羅臼町", goalNode.municipality)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
@@ -113,8 +113,9 @@ class HokkaidoAct1RouteTest {
         assertTrue(rank2Anchors.any { it.id == "teshio_river_mouth" && it.name == "天塩川河口" })
 
         val rank3Anchors = anchors.filter { it.rank == 3 }
-        assertEquals(39, rank3Anchors.size)
+        assertEquals(40, rank3Anchors.size)
         assertTrue(rank3Anchors.any { it.id == "kawaguchi_ruins_scenic_forest" && it.name == "川口遺跡風景林" })
+        assertTrue(rank3Anchors.any { it.id == "esashi_port" && it.name == "枝幸港" })
 
         val ids = anchors.map { it.id }.toSet()
         assertEquals(anchors.size, ids.size)
@@ -160,5 +161,8 @@ class HokkaidoAct1RouteTest {
         assertTrue("沢木海岸 should not be present", "沢木海岸" !in names)
         assertTrue("斜内海岸 should not be present", "斜内海岸" !in names)
         assertTrue("浜里海岸 should not be present", "浜里海岸" !in names)
+        assertTrue("坂の下高台 should not be present", "坂の下高台" !in names)
+        assertTrue("網走帽子岩 should not be present", "網走帽子岩" !in names)
+        assertTrue("稚内西海岸 should not be present", "稚内西海岸" !in names)
     }
 }
