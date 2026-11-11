@@ -30,7 +30,7 @@ class HokkaidoAct1RouteTest {
         val goalNode = HokkaidoAct1Route.goalNode
         assertEquals("node_0066", goalNode.id)
         assertEquals(66, goalNode.stepIndex)
-        assertEquals("相泊（最果ての終着点・車道終点）", goalNode.name)
+        assertEquals("相泊橋（最果ての終着点・車道終点）", goalNode.name)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
         assertTrue(goalNode.isAnchor)
     }
@@ -62,7 +62,7 @@ class HokkaidoAct1RouteTest {
 
         val nodeGoal = HokkaidoAct1Route.getNodeByStepIndex(HokkaidoAct1Route.maxStepIndex)
         assertNotNull(nodeGoal)
-        assertEquals("相泊（最果ての終着点・車道終点）", nodeGoal?.name)
+        assertEquals("相泊橋（最果ての終着点・車道終点）", nodeGoal?.name)
 
         assertNull(HokkaidoAct1Route.getNodeByStepIndex(-1))
         assertNull(HokkaidoAct1Route.getNodeByStepIndex(HokkaidoAct1Route.totalNodes))
