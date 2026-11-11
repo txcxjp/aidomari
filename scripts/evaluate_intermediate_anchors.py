@@ -129,7 +129,24 @@ def is_authorized_landmark(name: str) -> bool:
         return True
     if any(
         k in name
-        for k in ["道の駅", "キャンプ場", "野営場", "展望台", "原生花園", "モニュメント"]
+        for k in [
+            "道の駅",
+            "キャンプ場",
+            "野営場",
+            "展望台",
+            "展望所",
+            "原生花園",
+            "モニュメント",
+            "温泉",
+            "灯台",
+            "岬",
+            "滝",
+            "洞窟",
+            "資料館",
+            "博物館",
+            "歴史館",
+            "センター",
+        ]
     ):
         return True
     return False
