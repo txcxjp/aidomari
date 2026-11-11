@@ -112,6 +112,29 @@ def project_to_segment(lat_a, lon_a, lat_b, lon_b, lat_c, lon_c):
     return t, perp_dist
 
 
+def is_facility_duplicate(name1: str, name2: str) -> bool:
+    """同一敷地・同一施設の名称揺れ（公園と公園内キャンプ場など）を検知する。"""
+    if name1 == name2:
+        return True
+    for suffix in [
+        "オートキャンプ場",
+        "キャンプ場",
+        "野営場",
+        "公園",
+        "親水公園",
+        "展望台",
+        "展望所",
+        "駐車場",
+        "資料館",
+        "博物館",
+    ]:
+        if name1.startswith(name2) and name1.endswith(suffix):
+            return True
+        if name2.startswith(name1) and name2.endswith(suffix):
+            return True
+    return False
+
+
 def is_authorized_landmark(name: str) -> bool:
     name = name.strip()
     if len(name) < 3:
@@ -200,7 +223,7 @@ def load_authoritative_candidates(notes_dir: str):
                         "lon": float(p.get("P35_002")),
                         "lat": float(p.get("P35_001")),
                         "category": "道の駅",
-                        "weight": 100,
+                        "weight": 85,
                         "description": f"{muni}に位置する道の駅。",
                     }
                 )
@@ -387,9 +410,14 @@ def evaluate_intervals(
             if (d1 + d2) > max_detour_ratio * dist_inter:
                 continue
 
-            # ボロノイ近傍性チェック（直前・直後アンカーのいずれかが最近傍であること）
-            if c["closest_anchor_idx"] not in (i, i + 1):
+            # 前後アンカーとの名称重複（同施設）を防止
+            if is_facility_duplicate(c["name"], a1["name"]) or is_facility_duplicate(c["name"], a2["name"]):
                 continue
+
+            # ボロノイ近傍性チェック（直前・直後アンカーの近傍であること）
+            if c["closest_anchor_idx"] not in (i, i + 1) and c["closest_anchor_idx"] not in (i - 1, i + 2):
+                if c["min_anchor_dist"] < min(d1, d2) - 0.5:
+                    continue
 
             # 北海道陸地ポリゴン判定
             sx, sy = gps_to_svg(c["lon"], c["lat"])
