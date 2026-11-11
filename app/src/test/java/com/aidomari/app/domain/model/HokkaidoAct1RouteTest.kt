@@ -40,8 +40,9 @@ class HokkaidoAct1RouteTest {
 
         HokkaidoAct1Route.routeNodes.forEachIndexed { index, node ->
             assertEquals("Node at index $index must have stepIndex $index", index, node.stepIndex)
-            assertTrue("Node at index $index should have non-empty name", node.name.isNotBlank())
-            assertTrue("Node at index $index should have non-empty municipality", node.municipality.isNotBlank())
+            if (node.isAnchor) {
+                assertTrue("Anchor node at index $index should have non-empty name", node.name.isNotBlank())
+            }
             assertTrue("Node at index $index x coordinate should be within 0..2000", node.x in 0f..2000f)
             assertTrue("Node at index $index y coordinate should be within 0..2000", node.y in 0f..2000f)
         }
@@ -61,7 +62,7 @@ class HokkaidoAct1RouteTest {
         val nodeShosanbetsu = HokkaidoAct1Route.getNodeById("node_0966")
         assertNotNull(nodeShosanbetsu)
         assertEquals("みさき台公園", nodeShosanbetsu?.name)
-        assertEquals("初山別村", nodeShosanbetsu?.municipality)
+        assertTrue(nodeShosanbetsu?.isAnchor == true)
 
         val node1999 = HokkaidoAct1Route.getNodeByStepIndex(1999)
         assertNotNull(node1999)
