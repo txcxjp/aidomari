@@ -142,7 +142,7 @@ class HokkaidoAct1RouteTest {
             if (node.name.contains("岬") || node.name.contains("灯台")) {
                 assertTrue(
                     "Cape or lighthouse node ${node.stepIndex} (${node.name}) must be an anchor",
-                    node.isAnchor
+                    node.isAnchor,
                 )
             }
         }
