@@ -10,9 +10,9 @@ class HokkaidoAct1RouteTest {
 
     @Test
     fun route_hasExactCuratedNodes() {
-        assertEquals(129, HokkaidoAct1Route.totalNodes)
-        assertEquals(129, HokkaidoAct1Route.routeNodes.size)
-        assertEquals(128, HokkaidoAct1Route.maxStepIndex)
+        assertEquals(126, HokkaidoAct1Route.totalNodes)
+        assertEquals(126, HokkaidoAct1Route.routeNodes.size)
+        assertEquals(125, HokkaidoAct1Route.maxStepIndex)
     }
 
     @Test
@@ -32,7 +32,7 @@ class HokkaidoAct1RouteTest {
     fun goalNode_isAidomari() {
         val goalNode = HokkaidoAct1Route.goalNode
         assertEquals("aidomari_bridge", goalNode.id)
-        assertEquals(128, goalNode.stepIndex)
+        assertEquals(125, goalNode.stepIndex)
         assertEquals("相泊橋", goalNode.name)
         assertEquals("羅臼町", goalNode.municipality)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
@@ -109,13 +109,12 @@ class HokkaidoAct1RouteTest {
         assertTrue(anchors.any { it.id == "seseki_onsen" && it.name == "セセキ温泉" && it.rank == 1 })
 
         val rank2Anchors = anchors.filter { it.rank == 2 }
-        assertEquals(60, rank2Anchors.size)
+        assertEquals(58, rank2Anchors.size)
         assertTrue(rank2Anchors.any { it.id == "teshio_river_mouth" && it.name == "天塩川河口" })
 
         val rank3Anchors = anchors.filter { it.rank == 3 }
-        assertEquals(2, rank3Anchors.size)
+        assertEquals(1, rank3Anchors.size)
         assertTrue(rank3Anchors.any { it.id == "kawaguchi_ruins_scenic_forest" && it.name == "川口遺跡風景林" })
-        assertTrue(rank3Anchors.any { it.id == "hamasato_coast" && it.name == "浜里海岸" })
 
         val ids = anchors.map { it.id }.toSet()
         assertEquals(anchors.size, ids.size)
@@ -158,5 +157,8 @@ class HokkaidoAct1RouteTest {
         assertTrue("神岬海岸 should not be present", "神岬海岸" !in names)
         assertTrue("望来展望台 should not be present", "望来展望台" !in names)
         assertTrue("力昼夕日展望台 should not be present", "力昼夕日展望台" !in names)
+        assertTrue("沢木海岸 should not be present", "沢木海岸" !in names)
+        assertTrue("斜内海岸 should not be present", "斜内海岸" !in names)
+        assertTrue("浜里海岸 should not be present", "浜里海岸" !in names)
     }
 }
