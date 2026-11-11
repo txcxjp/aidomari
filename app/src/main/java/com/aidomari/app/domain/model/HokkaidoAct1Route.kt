@@ -60,7 +60,7 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "ogon_cape_bikuni", rank = 1, name = "黄金岬", municipality = "積丹町", lon = 140.6013, lat = 43.3032, x = 177.66f, y = 210.45f, description = "美国港にある黄金岬。夕日に輝く奇岩と宝島を望む展望地。"),
         RouteAnchor(id = "furubira_port", rank = 2, name = "古平港", municipality = "古平町", lon = 140.6358, lat = 43.2746, x = 179.86f, y = 212.96f, description = "たらこ発祥の地として知られる日本海の良港。丸山公園隣接。"),
         RouteAnchor(id = "setakamui_rock", rank = 1, name = "セタカムイ岩", municipality = "古平町", lon = 140.6872, lat = 43.2555, x = 183.14f, y = 214.63f, description = "遠吠えする犬の姿に見える義経伝説の奇岩。"),
-        RouteAnchor(id = "candle_rock", rank = 2, name = "ローソク岩", municipality = "余市町", lon = 140.7038, lat = 43.2336, x = 184.20f, y = 216.55f, description = "余市沖の海上にそびえ立つ高さ約46mの幻想的な一本奇岩。"),
+        RouteAnchor(id = "candle_rock", rank = 2, name = "ローソク岩", municipality = "余市町", lon = 140.7301, lat = 43.2411, x = 185.88f, y = 215.89f, description = "余市沖の海上にそびえ立つ高さ約46mの幻想的な一本奇岩。"),
         RouteAnchor(id = "nikka_yoichi_distillery", rank = 1, name = "余市蒸溜所", municipality = "余市町", lon = 140.7895, lat = 43.1862, x = 189.67f, y = 220.70f, description = "ニッカウヰスキー創業者・竹鶴政孝が築いた歴史あるウイスキー蒸溜所。"),
         RouteAnchor(id = "ranshima_beach", rank = 2, name = "蘭島海水浴場", municipality = "小樽市", lon = 140.8510, lat = 43.1988, x = 193.60f, y = 219.60f, description = "明治36年に開設された北海道屈指の歴史を誇る海水浴場。"),
         RouteAnchor(id = "oshoro_port", rank = 1, name = "忍路港", municipality = "小樽市", lon = 140.8625, lat = 43.2078, x = 194.33f, y = 218.81f, description = "古代の忍路環状列石や美しい天然の良港として知られる入り江。"),
