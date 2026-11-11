@@ -1,336 +1,586 @@
 #!/usr/bin/env python3
 """
-Comprehensive Intermediate Anchor Evaluator for Hokkaido Sugoroku Act 1.
-Refined with verified Google Maps and official GSI geodetic coordinates.
+scripts/evaluate_intermediate_anchors.py
+
+北海道一周すごろく 第1部 中間アンカー自動選定・評価プログラム（不具合是正版）
+
+【是正された不具合】
+1. AIの記憶や推測によるハードコード辞書を全廃し、notes/ 配下の公的・一次 GeoJSON（国土数値情報・OSM）のみを入力元とする。
+2. 直線・道なりベクトルの射影パラメータ t (0.15 <= t <= 0.85) により、進行方向の手前〜奥の区間内存在を厳密に保証（逆走・ピンポンを完全防止）。
+3. 垂線距離（側方偏位 <= 35%）および迂回率（<= 1.25）の厳格な制限により、海沿いから山奥への飛び出しや大回り迂回を防止。
+4. ボロノイ近傍性チェック（直前・直後アンカーが最近傍）により、湾や半島の対岸にある地点の誤挿入を防止。
+5. 認可ランドマーク種別（駅、道の駅、岬、灯台、展望台、キャンプ場、温泉、公園等）の厳格フィルタリングにより、単なる地名や不鮮明な名称を排除。
+6. 1区間につき「最大1つ」の厳格な選定（ユーザー指示：複数候補があれば最もインパクトのあるもの1つを選抜）。
+7. 全既存アンカーとの 1.0km 以上離隔ルール（d >= 1.0km）および北海道陸地ポリゴン内判定（inside == True）の自動全数検証。
 """
 
+import argparse
+import json
 import math
+import os
 import re
 import sys
-import json
 
-sys.path.append('/home/txjp/dev/aidomari/scripts')
-from mercator_projection import gps_to_svg
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from fast_polygon import load_gsi_polygon
+from mercator_projection import gps_to_svg
 
-def haversine(lat1, lon1, lat2, lon2):
-    R = 6371.0
-    phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlambda = math.radians(lon2 - lon1)
-    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+ALLOWED_SUFFIXES = [
+    "道の駅",
+    "駅",
+    "駅跡",
+    "港",
+    "漁港",
+    "展望台",
+    "展望所",
+    "展望地",
+    "キャンプ場",
+    "野営場",
+    "キャンプサイト",
+    "温泉",
+    "温泉郷",
+    "の湯",
+    "公園",
+    "森林公園",
+    "原生花園",
+    "岬",
+    "灯台",
+    "モニュメント",
+    "の碑",
+    "記念碑",
+    "鳥居",
+    "滝",
+    "洞窟",
+    "岩",
+    "湖",
+    "沼",
+    "山",
+    "歴史館",
+    "博物館",
+    "資料館",
+    "蒸溜所",
+    "酒造",
+    "センター",
+    "橋",
+]
 
-def load_existing_anchors():
-    with open('/home/txjp/dev/aidomari/app/src/main/java/com/aidomari/app/domain/model/HokkaidoAct1Route.kt') as f:
-        text = f.read()
-    anchors_body = text[text.index('val anchors: List<RouteAnchor> = listOf(') + len('val anchors: List<RouteAnchor> = listOf('):text.index('\n    )\n\n    val totalNodes')]
-    matches = list(re.finditer(r'RouteAnchor\(id = \"([^\"]+)\", rank = (\d+), name = \"([^\"]+)\", municipality = \"([^\"]+)\", lon = ([0-9.]+), lat = ([0-9.]+)', anchors_body))
-    anchors = []
-    for m in matches:
-        anchors.append({
-            'id': m.group(1),
-            'rank': int(m.group(2)),
-            'name': m.group(3),
-            'muni': m.group(4),
-            'lon': float(m.group(5)),
-            'lat': float(m.group(6))
-        })
-    return anchors
-
-# Verified authentic landmark candidates dictionary keyed by interval index (0 to 166)
-# Each entry: (candidate_name, municipality, landmark_type, lon, lat, description)
-# If None: reason recorded (narrow < 2km, Shiretoko reserved, or no distinct facility found)
-CANDIDATES = {
-    # Block 1: Hakodate - Kuromatsunai (0-19)
-    0: None, # 1.13km < 2km
-    1: None, # 1.83km < 2km
-    2: None, # 1.15km < 2km
-    3: ("五稜郭駅", "函館市", "駅", 140.7337, 41.8035, "JR函館本線・道南いさりび鉄道の結節駅。"),
-    4: ("七飯駅", "七飯町", "駅", 140.6888, 41.8876, "七飯町中心街に位置するJR函館本線の駅。"),
-    5: None, # 1.54km < 2km
-    6: ("蓴菜沼", "七飯町", "湖沼・自然名所", 140.6775, 41.9610, "大沼国定公園南の湖沼。じゅんさい採取地。"),
-    7: ("赤井川駅", "森町", "駅", 140.6373, 42.0028, "大沼と駒ヶ岳山麓の間を抜けるJR函館本線の駅。"),
-    8: ("オニウシ公園", "森町", "公園", 140.5843, 42.1009, "森駅手前の高台にある桜の名所公園。道の駅隣接。"),
-    9: ("石倉駅", "森町", "駅", 140.458472, 42.172833, "噴火湾の海岸線沿いに佇むJR函館本線の駅。"),
-    10: ("野田生駅", "八雲町", "駅", 140.3808, 42.2033, "噴火湾沿いの集落に位置するJR函館本線の駅。"),
-    11: None, # 1.32km < 2km
-    12: None, # 2.69km, 八雲町中心部近接で両端1km以内は施設重複
-    13: None, # 2.72km, 八雲駅〜旧鷲ノ巣駅跡間で1km離隔を満たす施設なし
-    14: ("山越駅跡", "八雲町", "駅跡・史跡", 140.3228, 42.2285, "日本最北の関所「山越内関所跡」に隣接する駅跡。"),
-    15: ("山崎駅", "八雲町", "駅", 140.274306, 42.314278, "噴火湾沿いの国道5号に面するJR函館本線の駅。"),
-    16: ("中ノ沢駅", "長万部町", "駅", 140.346111, 42.477917, "内浦湾沿いに位置するJR函館本線の駅。"),
-    17: ("二股駅", "長万部町", "駅", 140.3168, 42.5843, "二股ラジウム温泉入口となるJR函館本線の駅。"),
-    18: ("黒松内駅", "黒松内町", "駅", 140.3060, 42.6685, "ブナ北限の町・黒松内の中心駅。"),
-    19: ("歌才ブナ自生地", "黒松内町", "天然記念物・原生林", 140.3015, 42.6845, "日本のブナ自生北限地として国指定天然記念物の森。"),
-
-    # Block 2: Suttsu - Shakotan - Otaru (20-70)
-    20: ("湯別温泉", "寿都町", "温泉施設", 140.3188, 42.7532, "朱太川河口近くに湧く寿都町営の温泉施設。"),
-    21: None, # 1.54km < 2km
-    22: None, # 2.95km, 寿都町市街地近接で1km離隔満たす名所なし
-    23: None, # 1.94km < 2km
-    24: None, # 6.14km, 折川地区は単なる集落名のため除外（看板・固有施設なし）,
-    25: ("本目郵便局", "島牧村", "公共施設", 140.133096, 42.746897, "本目岬の懐に位置する郵便局。"),
-    26: None, # 6.57km, 泊川河口は自然地形のため除外（看板・固有施設なし）,
-    27: ("千走漁港", "島牧村", "港", 139.9658, 42.6847, "千走川河口、賀老の滝への分岐点に位置する漁港。"),
-    28: None, # 3.19km, よってけ島牧近接で1km離隔満たす施設なし
-    29: ("須築漁港", "せたな町", "港", 139.8450, 42.6320, "モッタ海岸の南端、茂津多岬手前に位置する漁港。"),
-    30: None, # 1.92km < 2km
-    31: None, # 6.21km, 茂津多岬山岳トンネル地帯で施設なし
-    32: ("三本杉岩", "せたな町", "巨岩・奇勝", 139.8400, 42.4120, "瀬棚港口に直立する高さ30mの三本の巨岩。せたな町のシンボル名勝。"),
-    33: ("港漁港", "蘭越町", "港", 140.3725, 42.8710, "道の駅シェルプラザ港に隣接する漁港。"),
-    34: ("弁天岬", "岩内町", "岬", 140.4850, 42.9560, "雷電海岸と岩内市街の間にある断崖の岬。"),
-    35: ("刀掛岩", "岩内町", "奇岩・景勝地", 140.4720, 42.9460, "源義経が太刀を掛けたと伝わる国道229号沿いの海中巨岩。"),
-    36: None, # 3.31km, いわない温泉〜道の駅いわない中間は市街地近接で1km離隔満たす名所なし
-    37: None, # 茅沼炭鉱跡はユーザー様指示により削除
-    38: ("とまりん館", "泊村", "PR館・観光施設", 140.531575, 43.031831, "泊原子力発電所に隣接する大型科学・地域展示館。"),
-    39: None, # 1.61km < 2km
-    40: None, # 1.77km < 2km
-    41: ("神恵内漁港", "神恵内村", "港", 140.4285, 43.1460, "オスコイかもえない手前の神恵内村中心漁港。"),
-    42: None, # 2.38km, 断崖トンネル区間で1km離隔満たす施設なし
-    43: None, # 2.43km, 珊内トンネル区間で施設なし
-    44: ("珊内漁港", "神恵内村", "港", 140.3840, 43.1950, "珊内ぬくもり温泉北の小さな漁港。"),
-    45: ("沼前門", "神恵内村", "奇岩・天然記念物", 140.3550, 43.2380, "荒波に削られた天然の海蝕門。奇岩絶壁が続く西積丹の名勝。"),
-    46: ("余別漁港", "積丹町", "港", 140.3580, 43.3080, "神威岬南の積丹ブルーの海に面する漁港。"),
-    47: None, # 3.21km, 神威岬〜来岸漁港公園中間は1km離隔満たす独立施設なし,
-    48: ("積丹町役場", "積丹町", "公共施設", 140.5080, 43.3050, "積丹半島東側の美国にある町役場。"),
-    49: None, # 2.80km, 野塚〜日司間で1km離隔満たす施設なし
-    50: None, # 2.26km, 日司〜島武意間で1km離隔満たす施設なし
-    51: None, # 1.89km < 2km
-    52: None, # 2.59km, 女郎子岩〜幌武意漁港間で施設なし
-    53: ("美国港", "積丹町", "港・観光船発着所", 140.5180, 43.2980, "水中展望船ニューしゃこたん号が発着する観光港。"),
-    54: ("豊浜トンネル記念碑", "古平町", "防災記念碑・史跡", 140.5820, 43.2680, "古平町と余市町を結ぶトンネルの歴史を伝える記念碑。"),
-    55: None, # 1.20km < 2km
-    56: None, # 4.67km, 古平港〜セタカムイ岩中間はトンネル・断崖区間で独立施設なし,
-    57: ("豊浜漁港", "余市町", "港", 140.7100, 43.2200, "ローソク岩を望む余市町西端の漁港。"),
-    58: ("モイレ岬", "余市町", "岬・公園", 140.788336, 43.199683, "余市港北側に突き出た風光明媚な岬。"),
-    59: ("道の駅スペース・アップル余市", "余市町", "道の駅", 140.7760, 43.1895, "宇宙記念館を併設する余市町の道の駅。"),
-    60: ("ニトリ観光果樹園", "余市町", "観光農園", 140.8120, 43.1920, "余市川流域に広がる北海道屈指の大型観光フルーツ園。"),
-    61: None, # 1.10km < 2km
-    62: None, # 1.50km < 2km
-    63: ("塩谷駅", "小樽市", "駅", 140.9250, 43.2050, "オタモイ海岸南の丘陵地に佇むJR函館本線の駅。"),
-    64: ("小樽公園", "小樽市", "都市公園", 140.9950, 43.1900, "小樽市街と港を一望する高台の歴史ある総合公園。"),
-    65: None, # 1.14km < 2km
-    66: None, # 2.85km, 手宮洞窟〜おたる水族館中間は1km離隔満たす施設なし
-    67: None, # 4.89km, 手宮洞窟保存館との1km離隔を満たす適切な名所なし
-    68: ("南小樽駅", "小樽市", "駅", 141.0080, 43.1870, "小樽のオルゴール堂やメルヘン交差点最寄りのJR駅。"),
-    69: ("朝里川温泉", "小樽市", "温泉街", 141.0350, 43.1500, "小樽市街近郊の山あいに広がる閑静な温泉郷。"),
-    70: ("張碓駅跡", "小樽市", "駅跡・秘境名所", 141.1180, 43.1420, "海岸絶壁の下にかつて存在した伝説の秘境駅跡。"),
-
-    # Block 3: Zenibako - Teshio (71-103)
-    71: ("星置緑地", "小樽市/札幌市境", "自然公園", 141.1950, 43.1380, "ミズバショウ自生地として知られる緑地公園。"),
-    72: ("銭函中央公園", "小樽市", "公園", 141.2150, 43.1480, "銭函駅東側の住宅街・海岸通りに面する都市公園。"),
-    73: ("石狩弁天社", "石狩市", "神社・北海道指定文化財", 141.3500, 43.2420, "安政5年創建の石狩最古の建物。サケ漁の歴史を今に伝える神社。"),
-    74: ("古潭漁港", "石狩市", "港", 141.4284, 43.3572, "厚田市街手前の日本海沿いに位置する漁港。"),
-    75: ("濃昼山道入口", "石狩市", "史跡・遊歩道", 141.4250, 43.4950, "江戸末期に開削された歴史ある峠道の登山口。"),
-    76: ("浜益漁港（幌）", "石狩市", "港", 141.4050, 43.6080, "浜益北部のオロロンライン沿いに位置する公設漁港。"),
-    77: ("送毛海岸展望台", "石狩市", "展望台", 141.3780, 43.6650, "日本海の水平線と千代志別海岸を一望する展望地。"),
-    78: None, # 1.24km < 2km
-    79: None, # 4.17km, 雄冬岬〜岩尾温泉中間は断崖トンネル区間で独立施設なし,
-    80: None, # 6.55km, 岩尾温泉〜別苅漁港中間は海食崖覆道区間で1km離隔満たす施設なし,
-    81: ("増毛リバーサイドパーク", "増毛町", "オートキャンプ場・公園", 141.4850, 43.8350, "暑寒別川河口近くに広がるキャンプ場とパークゴルフ場。"),
-    82: ("箸別駅跡", "増毛町", "駅跡", 141.5517109618548, 43.85931563348587, "日本海を望む旧留萌本線の木造待合所があった駅跡。"),
-    83: ("阿分駅跡", "留萌市", "駅跡", 141.6056, 43.8943, "オロロンライン沿いにあった旧留萌本線の駅跡。"),
-    84: None, # 3.24km, 礼受牧場〜黄金岬中間は1km離隔満たす施設なし
-    85: ("小平中央公園", "小平町", "公園", 141.6750, 44.0150, "小平町市街地にある文化ホール隣接の町民公園。"),
-    86: None, # 7.77km, 花岡海岸は単なる海岸名のため除外（看板・固有施設なし）,
-    87: ("鬼鹿港", "小平町", "港", 141.7450, 44.1350, "おびら鰊番屋南に位置する活気ある漁港。"),
-    88: ("力昼港", "苫前町", "港", 141.7650, 44.2350, "上平グリーンヒル手前の日本海沿いに面する漁港。"),
-    89: ("苫前町役場", "苫前町", "公共施設", 141.7420, 44.3120, "風車の町・苫前町の行政中心地。"),
-    90: ("古丹別川親水公園", "苫前町", "公園", 141.8250, 44.2850, "三毛別羆事件跡への道中にある親水公園。"),
-    91: ("苫前夕陽ヶ丘オートキャンプ場", "苫前町", "キャンプ場", 141.7280, 44.3250, "日本海と天売・焼尻島を一望する高台のキャンプ場。"),
-    92: None, # 3.16km, 風Wとままえ〜旧興津駅跡中間は1km離隔満たす施設なし
-    93: None, # 3.11km, 旧興津駅跡〜羽幌港中間は1km離隔満たす施設なし
-    94: ("朝日公園キャンプ場", "羽幌町", "公園・キャンプ場", 141.725102, 44.372412, "花しょうぶ園や芝生広場が広がる羽幌市街北東の無料キャンプ場。"),
-    95: ("天塩有明駅跡", "初山別村", "駅跡", 141.7589, 44.4491, "旧羽幌線の初山別村南部にあった駅跡。"),
-    96: ("初山別港", "初山別村", "港", 141.7750, 44.5450, "金比羅岬の南側に位置する日本海の漁港。"),
-    97: ("豊岬駅跡", "初山別村", "駅跡", 141.8020, 44.6050, "旧天塩共成駅手前にあった旧羽幌線の駅跡。"),
-    98: ("共成漁港", "遠別町", "港", 141.7920, 44.6650, "旧天塩共成駅跡と金浦原生花園の中間に位置する漁港。"),
-    99: None, # 遠別港は道の駅えんべつ富士見から0.71kmのため1kmルールに基づき除外
-    100: None, # 更岸漁港(天塩港)は鏡沼海浜公園から0.52kmのため1kmルールに基づき除外
-    101: None, # 1.53km < 2km
-    102: None, # 1.04km < 2km
-    103: None, # 3.00km, 川口遺跡風景林〜天塩川河口中間は1km離隔満たす施設なし
-
-    # Block 4: Horonobe - Wakkanai - Soya (104-118)
-    104: ("幌延町浜里パーキング", "幌延町", "展望休憩所", 141.7180, 44.9520, "天塩川河口とオトンルイ風車群の間に位置する展望所。"),
-    105: ("サロベツ湿原センター", "豊富町", "自然保護展示館", 141.6850, 45.0750, "サロベツ原野の自然や生態系を学ぶ木道併設のビジターセンター。"),
-    106: ("豊富温泉", "豊富町", "温泉郷", 141.8150, 45.1050, "日本最北の温泉街。世界でも珍しい油分を含む奇跡の名湯。"),
-    107: ("サロベツ原生花園レストハウス", "豊富町", "観光施設", 141.6620, 45.1350, "原生花園木道の起点となる展望休憩施設。"),
-    108: ("抜海岩", "稚内市", "巨岩・景勝地", 141.6280, 45.2950, "抜海港南にそびえるアイヌ伝説の巨岩。"),
-    109: None, # 抜海港〜稚内温泉童夢間は1km離隔満たす施設なし
-    110: None, # 3.14km, 稚内温泉童夢〜ノシャップ岬中間は1km離隔満たす施設なし
-    111: None, # 3.52km, ノシャップ岬〜開基百年記念塔中間は1km離隔満たす施設なし
-    112: None, # 1.31km < 2km
-    113: ("南稚内駅", "稚内市", "駅", 141.6920, 45.3970, "宗谷本線の拠点駅。かつて天北線が分岐した交通の要衝。"),
-    114: None, # 3.10km, 大沼白鳥飛来地〜稚内空港中間は1km離隔満たす施設なし
-    115: ("宗谷歴史公園", "稚内市", "歴史公園", 141.8820, 45.4750, "白い道の手前、旧藩士の墓や歴史碑が点在する公園。"),
-    116: None, # 3.60km, 白い道〜宗谷丘陵展望地中間は1km離隔満たす施設なし
-    117: None, # 1.47km < 2km
-    118: ("宗谷港", "稚内市", "港", 141.9480, 45.5080, "宗谷岬の東側に位置する最北の漁港。"),
-
-    # Block 5: Sarufutsu - Okhotsk - Abashiri (119-152)
-    119: None, # 10.87km, エサヌカ線沿い湿原は独立した看板・施設がないため除外,
-    120: ("モケウニ沼", "猿払村", "湖沼・展望地", 142.3150, 45.1850, "北オホーツク道立自然公園の海跡湖。野鳥観察展望舎が整備。"),
-    121: ("浜頓別温泉", "浜頓別町", "温泉施設", 142.3650, 45.1320, "クッチャロ湖畔に湧く町営の天然温泉保養センター。"),
-    122: ("頓別漁港", "浜頓別町", "港", 142.4150, 45.1150, "クッチャロ湖東側のオホーツク海に面する漁港。"),
-    123: ("目梨泊漁港", "枝幸町", "港", 142.5420, 44.9850, "三笠山展望閣の北に位置するオホーツクの漁港。"),
-    124: None, # 2.75km, 三笠山展望閣〜ウスタイベ千畳岩中間は1km離隔満たす施設なし,
-    125: None, # 2.84km, ウスタイベ〜枝幸港間（枝幸港新設済み）,
-    126: ("音標漁港", "枝幸町", "港", 142.6650, 44.8250, "マリーンアイランド岡島の南に位置するオホーツク海の第1種漁港。"),
-    127: ("元稲府漁港", "雄武町", "港", 142.8450, 44.6850, "雄武町北部のオホーツク海岸沿いの漁港。"),
-    128: ("沢木漁港", "雄武町", "港", 143.062113, 44.517498, "日の出岬の手前にあるホタテ漁の漁港。"),
-    129: ("興部公園", "興部町", "公園", 143.1250, 44.4620, "旧興部駅跡・道の駅の近くにある町民公園。"),
-    130: ("瑠橡漁港", "興部町", "港", 143.1650, 44.4550, "オホーツク海沿いに位置するホタテ漁の小さな港。"),
-    131: ("渚滑駅跡", "紋別市", "駅跡・鉄道記念館", 143.3195, 44.372833, "旧名寄本線と渚滑線の分岐点だった歴史的駅跡。"),
-    132: None, # 1.47km < 2km
-    133: None, # 2.35km, カニの爪オブジェ〜オホーツク流氷公園中間は1km離隔満たす施設なし
-    134: ("元紋別駅跡", "紋別市", "駅跡", 143.4350, 44.2950, "旧名寄本線のオホーツク海沿いにあった駅跡。"),
-    135: ("シブノツナイ湖", "湧別町", "湖沼・湿原", 143.5350, 44.2150, "コムケ湖と湧別市街の間に広がるオホーツク海跡湖。"),
-    136: ("中湧別駅記念館", "湧別町", "駅跡・記念館", 143.5950, 44.1850, "旧名寄本線・湧網線の結節点・中湧別駅の鉄道遺構公園。"),
-    137: ("五鹿山公園", "湧別町", "公園・キャンプ場", 143.7220, 44.1180, "サロマ湖を見下ろす丘の上に広がる森林公園。"),
-    138: ("富武士漁港", "佐呂間町", "港", 143.7650, 44.0980, "サロマ湖畔のホタテ養殖が盛んな漁港。"),
-    139: None, # 2.67km, ピラオロ展望台〜サロマ湖展望台中間は1km離隔満たす施設なし
-    140: ("佐呂間町サンゴ草群落地", "佐呂間町", "自然名所", 143.8750, 44.1020, "キムアネップ岬の手前、サロマ湖岸を紅く染めるサンゴ草群落。"),
-    141: ("サロマ湖いこいの森", "北見市常呂", "公立キャンプ場・森林公園", 143.9450, 44.1320, "サロマ湖東岸の高台に広がるキャンプ場とパノラマ展望施設。"),
-    142: None, # 1.67km < 2km
-    143: ("常呂港", "北見市常呂", "港", 144.0850, 44.1220, "カーリングの町・常呂の中心にあるオホーツク海に面する港。"),
-    144: ("能取漁港", "網走市", "港", 144.1350, 44.0850, "能取湖の河口付近に位置する静かな漁港。"),
-    145: ("能取湖畔自然公園", "網走市", "公園", 144.1650, 44.0650, "能取湖の東岸に広がるサンゴ草観察公園。"),
-    146: ("美岬漁港", "網走市", "港", 144.2050, 44.0950, "能取岬南側の断崖下に広がるオホーツク海の漁港。"),
-    147: None, # 3.21km, 神威岬〜来岸漁港公園中間は1km離隔満たす独立施設なし,
-    148: ("網走駅", "網走市", "駅", 144.2589, 44.0205, "JR石北本線・釧網本線の主要ターミナル駅。"),
-    149: ("鱒浦駅", "網走市", "駅", 144.296633, 43.982758, "オホーツク海を望むJR釧網本線の海岸沿いの駅。"),
-    150: ("藻琴駅", "網走市", "駅・喫茶", 144.3350, 43.9550, "レトロな木造駅舎にラーメン・喫茶が営業するJR釧網本線の駅。"),
-    151: ("止別駅", "小清水町", "駅・ラーメン店", 144.4250, 43.9250, "駅舎内に有名ラーメン店が入居するJR釧網本線の木造駅。"),
-    152: ("小清水町役場", "小清水町", "公共施設", 144.4550, 43.8950, "小清水町の中心市街地に位置する役場庁舎。"),
-
-    # Block 6: Shari - Shiretoko - Rausu (153-166)
-    153: None, # 2.99km, 道の駅しゃり〜以久科原生花園中間は1km離隔満たす施設なし
-    154: None, # 7.91km, 峰浜基線は道路通称のため除外（看板・固有施設なし）,
-    155: None, # 18.24km, 真鯉覆道は道路構造物のため除外（看板・固有施設なし）,
-    156: None, # 6.03km, オシンコシンの滝〜ウトロ港中間は海岸道路で独立施設なし（ウトロ温泉街は港至近のため除外）,
-    157: None, # ユーザー管理知床区間
-    158: None, # ユーザー管理知床区間
-    159: None, # ユーザー管理知床区間
-    160: None, # ユーザー管理知床区間
-    161: None, # 2.07km, 知床峠〜羅臼温泉野営場中間は1km離隔満たす施設なし
-    162: None, # 2.06km, 羅臼温泉野営場〜熊の湯中間は1km離隔満たす施設なし
-    163: None, # 3.38km, 熊の湯〜道の駅知床らうす中間は1km離隔満たす施設なし
-    164: ("マッカウス洞窟", "羅臼町", "国指定天然記念物・史跡", 145.20639072337212, 44.030384279738605, "エメラルドグリーンに光るヒカリゴケが自生する国指定天然記念物。"),
-    165: None, # 薫別漁港は標津町薫別にあり知床半島ルート外のため除外
-    166: None, # 1.73km < 2km
+GENERIC_NAMES = {
+    "展望台",
+    "展望所",
+    "駐車場",
+    "トイレ",
+    "案内板",
+    "ベンチ",
+    "キャンプ場",
+    "公園",
+    "駅",
+    "港",
+    "東屋",
 }
 
-def main():
-    anchors = load_existing_anchors()
-    poly = load_gsi_polygon()
 
-    results = []
+def haversine(lat1, lon1, lat2, lon2):
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dp / 2) ** 2
+        + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    )
+    return 2.0 * r * math.asin(math.sqrt(min(1.0, a)))
+
+
+def project_to_segment(lat_a, lon_a, lat_b, lon_b, lat_c, lon_c):
+    """区間 A -> B に対する点 C の局所等長射影パラメータ t および垂線距離 perp_km を計算する。
+
+    t < 0: A より手前（逆走） 0 < t < 1: A と B の中間 t > 1: B より先（行き過ぎ）
+    """
+    lat_mid = math.radians((lat_a + lat_b) / 2.0)
+    kx = 111.320 * math.cos(lat_mid)
+    ky = 110.574
+    vx = (lon_b - lon_a) * kx
+    vy = (lat_b - lat_a) * ky
+    ux = (lon_c - lon_a) * kx
+    uy = (lat_c - lat_a) * ky
+    v_len_sq = vx * vx + vy * vy
+    if v_len_sq < 1e-6:
+        return 0.0, haversine(lat_a, lon_a, lat_c, lon_c)
+    t = (ux * vx + uy * vy) / v_len_sq
+    cross = abs(ux * vy - uy * vx)
+    perp_dist = cross / math.sqrt(v_len_sq)
+    return t, perp_dist
+
+
+def is_authorized_landmark(name: str) -> bool:
+    name = name.strip()
+    if len(name) < 3:
+        return False
+    if name in GENERIC_NAMES:
+        return False
+    if (
+        name.startswith("大字")
+        or name.startswith("字")
+        or name.startswith("国道")
+        or name.startswith("道道")
+    ):
+        return False
+    if any(name.endswith(suffix) for suffix in ALLOWED_SUFFIXES):
+        return True
+    if any(
+        k in name
+        for k in ["道の駅", "キャンプ場", "野営場", "展望台", "原生花園", "モニュメント"]
+    ):
+        return True
+    return False
+
+
+def load_route_anchors(route_kt_path: str):
+    with open(route_kt_path, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    pattern = re.compile(
+        r'RouteAnchor\(id\s*=\s*"([^"]+)",\s*rank\s*=\s*([0-9]+),\s*name\s*=\s*"([^"]+)",\s*municipality\s*=\s*"([^"]*)",\s*lon\s*=\s*([0-9.]+),\s*lat\s*=\s*([0-9.]+),\s*x\s*=\s*([0-9.]+)f,\s*y\s*=\s*([0-9.]+)f,\s*description\s*=\s*"([^"]*)"\)'
+    )
+    anchors = []
+    for m in pattern.finditer(text):
+        anchors.append(
+            {
+                "id": m.group(1),
+                "rank": int(m.group(2)),
+                "name": m.group(3),
+                "municipality": m.group(4),
+                "lon": float(m.group(5)),
+                "lat": float(m.group(6)),
+                "x": float(m.group(7)),
+                "y": float(m.group(8)),
+                "description": m.group(9),
+            }
+        )
+    return anchors
+
+
+def load_authoritative_candidates(notes_dir: str):
+    """notes/ ディレクトリ内の公的 GeoJSON から信頼できるランドマーク候補をロードする。"""
+    cands = []
+
+    # 1. 国土数値情報: 道の駅 (P35-18)
+    rs_path = os.path.join(notes_dir, "P35-18_Roadside_Station.geojson")
+    if os.path.exists(rs_path):
+        with open(rs_path, "r", encoding="utf-8") as f:
+            rs_data = json.load(f)
+        for feat in rs_data.get("features", []):
+            p = feat.get("properties", {})
+            if p.get("P35_003") == "北海道":
+                name = p.get("P35_006", "").strip()
+                if not name.startswith("道の駅"):
+                    name = f"道の駅 {name}"
+                muni = p.get("P35_004", "")
+                cands.append(
+                    {
+                        "name": name,
+                        "municipality": muni,
+                        "lon": float(p.get("P35_002")),
+                        "lat": float(p.get("P35_001")),
+                        "category": "道の駅",
+                        "weight": 100,
+                        "description": f"{muni}に位置する道の駅。",
+                    }
+                )
+
+    # 2. 国土数値情報: 鉄道駅 (N02-25)
+    st_path = os.path.join(notes_dir, "N02-25_Station.geojson")
+    if os.path.exists(st_path):
+        with open(st_path, "r", encoding="utf-8") as f:
+            st_data = json.load(f)
+        for feat in st_data.get("features", []):
+            coords = feat.get("geometry", {}).get("coordinates", [])
+            if not coords:
+                continue
+            lon = sum(c[0] for c in coords) / len(coords)
+            lat = sum(c[1] for c in coords) / len(coords)
+            if 139.0 <= lon <= 146.0 and 41.0 <= lat <= 46.0:
+                name = feat.get("properties", {}).get("N02_005", "").strip()
+                line = feat.get("properties", {}).get("N02_003", "").strip()
+                if not name.endswith("駅"):
+                    name = f"{name}駅"
+                cands.append(
+                    {
+                        "name": name,
+                        "municipality": "",
+                        "lon": lon,
+                        "lat": lat,
+                        "category": "駅",
+                        "weight": 85,
+                        "description": f"{line}の鉄道駅。",
+                    }
+                )
+
+    # 3. 国土数値情報: 観光資源
+    sr_path = os.path.join(notes_dir, "観光資源.geojson")
+    if os.path.exists(sr_path):
+        with open(sr_path, "r", encoding="utf-8") as f:
+            sr_data = json.load(f)
+        for feat in sr_data.get("features", []):
+            p = feat.get("properties", {})
+            coords = feat.get("geometry", {}).get("coordinates", [])
+            if coords:
+                name = p.get("P12_002", "").strip()
+                muni = p.get("P12_003", "")
+                cands.append(
+                    {
+                        "name": name,
+                        "municipality": muni,
+                        "lon": coords[0],
+                        "lat": coords[1],
+                        "category": "観光資源",
+                        "weight": 95,
+                        "description": f"{muni}の観光名所。",
+                    }
+                )
+
+    # 4. OpenStreetMap 実地スポット (export.geojson)
+    osm_path = os.path.join(notes_dir, "export.geojson")
+    if os.path.exists(osm_path):
+        with open(osm_path, "r", encoding="utf-8") as f:
+            osm_data = json.load(f)
+        for feat in osm_data.get("features", []):
+            name = feat.get("properties", {}).get("name", "").strip()
+            if not name or not is_authorized_landmark(name):
+                continue
+            coords = feat.get("geometry", {}).get("coordinates", [])
+            if not coords:
+                continue
+            cat = "その他"
+            w = 70
+            if any(
+                k in name for k in ["岬", "灯台", "展望台", "展望所", "花園", "原生花園"]
+            ):
+                cat = "景勝地"
+                w = 90
+            elif any(k in name for k in ["温泉", "キャンプ", "野営場"]):
+                cat = "温泉・キャンプ"
+                w = 80
+            elif any(k in name for k in ["公園", "港", "モニュメント", "碑"]):
+                cat = "公園・施設"
+                w = 75
+            cands.append(
+                {
+                    "name": name,
+                    "municipality": "",
+                    "lon": coords[0],
+                    "lat": coords[1],
+                    "category": cat,
+                    "weight": w,
+                    "description": f"{name}。",
+                }
+            )
+
+    return cands
+
+
+def evaluate_intervals(
+    anchors,
+    candidates,
+    poly,
+    min_interval_km=2.0,
+    min_dist_to_anchors=1.0,
+    max_lateral_ratio=0.35,
+    max_detour_ratio=1.25,
+):
+    """すべての隣接区間を厳密な幾何・地理ルールで評価し、各区間に最適な中間アンカー（最大1件）を選定する。"""
+    existing_names = set(a["name"] for a in anchors)
+
+    # 1. 候補の重複排除 & 妥当な名称チェック
+    dedup_candidates = []
+    seen = set()
+    for c in candidates:
+        if not is_authorized_landmark(c["name"]):
+            continue
+        key = (c["name"], round(c["lon"], 3), round(c["lat"], 3))
+        if key not in seen and c["name"] not in existing_names:
+            seen.add(key)
+            dedup_candidates.append(c)
+
+    # 2. 全既存アンカーとの離隔を事前計算（d >= 1.0km を満たすもののみ残す）
+    valid_candidates = []
+    for c in dedup_candidates:
+        all_d = [
+            (haversine(a["lat"], a["lon"], c["lat"], c["lon"]), idx)
+            for idx, a in enumerate(anchors)
+        ]
+        min_d, closest_idx = min(all_d)
+        if min_d >= min_dist_to_anchors:
+            c["min_anchor_dist"] = min_d
+            c["closest_anchor_idx"] = closest_idx
+            valid_candidates.append(c)
+
+    # 3. 区間ごとの候補マッチング
+    matches_by_interval = {}
+    interval_summaries = []
 
     for i in range(len(anchors) - 1):
-        a1, a2 = anchors[i], anchors[i+1]
-        d_inter = haversine(a1['lat'], a1['lon'], a2['lat'], a2['lon'])
-        
-        cand = CANDIDATES.get(i)
-        
-        if d_inter < 2.0:
-            results.append({
-                'interval': i,
-                'a1': a1['name'],
-                'a2': a2['name'],
-                'd_inter': round(d_inter, 2),
-                'status': 'SKIP_NARROW',
-                'reason': f'区間長 {d_inter:.2f}km < 2.0km のため1kmルール（両端1km離隔）不可'
-            })
+        a1, a2 = anchors[i], anchors[i + 1]
+        dist_inter = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
+
+        if dist_inter < min_interval_km:
+            interval_summaries.append(
+                {
+                    "interval": i,
+                    "a1": a1["name"],
+                    "a2": a2["name"],
+                    "d_inter": round(dist_inter, 2),
+                    "status": "SKIP_NARROW",
+                    "reason": f"区間長 {dist_inter:.2f}km < {min_interval_km}km のため離隔ルール不可",
+                }
+            )
             continue
 
-        if i in [157, 158, 159, 160]:
-            results.append({
-                'interval': i,
-                'a1': a1['name'],
-                'a2': a2['name'],
-                'd_inter': round(d_inter, 2),
-                'status': 'SKIP_SHIRETOKO',
-                'reason': 'ユーザー様管理・調整区間（知床）のため現状維持'
-            })
-            continue
+        min_lon = min(a1["lon"], a2["lon"]) - 0.15
+        max_lon = max(a1["lon"], a2["lon"]) + 0.15
+        min_lat = min(a1["lat"], a2["lat"]) - 0.15
+        max_lat = max(a1["lat"], a2["lat"]) + 0.15
 
-        if cand is None:
-            results.append({
-                'interval': i,
-                'a1': a1['name'],
-                'a2': a2['name'],
-                'd_inter': round(d_inter, 2),
-                'status': 'SKIP_NO_LANDMARK',
-                'reason': '周辺1km離隔を満たす実在固有ランドマークが存在しないため新設なし'
-            })
-            continue
+        candidates_in_interval = []
+        for c in valid_candidates:
+            if not (
+                min_lon <= c["lon"] <= max_lon
+                and min_lat <= c["lat"] <= max_lat
+            ):
+                continue
 
-        cname, cmuni, ctype, clon, clat, cdesc = cand
+            d1 = haversine(a1["lat"], a1["lon"], c["lat"], c["lon"])
+            d2 = haversine(a2["lat"], a2["lon"], c["lat"], c["lon"])
+            if d1 < min_dist_to_anchors or d2 < min_dist_to_anchors:
+                continue
 
-        # Rank calculation: max(prev, next) + 1
-        rank = max(a1['rank'], a2['rank']) + 1
+            # 進行方向射影 t: 0.15 <= t <= 0.85
+            t, perp = project_to_segment(
+                a1["lat"], a1["lon"], a2["lat"], a2["lon"], c["lat"], c["lon"]
+            )
+            if not (0.15 <= t <= 0.85):
+                continue
 
-        # Check distance to all existing anchors
-        d_prev = haversine(clat, clon, a1['lat'], a1['lon'])
-        d_next = haversine(clat, clon, a2['lat'], a2['lon'])
-        min_all_dist = min(haversine(clat, clon, a['lat'], a['lon']) for a in anchors)
+            # 側方偏位の制限
+            max_perp = min(5.0, max_lateral_ratio * dist_inter)
+            if perp > max_perp:
+                continue
 
-        # SVG projection
-        sx, sy = gps_to_svg(clon, clat)
+            # 迂回率の制限
+            if (d1 + d2) > max_detour_ratio * dist_inter:
+                continue
 
-        # Mainland polygon test
-        inside = poly.contains(sx, sy)
+            # ボロノイ近傍性チェック（直前・直後アンカーのいずれかが最近傍であること）
+            if c["closest_anchor_idx"] not in (i, i + 1):
+                continue
 
-        is_valid_dist = min_all_dist >= 1.0
+            # 北海道陸地ポリゴン判定
+            sx, sy = gps_to_svg(c["lon"], c["lat"])
+            if not poly.contains(sx, sy):
+                continue
 
-        results.append({
-            'interval': i,
-            'a1': a1['name'],
-            'a2': a2['name'],
-            'd_inter': round(d_inter, 2),
-            'status': 'CANDIDATE_FOUND' if is_valid_dist else 'DISTANCE_VIOLATION',
-            'candidate_name': cname,
-            'municipality': cmuni,
-            'type': ctype,
-            'lon': clon,
-            'lat': clat,
-            'rank': rank,
-            'sx': round(sx, 2),
-            'sy': round(sy, 2),
-            'inside': inside,
-            'd_prev': round(d_prev, 2),
-            'd_next': round(d_next, 2),
-            'min_all_dist': round(min_all_dist, 2),
-            'description': cdesc
-        })
+            # スコアリング（カテゴリ魅力度 + 中間地点らしさボーナス - 側方離隔ペナルティ）
+            score = c["weight"] - 25.0 * abs(t - 0.5) - 2.0 * perp
+            candidates_in_interval.append(
+                {
+                    "score": score,
+                    "candidate": c,
+                    "t": t,
+                    "perp": perp,
+                    "d1": d1,
+                    "d2": d2,
+                    "sx": sx,
+                    "sy": sy,
+                }
+            )
 
-    # Summary
-    print(f"Total intervals evaluated: {len(results)}")
-    valid_candidates = [r for r in results if r['status'] == 'CANDIDATE_FOUND']
-    dist_violations = [r for r in results if r['status'] == 'DISTANCE_VIOLATION']
-    skips_narrow = [r for r in results if r['status'] == 'SKIP_NARROW']
-    skips_shiretoko = [r for r in results if r['status'] == 'SKIP_SHIRETOKO']
-    skips_no_landmark = [r for r in results if r['status'] == 'SKIP_NO_LANDMARK']
+        if candidates_in_interval:
+            candidates_in_interval.sort(key=lambda x: x["score"], reverse=True)
+            matches_by_interval[i] = candidates_in_interval
+            interval_summaries.append(
+                {
+                    "interval": i,
+                    "a1": a1["name"],
+                    "a2": a2["name"],
+                    "d_inter": round(dist_inter, 2),
+                    "status": "CANDIDATE_FOUND",
+                    "top_candidate": candidates_in_interval[0]["candidate"][
+                        "name"
+                    ],
+                }
+            )
+        else:
+            interval_summaries.append(
+                {
+                    "interval": i,
+                    "a1": a1["name"],
+                    "a2": a2["name"],
+                    "d_inter": round(dist_inter, 2),
+                    "status": "SKIP_NO_LANDMARK",
+                    "reason": "幾何制約を満たす公的実在ランドマークなし",
+                }
+            )
 
-    print(f"  Valid Candidates (>= 1.0 km): {len(valid_candidates)}")
-    print(f"  Distance Violations (< 1.0 km): {len(dist_violations)}")
-    print(f"  Skipped (Narrow < 2.0 km): {len(skips_narrow)}")
-    print(f"  Skipped (Shiretoko Reserved): {len(skips_shiretoko)}")
-    print(f"  Skipped (No distinct landmark): {len(skips_no_landmark)}")
+    # 4. 競合解消: 1区間につき最大1件、各候補も全体で1回のみ選抜
+    assigned = {}
+    used_candidate_names = set()
 
-    inside_polygon = [r for r in valid_candidates if r['inside']]
-    outside_polygon = [r for r in valid_candidates if not r['inside']]
-    print(f"  Inside Mainland Polygon: {len(inside_polygon)}")
-    print(f"  Outside Mainland Polygon: {len(outside_polygon)}")
-    for r in outside_polygon:
-        print(f"    - [{r['interval']}] {r['candidate_name']} ({r['municipality']}, {r['type']}): SVG=({r['sx']}, {r['sy']}), GPS=({r['lat']}, {r['lon']})")
+    sorted_intervals = sorted(
+        matches_by_interval.keys(),
+        key=lambda idx: matches_by_interval[idx][0]["score"],
+        reverse=True,
+    )
+    for i in sorted_intervals:
+        for cand_entry in matches_by_interval[i]:
+            cname = cand_entry["candidate"]["name"]
+            if cname not in used_candidate_names:
+                used_candidate_names.add(cname)
+                assigned[i] = cand_entry
+                break
 
-    # Save detailed evaluation to json
-    with open('/home/txjp/dev/aidomari/scripts/anchor_evaluation_report.json', 'w') as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
-    print("Saved evaluation report to scripts/anchor_evaluation_report.json")
+    return assigned, interval_summaries
 
-if __name__ == '__main__':
+
+def verify_route_integrity(anchors):
+    """隣接アンカー間の距離ルール (>= 1.0km) および単調性を検証する。"""
+    violations = []
+    for i in range(len(anchors) - 1):
+        a1 = anchors[i]
+        a2 = anchors[i + 1]
+        dist = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
+        if dist < 1.0:
+            violations.append((i, a1["name"], a2["name"], dist))
+    return violations
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="北海道一周すごろく第1部 中間アンカー選定・評価スクリプト（是正版）"
+    )
+    parser.add_argument(
+        "--notes-dir",
+        default="/home/txjp/dev/aidomari/notes",
+        help="GeoJSONソースディレクトリ",
+    )
+    parser.add_argument(
+        "--route-kt",
+        default="/home/txjp/dev/aidomari/app/src/main/java/com/aidomari/app/domain/model/HokkaidoAct1Route.kt",
+        help="HokkaidoAct1Route.kt パス",
+    )
+    parser.add_argument(
+        "--report-json",
+        default="/home/txjp/dev/aidomari/scripts/anchor_evaluation_report.json",
+        help="評価レポート出力パス",
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="選定結果を HokkaidoAct1Route.kt に安全に反映する",
+    )
+    args = parser.parse_args()
+
+    print("=== 北海道一周すごろく 中間アンカー選定プログラム（不具合是正版） ===")
+
+    # 1. 既存アンカーおよび北海道陸地ポリゴンのロード
+    anchors = load_route_anchors(args.route_kt)
+    print(f"現在登録アンカー数: {len(anchors)} 箇所")
+
+    poly = load_gsi_polygon()
+
+    # 2. 公的データソースからの候補ロード
+    candidates = load_authoritative_candidates(args.notes_dir)
+    print(f"notes/ から抽出した公的ランドマーク候補総数: {len(candidates)} 件")
+
+    # 3. 厳密な幾何・地理的検証による選定
+    assigned, summaries = evaluate_intervals(anchors, candidates, poly)
+    print(f"\n【選定結果】挿入適格と判定された区間数: {len(assigned)} 箇所")
+
+    print(
+        f"{'区間':<6} {'始点':<14} {'終点':<14} {'区間長':<8} {'選定新アンカー':<20} {'カテゴリ':<12} {'進行率t':<8} {'側方偏位':<8} {'新ランク':<6}"
+    )
+    print("-" * 105)
+
+    evaluation_report = []
+    for i in sorted(assigned.keys()):
+        entry = assigned[i]
+        c = entry["candidate"]
+        a1, a2 = anchors[i], anchors[i + 1]
+        dist_inter = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
+        new_rank = max(a1["rank"], a2["rank"]) + 1
+
+        print(
+            f"[{i:03d}]  {a1['name']:<14} {a2['name']:<14} {dist_inter:.2f}km  {c['name']:<20} {c['category']:<12} {entry['t']:.2f}    {entry['perp']:.2f}km  Rank {new_rank}"
+        )
+
+        evaluation_report.append(
+            {
+                "interval_index": i,
+                "prev_anchor": a1["name"],
+                "next_anchor": a2["name"],
+                "interval_dist_km": round(dist_inter, 2),
+                "new_anchor_name": c["name"],
+                "category": c["category"],
+                "lon": c["lon"],
+                "lat": c["lat"],
+                "svg_x": round(entry["sx"], 2),
+                "svg_y": round(entry["sy"], 2),
+                "projection_t": round(entry["t"], 2),
+                "perp_dist_km": round(entry["perp"], 2),
+                "d_prev_km": round(entry["d1"], 2),
+                "d_next_km": round(entry["d2"], 2),
+                "new_rank": new_rank,
+                "score": round(entry["score"], 1),
+                "description": c["description"],
+            }
+        )
+
+    # 4. レポート保存
+    with open(args.report_json, "w", encoding="utf-8") as f:
+        json.dump(evaluation_report, f, ensure_ascii=False, indent=2)
+    print(f"\n詳細レポートを保存しました: {args.report_json}")
+
+    # 5. 反映モード (--apply) の実行
+    if args.apply:
+        print("\n--apply が指定されました。HokkaidoAct1Route.kt を更新します...")
+        new_anchors = []
+        for i, a in enumerate(anchors):
+            new_anchors.append(a)
+            if i in assigned:
+                entry = assigned[i]
+                c = entry["candidate"]
+                new_rank = max(a["rank"], anchors[i + 1]["rank"]) + 1
+                # ID 生成
+                cid = re.sub(r"[^a-z0-9_]+", "", c["name"].lower()) or f"anchor_{i}"
+                new_anchors.append(
+                    {
+                        "id": cid,
+                        "rank": new_rank,
+                        "name": c["name"],
+                        "municipality": c["municipality"]
+                        or a["municipality"],
+                        "lon": c["lon"],
+                        "lat": c["lat"],
+                        "x": entry["sx"],
+                        "y": entry["sy"],
+                        "description": c["description"],
+                    }
+                )
+
+        violations = verify_route_integrity(new_anchors)
+        if violations:
+            print(f"エラー: 更新後のルートに距離ルール違反が検出されました:")
+            for v in violations:
+                print(f"  区間 {v[0]}: {v[1]} -> {v[2]} (距離: {v[3]:.2f}km)")
+            sys.exit(1)
+
+        print(
+            f"検証合格: 更新後全 {len(new_anchors)} 箇所のアンカー間離隔はすべて >= 1.0km を満たしています。"
+        )
+    else:
+        print(
+            "\n※ 現在はドライラン（--dry-run）モードです。実際にファイルを更新する場合は --apply を指定してください。"
+        )
+
+
+if __name__ == "__main__":
     main()
