@@ -9,10 +9,10 @@ import org.junit.Test
 class HokkaidoAct1RouteTest {
 
     @Test
-    fun route_hasExact221Nodes() {
-        assertEquals(221, HokkaidoAct1Route.totalNodes)
-        assertEquals(221, HokkaidoAct1Route.routeNodes.size)
-        assertEquals(220, HokkaidoAct1Route.maxStepIndex)
+    fun route_hasExactCuratedNodes() {
+        assertEquals(78, HokkaidoAct1Route.totalNodes)
+        assertEquals(78, HokkaidoAct1Route.routeNodes.size)
+        assertEquals(77, HokkaidoAct1Route.maxStepIndex)
     }
 
     @Test
@@ -28,9 +28,9 @@ class HokkaidoAct1RouteTest {
     @Test
     fun goalNode_isAidomari() {
         val goalNode = HokkaidoAct1Route.goalNode
-        assertEquals("node_0220", goalNode.id)
-        assertEquals(220, goalNode.stepIndex)
-        assertEquals("相泊（最果ての終着点・相泊温泉）", goalNode.name)
+        assertEquals("node_0077", goalNode.id)
+        assertEquals(77, goalNode.stepIndex)
+        assertEquals("相泊（最果ての終着点・車道終点）", goalNode.name)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
         assertTrue(goalNode.isAnchor)
     }
@@ -38,7 +38,7 @@ class HokkaidoAct1RouteTest {
     @Test
     fun allNodes_haveUniqueIdsAndSequentialStepIndices() {
         val ids = HokkaidoAct1Route.routeNodes.map { it.id }.toSet()
-        assertEquals(221, ids.size)
+        assertEquals(HokkaidoAct1Route.totalNodes, ids.size)
 
         HokkaidoAct1Route.routeNodes.forEachIndexed { index, node ->
             assertEquals("Node at index $index must have stepIndex $index", index, node.stepIndex)
@@ -55,30 +55,27 @@ class HokkaidoAct1RouteTest {
         assertNotNull(node0)
         assertEquals("函館駅前", node0?.name)
 
-        val nodeSoya = HokkaidoAct1Route.getNodeById("node_0144")
+        val nodeSoya = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("宗谷岬") && it.name.contains("碑") }
         assertNotNull(nodeSoya)
         assertEquals("日本最北端の地の碑（宗谷岬）", nodeSoya?.name)
         assertEquals(SugorokuNodeType.SCENIC_SPOT, nodeSoya?.type)
 
-        val nodeShosanbetsu = HokkaidoAct1Route.getNodeById("node_0110")
-        assertNotNull(nodeShosanbetsu)
-        assertEquals("みさき台公園", nodeShosanbetsu?.name)
-        assertTrue(nodeShosanbetsu?.isAnchor == true)
-
-        val nodeGoal = HokkaidoAct1Route.getNodeByStepIndex(220)
+        val nodeGoal = HokkaidoAct1Route.getNodeByStepIndex(HokkaidoAct1Route.maxStepIndex)
         assertNotNull(nodeGoal)
-        assertEquals("相泊（最果ての終着点・相泊温泉）", nodeGoal?.name)
+        assertEquals("相泊（最果ての終着点・車道終点）", nodeGoal?.name)
 
         assertNull(HokkaidoAct1Route.getNodeByStepIndex(-1))
-        assertNull(HokkaidoAct1Route.getNodeByStepIndex(221))
+        assertNull(HokkaidoAct1Route.getNodeByStepIndex(HokkaidoAct1Route.totalNodes))
     }
 
     @Test
     fun getNodeById_returnsCorrectNode() {
-        val node = HokkaidoAct1Route.getNodeById("node_0144")
-        assertNotNull(node)
-        assertEquals(144, node?.stepIndex)
-        assertEquals("日本最北端の地の碑（宗谷岬）", node?.name)
+        val nodeSoya = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("宗谷岬") && it.name.contains("碑") }
+        assertNotNull(nodeSoya)
+        val fetchedNode = HokkaidoAct1Route.getNodeById(nodeSoya!!.id)
+        assertNotNull(fetchedNode)
+        assertEquals(nodeSoya.stepIndex, fetchedNode?.stepIndex)
+        assertEquals("日本最北端の地の碑（宗谷岬）", fetchedNode?.name)
 
         assertNull(HokkaidoAct1Route.getNodeById("non_existent_node"))
     }
@@ -86,16 +83,16 @@ class HokkaidoAct1RouteTest {
     @Test
     fun anchors_areCorrectlyDefinedAndMonotonic() {
         val anchors = HokkaidoAct1Route.anchors
-        assertEquals(221, anchors.size)
+        assertEquals(HokkaidoAct1Route.totalNodes, anchors.size)
         assertEquals(0, anchors.first().stepIndex)
-        assertEquals(220, anchors.last().stepIndex)
+        assertEquals(HokkaidoAct1Route.maxStepIndex, anchors.last().stepIndex)
 
         for (i in 0 until anchors.size - 1) {
             assertTrue(
                 "Anchors must be strictly monotonic: ${anchors[i].stepIndex} < ${anchors[i+1].stepIndex}",
                 anchors[i].stepIndex < anchors[i + 1].stepIndex
             )
-            assertEquals("Anchors must be sequential 0..220", i, anchors[i].stepIndex)
+            assertEquals("Anchors must be sequential 0..maxStepIndex", i, anchors[i].stepIndex)
         }
     }
 
