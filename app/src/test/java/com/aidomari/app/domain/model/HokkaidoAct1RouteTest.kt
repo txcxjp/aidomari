@@ -10,9 +10,9 @@ class HokkaidoAct1RouteTest {
 
     @Test
     fun route_hasExactCuratedNodes() {
-        assertEquals(319, HokkaidoAct1Route.totalNodes)
-        assertEquals(319, HokkaidoAct1Route.routeNodes.size)
-        assertEquals(318, HokkaidoAct1Route.maxStepIndex)
+        assertEquals(293, HokkaidoAct1Route.totalNodes)
+        assertEquals(293, HokkaidoAct1Route.routeNodes.size)
+        assertEquals(292, HokkaidoAct1Route.maxStepIndex)
     }
 
     @Test
@@ -32,7 +32,7 @@ class HokkaidoAct1RouteTest {
     fun goalNode_isAidomari() {
         val goalNode = HokkaidoAct1Route.goalNode
         assertEquals("aidomari_bridge", goalNode.id)
-        assertEquals(318, goalNode.stepIndex)
+        assertEquals(292, goalNode.stepIndex)
         assertEquals("相泊橋", goalNode.name)
         assertEquals("羅臼町", goalNode.municipality)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
@@ -104,31 +104,31 @@ class HokkaidoAct1RouteTest {
         }
 
         val rank1Anchors = anchors.filter { it.rank == 1 }
-        assertEquals(67, rank1Anchors.size)
+        assertEquals(63, rank1Anchors.size)
         assertTrue(anchors.any { it.id == "otaru_aquarium" && it.name == "おたる水族館" && it.rank == 1 })
         assertTrue(anchors.any { it.id == "seseki_onsen" && it.name == "セセキ温泉" && it.rank == 1 })
 
         val rank2Anchors = anchors.filter { it.rank == 2 }
-        assertEquals(68, rank2Anchors.size)
+        assertEquals(62, rank2Anchors.size)
         assertTrue(rank2Anchors.any { it.id == "teshio_river_mouth" && it.name == "天塩川河口" })
 
         val rank3Anchors = anchors.filter { it.rank == 3 }
-        assertEquals(86, rank3Anchors.size)
+        assertEquals(78, rank3Anchors.size)
         assertTrue(rank3Anchors.any { it.id == "kawaguchi_ruins_scenic_forest" && it.name == "川口遺跡風景林" })
         assertTrue(rank3Anchors.any { it.id == "sembodai_observatory" && it.name == "千望台" })
 
         val rank4Anchors = anchors.filter { it.rank == 4 }
-        assertEquals(68, rank4Anchors.size)
+        assertEquals(62, rank4Anchors.size)
         assertTrue(rank4Anchors.any { it.id == "goryokaku_station" && it.name == "五稜郭駅" })
         assertTrue(rank4Anchors.any { it.id == "michi_no_eki_hot_haboro" && it.name == "道の駅 ほっと・はぼろ" })
 
         val rank5Anchors = anchors.filter { it.rank == 5 }
-        assertEquals(24, rank5Anchors.size)
+        assertEquals(23, rank5Anchors.size)
         assertTrue(rank5Anchors.any { it.id == "showa_park" && it.name == "昭和公園" })
         assertTrue(rank5Anchors.any { it.id == "enoshima_coast" && it.name == "江ノ島海岸" })
 
         val rank6Anchors = anchors.filter { it.rank == 6 }
-        assertEquals(6, rank6Anchors.size)
+        assertEquals(5, rank6Anchors.size)
         assertTrue(rank6Anchors.any { it.id == "shin_hakodate_hokuto_station" && it.name == "新函館北斗駅" })
         assertTrue(rank6Anchors.any { it.id == "michi_no_eki_you_yu_mori" && it.name == "道の駅 YOU･遊･もり" })
 
