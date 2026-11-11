@@ -10,9 +10,9 @@ class HokkaidoAct1RouteTest {
 
     @Test
     fun route_hasExactCuratedNodes() {
-        assertEquals(168, HokkaidoAct1Route.totalNodes)
-        assertEquals(168, HokkaidoAct1Route.routeNodes.size)
-        assertEquals(167, HokkaidoAct1Route.maxStepIndex)
+        assertEquals(262, HokkaidoAct1Route.totalNodes)
+        assertEquals(262, HokkaidoAct1Route.routeNodes.size)
+        assertEquals(261, HokkaidoAct1Route.maxStepIndex)
     }
 
     @Test
@@ -32,7 +32,7 @@ class HokkaidoAct1RouteTest {
     fun goalNode_isAidomari() {
         val goalNode = HokkaidoAct1Route.goalNode
         assertEquals("aidomari_bridge", goalNode.id)
-        assertEquals(167, goalNode.stepIndex)
+        assertEquals(261, goalNode.stepIndex)
         assertEquals("相泊橋", goalNode.name)
         assertEquals("羅臼町", goalNode.municipality)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
@@ -96,7 +96,7 @@ class HokkaidoAct1RouteTest {
         assertEquals("aidomari_bridge", anchors.last().id)
 
         anchors.forEach { anchor ->
-            assertTrue("Rank must be between 1 and 3", anchor.rank in 1..3)
+            assertTrue("Rank must be between 1 and 4", anchor.rank in 1..4)
             assertTrue("Anchor id should not be blank", anchor.id.isNotBlank())
             assertTrue("Anchor name should not be blank", anchor.name.isNotBlank())
             assertTrue("Anchor municipality should not be blank", anchor.municipality.isNotBlank())
@@ -109,16 +109,44 @@ class HokkaidoAct1RouteTest {
         assertTrue(anchors.any { it.id == "seseki_onsen" && it.name == "セセキ温泉" && it.rank == 1 })
 
         val rank2Anchors = anchors.filter { it.rank == 2 }
-        assertEquals(61, rank2Anchors.size)
+        assertEquals(68, rank2Anchors.size)
         assertTrue(rank2Anchors.any { it.id == "teshio_river_mouth" && it.name == "天塩川河口" })
 
         val rank3Anchors = anchors.filter { it.rank == 3 }
-        assertEquals(40, rank3Anchors.size)
+        assertEquals(80, rank3Anchors.size)
         assertTrue(rank3Anchors.any { it.id == "kawaguchi_ruins_scenic_forest" && it.name == "川口遺跡風景林" })
         assertTrue(rank3Anchors.any { it.id == "esashi_port" && it.name == "枝幸港" })
 
+        val rank4Anchors = anchors.filter { it.rank == 4 }
+        assertEquals(47, rank4Anchors.size)
+        assertTrue(rank4Anchors.any { it.id == "goryokaku_station" && it.name == "五稜郭駅" })
+        assertTrue(rank4Anchors.any { it.id == "nanae_station" && it.name == "七飯駅" })
+
         val ids = anchors.map { it.id }.toSet()
         assertEquals(anchors.size, ids.size)
+    }
+
+    @Test
+    fun adjacentAnchors_satisfyMinimumDistanceRule() {
+        val anchors = HokkaidoAct1Route.anchors
+        for (i in 0 until anchors.size - 1) {
+            val a1 = anchors[i]
+            val a2 = anchors[i + 1]
+            val lat1Rad = Math.toRadians(a1.lat)
+            val lat2Rad = Math.toRadians(a2.lat)
+            val dLat = Math.toRadians(a2.lat - a1.lat)
+            val dLon = Math.toRadians(a2.lon - a1.lon)
+            val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+            val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+            val distKm = 6371.0 * c
+
+            assertTrue(
+                "Distance between anchor $i (${a1.name}) and ${i + 1} (${a2.name}) is ${distKm}km, expected >= 1.0km",
+                distKm >= 1.0,
+            )
+        }
     }
 
     @Test
@@ -164,5 +192,6 @@ class HokkaidoAct1RouteTest {
         assertTrue("坂の下高台 should not be present", "坂の下高台" !in names)
         assertTrue("網走帽子岩 should not be present", "網走帽子岩" !in names)
         assertTrue("稚内西海岸 should not be present", "稚内西海岸" !in names)
+        assertTrue("茅沼炭鉱跡 should not be present", "茅沼炭鉱跡" !in names)
     }
 }
