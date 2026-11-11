@@ -759,13 +759,13 @@ private fun DrawScope.drawSugorokuTiles(
 
     // If zoomed out to whole prefecture overview, draw key landmark pins
     if (zoomScale < 0.05f) {
-        val pinKeySteps = listOf(
-            0 to "函館駅",
-            540 to "小樽",
-            966 to "初山別",
-            1218 to "宗谷岬",
-            1700 to "網走",
-            1999 to "相泊",
+        val pinKeySteps = listOfNotNull(
+            nodes.firstOrNull { it.type == SugorokuNodeType.START_HAKODATE }?.let { it.stepIndex to "函館駅" },
+            nodes.firstOrNull { it.name.contains("小樽") }?.let { it.stepIndex to "小樽" },
+            nodes.firstOrNull { it.name.contains("初山別") || it.name.contains("金比羅岬") }?.let { it.stepIndex to "初山別" },
+            nodes.firstOrNull { it.name.contains("宗谷岬") }?.let { it.stepIndex to "宗谷岬" },
+            nodes.firstOrNull { it.name.contains("網走") }?.let { it.stepIndex to "網走" },
+            nodes.firstOrNull { it.type == SugorokuNodeType.GOAL_AIDOMARI }?.let { it.stepIndex to "相泊" },
         )
         val pinRadiusWorld = 7.dp.toPx() / zoomScale
         val ringWidthWorld = 2.dp.toPx() / zoomScale
