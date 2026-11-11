@@ -365,24 +365,23 @@ object HokkaidoAct1Route {
         return if (index > 0) anchors[index - 1] else null
     }
 
+    private val scenicKeywords = listOf(
+        "岬", "灯台", "碑", "公園", "展望", "原野", "湖", "花園", "丘", "道", "岩", "オブジェ",
+        "運河", "タワー", "海岸", "河口", "洞窟", "滝", "風力", "牧場", "林", "水族館", "マリーナ", "関所",
+    )
+
+    private val townKeywords = listOf(
+        "駅", "通", "町", "蒸溜所", "酒造", "ホール", "カーリング", "のりば", "ハウス", "港",
+    )
+
     val initialNodes: List<SugorokuNode> by lazy {
         anchors.mapIndexed { index, anchor ->
             val nodeType = when {
                 index == 0 -> SugorokuNodeType.START_HAKODATE
                 index == maxStepIndex -> SugorokuNodeType.GOAL_AIDOMARI
                 anchor.name.contains("温泉") -> SugorokuNodeType.REST_AREA
-                anchor.name.contains("岬") || anchor.name.contains("灯台") || anchor.name.contains("碑") ||
-                    anchor.name.contains("公園") || anchor.name.contains("展望") || anchor.name.contains("原野") ||
-                    anchor.name.contains("湖") || anchor.name.contains("花園") || anchor.name.contains("丘") ||
-                    anchor.name.contains("道") || anchor.name.contains("岩") || anchor.name.contains("オブジェ") ||
-                    anchor.name.contains("運河") || anchor.name.contains("タワー") || anchor.name.contains("海岸") ||
-                    anchor.name.contains("河口") || anchor.name.contains("洞窟") || anchor.name.contains("滝") ||
-                    anchor.name.contains("風力") || anchor.name.contains("牧場") || anchor.name.contains("林") ||
-                    anchor.name.contains("水族館") || anchor.name.contains("マリーナ") || anchor.name.contains("関所") -> SugorokuNodeType.SCENIC_SPOT
-                anchor.name.contains("駅") || anchor.name.contains("通") || anchor.name.contains("町") ||
-                    anchor.name.contains("蒸溜所") || anchor.name.contains("酒造") || anchor.name.contains("ホール") ||
-                    anchor.name.contains("カーリング") || anchor.name.contains("のりば") || anchor.name.contains("ハウス") ||
-                    anchor.name.contains("港") -> SugorokuNodeType.TOWN_CENTER
+                scenicKeywords.any { anchor.name.contains(it) } -> SugorokuNodeType.SCENIC_SPOT
+                townKeywords.any { anchor.name.contains(it) } -> SugorokuNodeType.TOWN_CENTER
                 else -> SugorokuNodeType.NORMAL
             }
             SugorokuNode(
