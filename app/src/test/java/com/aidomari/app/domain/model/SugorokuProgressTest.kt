@@ -51,7 +51,7 @@ class SugorokuProgressTest {
         assertEquals(0, advanced.currentProgressInStep)
         assertEquals(1, advanced.totalQuestionsAnswered)
         assertTrue(advanced.visitedNodeIds.contains("hakodate_station"))
-        assertTrue(advanced.visitedNodeIds.contains("goryokaku_park"))
+        assertTrue(advanced.visitedNodeIds.contains("chiyogadai_park"))
     }
 
     @Test
@@ -68,16 +68,16 @@ class SugorokuProgressTest {
     @Test
     fun advanceByQuestions_multiStep_advancesMultipleAndCollectsAllVisitedNodes() {
         val initial = SugorokuProgress(targetQuestionsPerStep = 1)
-        val advanced = initial.advanceByQuestions(3) // 3 steps
+        val advanced = initial.advanceByQuestions(3) // 3 steps: 0 -> 1 -> 2 -> 3
 
         assertEquals(3, advanced.currentStepIndex)
         assertEquals(0, advanced.currentProgressInStep)
         assertEquals(3, advanced.totalQuestionsAnswered)
         assertTrue(advanced.visitedNodeIds.contains("hakodate_station"))
+        assertTrue(advanced.visitedNodeIds.contains("chiyogadai_park"))
         assertTrue(advanced.visitedNodeIds.contains("goryokaku_park"))
-        assertTrue(advanced.visitedNodeIds.contains("onuma_park"))
-        assertTrue(advanced.visitedNodeIds.contains("mori_station"))
-        assertFalse(advanced.visitedNodeIds.contains("yakumo"))
+        assertTrue(advanced.visitedNodeIds.contains("michinoeki_nanairo_nanae"))
+        assertFalse(advanced.visitedNodeIds.contains("onuma_park"))
     }
 
     @Test

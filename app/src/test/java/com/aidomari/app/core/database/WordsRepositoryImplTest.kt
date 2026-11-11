@@ -52,19 +52,19 @@ class WordsRepositoryImplTest {
         val initial = repository.getSugorokuProgress().first()
         assertEquals(0, initial.currentStepIndex)
 
-        // Advance by 1 question (advances to step 1)
+        // Advance by 1 question (advances to step 1: chiyogadai_park)
         val p1 = repository.recordSugorokuProgress(1)
         assertEquals(1, p1.currentStepIndex)
         assertEquals(0, p1.currentProgressInStep)
         assertEquals(1, p1.totalQuestionsAnswered)
-        assertTrue(p1.visitedNodeIds.contains("goryokaku_park"))
+        assertTrue(p1.visitedNodeIds.contains("chiyogadai_park"))
 
         // Advance by 2 more questions (advances to step 3)
         val p2 = repository.recordSugorokuProgress(2)
         assertEquals(3, p2.currentStepIndex)
         assertEquals(0, p2.currentProgressInStep)
         assertEquals(3, p2.totalQuestionsAnswered)
-        assertTrue(p2.visitedNodeIds.contains("mori_station"))
+        assertTrue(p2.visitedNodeIds.contains("michinoeki_nanairo_nanae"))
 
         // Flow should reflect updated progress
         val flowValue = repository.getSugorokuProgress().first()
