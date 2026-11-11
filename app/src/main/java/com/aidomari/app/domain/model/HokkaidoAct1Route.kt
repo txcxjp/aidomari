@@ -15,7 +15,7 @@ data class RouteAnchor(
 
 /**
  * 北海道一周すごろく（第1部：函館駅前 〜 相泊終点）厳選ルートデータ。
- * 旅行の目的地としてふさわしい主要ランドマーク・景勝地・岬・道の駅・駅のみを厳選した全67マスのルートです。
+ * 旅行の目的地としてふさわしい主要ランドマーク・景勝地・岬・道の駅・温泉のみを厳選した全67マスのルートです。
  * 海岸線沿いの一筆書き順（函館 → 寿都 → 積丹 → 留萌 → 稚内・宗谷岬 → オホーツク → 知床相泊）で構成されます。
  */
 object HokkaidoAct1Route {
@@ -26,48 +26,48 @@ object HokkaidoAct1Route {
     /** 公式一次測地データに基づくアンカーポイント（全67箇所） */
     val anchors: List<RouteAnchor> = listOf(
         RouteAnchor(0, 140.7264, 41.7738, 185.64f, 342.97f, "函館駅前"),
-        RouteAnchor(1, 140.7337, 41.8035, 186.11f, 340.43f, "五稜郭駅前"),
+        RouteAnchor(1, 140.7538, 41.7945, 187.39f, 341.20f, "五稜郭公園（五稜郭タワー）"),
         RouteAnchor(2, 140.6723, 41.9814, 182.19f, 325.17f, "大沼国定公園"),
-        RouteAnchor(3, 140.575, 42.109, 175.98f, 314.20f, "森駅前"),
-        RouteAnchor(4, 140.2678, 42.2514, 156.36f, 301.94f, "JR八雲駅前"),
-        RouteAnchor(5, 140.375, 42.5125, 163.21f, 279.37f, "長万部観光案内所"),
+        RouteAnchor(3, 140.575, 42.109, 175.98f, 314.20f, "森駅（名物いかめし）"),
+        RouteAnchor(4, 140.2678, 42.2514, 156.36f, 301.94f, "八雲（木彫り熊発祥の地）"),
+        RouteAnchor(5, 140.375, 42.5125, 163.21f, 279.37f, "長万部（名物かにめし）"),
         RouteAnchor(6, 140.2285, 42.7938, 153.86f, 254.95f, "道の駅みなとま〜れ寿都"),
         RouteAnchor(7, 140.1895, 42.8253, 151.37f, 252.21f, "弁慶岬"),
         RouteAnchor(8, 140.0683, 42.7158, 143.63f, 261.73f, "道の駅よってけ！島牧"),
         RouteAnchor(9, 139.8278, 42.6144, 128.27f, 270.54f, "茂津多岬"),
         RouteAnchor(10, 140.4028, 42.9242, 164.98f, 243.60f, "雷電温泉郷"),
         RouteAnchor(11, 140.518, 42.987, 172.34f, 238.12f, "道の駅いわない（岩内港）"),
-        RouteAnchor(12, 140.457, 43.107, 168.44f, 227.63f, "盃漁港（盃温泉郷）"),
-        RouteAnchor(13, 140.432, 43.1435, 166.85f, 224.44f, "神恵内港（神恵内村）"),
-        RouteAnchor(14, 140.3306, 43.2603, 160.37f, 214.21f, "ジュウボウ岬"),
+        RouteAnchor(12, 140.457, 43.107, 168.44f, 227.63f, "盃温泉郷"),
+        RouteAnchor(13, 140.392, 43.1653, 164.29f, 222.53f, "道の駅オスコイ！かもえない"),
+        RouteAnchor(14, 140.338, 43.2603, 160.85f, 214.21f, "ジュウボウ岬（西の河原）"),
         RouteAnchor(15, 140.348, 43.3337, 161.48f, 207.77f, "神威岬"),
         RouteAnchor(16, 140.4814, 43.3731, 170.00f, 204.31f, "積丹出岬灯台（島武意海岸）"),
         RouteAnchor(17, 140.6019, 43.3027, 177.69f, 210.49f, "黄金岬（美国）"),
-        RouteAnchor(18, 140.6377, 43.2772, 179.98f, 212.73f, "古平港"),
-        RouteAnchor(19, 140.7948, 43.1865, 190.01f, 220.68f, "JR余市駅前"),
+        RouteAnchor(18, 140.6872, 43.2554, 183.14f, 214.64f, "セタカムイ岩（義経伝説の奇岩）"),
+        RouteAnchor(19, 140.7899, 43.1846, 189.70f, 220.84f, "ニッカウヰスキー余市蒸溜所"),
         RouteAnchor(20, 140.8646, 43.2079, 194.47f, 218.80f, "忍路港"),
-        RouteAnchor(21, 140.9937, 43.1977, 202.71f, 219.70f, "JR小樽駅前"),
+        RouteAnchor(21, 140.9997, 43.2052, 203.09f, 219.04f, "小樽運河"),
         RouteAnchor(22, 141.0161, 43.2383, 204.14f, 216.14f, "日和山灯台（祝津）"),
-        RouteAnchor(23, 141.288, 43.195, 221.50f, 219.93f, "石狩湾新港"),
+        RouteAnchor(23, 141.16, 43.1452, 213.32f, 224.29f, "銭函（縁起の良いレトロ駅・海岸）"),
         RouteAnchor(24, 141.3606, 43.2569, 226.13f, 214.51f, "石狩灯台（はまなすの丘公園）"),
         RouteAnchor(25, 141.432, 43.399, 230.69f, 202.04f, "厚田港（道の駅あいろーど厚田）"),
         RouteAnchor(26, 141.3926, 43.6068, 228.17f, 183.75f, "浜益海浜公園"),
         RouteAnchor(27, 141.353, 43.745, 225.65f, 171.55f, "雄冬岬展望台"),
-        RouteAnchor(28, 141.5249, 43.8561, 236.62f, 161.72f, "旧JR増毛駅前"),
+        RouteAnchor(28, 141.5246, 43.8579, 236.60f, 161.56f, "国稀酒造（日本最北の造り酒屋）"),
         RouteAnchor(29, 141.6296, 43.9461, 243.30f, 153.75f, "黄金岬（留萌）"),
         RouteAnchor(30, 141.6561, 44.1374, 245.00f, 136.76f, "道の駅おびら鰊番屋（小平町）"),
-        RouteAnchor(31, 141.6508, 44.3092, 244.66f, 121.45f, "苫前岬"),
+        RouteAnchor(31, 141.6565, 44.3133, 245.02f, 121.09f, "道の駅風Wとままえ（風車と夕日の温泉）"),
         RouteAnchor(32, 141.7995, 44.1315, 254.15f, 137.28f, "三毛別羆事件復元地"),
         RouteAnchor(33, 141.701, 44.368, 247.86f, 116.20f, "羽幌港（フェリーターミナル）"),
         RouteAnchor(34, 141.7739, 44.5631, 252.52f, 98.75f, "金比羅岬（海中鳥居）"),
         RouteAnchor(35, 141.7921, 44.7137, 253.68f, 85.24f, "遠別（道の駅富士見）"),
-        RouteAnchor(36, 141.7476, 44.8756, 250.84f, 70.67f, "天塩港（天塩川河口）"),
+        RouteAnchor(36, 141.7478, 44.8845, 250.85f, 69.87f, "天塩（天塩川河口・道の駅てしお）"),
         RouteAnchor(37, 141.6813, 45.0023, 246.60f, 59.25f, "北緯45度モニュメント"),
         RouteAnchor(38, 141.64, 45.15, 243.97f, 45.89f, "サロベツ原野"),
         RouteAnchor(39, 141.6211, 45.3107, 242.76f, 31.33f, "抜海港（アザラシ越冬地）"),
         RouteAnchor(40, 141.6447, 45.449, 244.27f, 18.76f, "ノシャップ岬（野寒布岬）"),
         RouteAnchor(41, 141.677, 45.4168, 246.33f, 21.69f, "JR日本最北端の駅・稚内駅"),
-        RouteAnchor(42, 141.802, 45.405, 254.31f, 22.76f, "稚内空港"),
+        RouteAnchor(42, 141.8942, 45.4911, 260.20f, 14.92f, "宗谷丘陵（白い道・風車群）"),
         RouteAnchor(43, 141.9366, 45.5228, 262.90f, 12.04f, "日本最北端の地の碑（宗谷岬）"),
         RouteAnchor(44, 142.248, 45.245, 282.78f, 37.29f, "猿払村道エサヌカ線"),
         RouteAnchor(45, 142.35, 45.127, 289.30f, 47.98f, "クッチャロ湖（浜頓別）"),
@@ -77,20 +77,20 @@ object HokkaidoAct1Route {
         RouteAnchor(49, 143.062, 44.5321, 334.75f, 101.53f, "日の出岬（ガラスの展望台）"),
         RouteAnchor(50, 143.1239, 44.4699, 338.70f, 107.10f, "興部（道の駅おこっぺ）"),
         RouteAnchor(51, 143.358, 44.35, 353.65f, 117.81f, "紋別港（ガリンコ号乗り場）"),
-        RouteAnchor(52, 143.404, 44.304, 356.59f, 121.92f, "オホーツク紋別空港"),
+        RouteAnchor(52, 143.3774, 44.3277, 354.89f, 119.80f, "カニの爪オブジェ（紋別のシンボル）"),
         RouteAnchor(53, 143.7191, 44.1314, 376.70f, 137.29f, "道の駅愛ランド湧別（湧別町）"),
         RouteAnchor(54, 143.9118, 44.1083, 389.00f, 139.35f, "キムアネップ岬（サロマ湖夕日展望地）"),
         RouteAnchor(55, 143.9382, 44.0805, 390.69f, 141.82f, "浜佐呂間（サロマ湖東岸）"),
-        RouteAnchor(56, 144.0707, 44.1211, 399.15f, 138.21f, "常呂港（カーリングの聖地）"),
+        RouteAnchor(56, 144.0734, 44.1162, 399.32f, 138.64f, "アドヴィックス常呂カーリングホール（カーリングの聖地）"),
         RouteAnchor(57, 144.2431, 44.1122, 410.15f, 139.00f, "能取岬（流氷展望の白亜灯台）"),
         RouteAnchor(58, 144.275, 44.024, 412.19f, 146.84f, "網走港（道の駅流氷街道網走）"),
         RouteAnchor(59, 144.4134, 43.9419, 421.03f, 154.12f, "小清水原生花園"),
-        RouteAnchor(60, 144.6628, 43.9122, 436.95f, 156.75f, "斜里（JR知床斜里駅前）"),
+        RouteAnchor(60, 144.7987, 43.9068, 445.63f, 157.23f, "天に続く道（遥かなる一本道）"),
         RouteAnchor(61, 144.996, 44.068, 458.22f, 142.93f, "ウトロ港（知床観光船乗り場）"),
         RouteAnchor(62, 145.0805, 44.1222, 463.62f, 138.11f, "知床五湖フィールドハウス"),
         RouteAnchor(63, 145.11, 44.05, 465.50f, 144.53f, "知床峠（標高738m）"),
         RouteAnchor(64, 145.191, 44.019, 470.67f, 147.28f, "道の駅知床・らうす（羅臼港）"),
-        RouteAnchor(65, 145.3175, 44.1845, 478.75f, 132.56f, "相泊温泉（日本最北東端の温泉）"),
+        RouteAnchor(65, 145.3175, 44.1845, 478.75f, 132.57f, "相泊温泉（日本最北東端の温泉）"),
         RouteAnchor(66, 145.322, 44.1903, 479.03f, 132.05f, "相泊橋（最果ての終着点・車道終点）"),
     )
 
@@ -110,8 +110,8 @@ object HokkaidoAct1Route {
             val nodeType = when {
                 index == 0 -> SugorokuNodeType.START_HAKODATE
                 index == maxStepIndex -> SugorokuNodeType.GOAL_AIDOMARI
-                anchor.name.contains("岬") || anchor.name.contains("灯台") || anchor.name.contains("碑") || anchor.name.contains("公園") || anchor.name.contains("展望") || anchor.name.contains("原野") || anchor.name.contains("湖") || anchor.name.contains("花園") -> SugorokuNodeType.SCENIC_SPOT
-                anchor.name.contains("駅") || anchor.name.contains("通") || anchor.name.contains("町") || anchor.name.contains("空港") -> SugorokuNodeType.TOWN_CENTER
+                anchor.name.contains("岬") || anchor.name.contains("灯台") || anchor.name.contains("碑") || anchor.name.contains("公園") || anchor.name.contains("展望") || anchor.name.contains("原野") || anchor.name.contains("湖") || anchor.name.contains("花園") || anchor.name.contains("丘") || anchor.name.contains("道") || anchor.name.contains("岩") || anchor.name.contains("オブジェ") || anchor.name.contains("運河") -> SugorokuNodeType.SCENIC_SPOT
+                anchor.name.contains("駅") || anchor.name.contains("通") || anchor.name.contains("町") || anchor.name.contains("蒸溜所") || anchor.name.contains("酒造") || anchor.name.contains("ホール") -> SugorokuNodeType.TOWN_CENTER
                 else -> SugorokuNodeType.NORMAL
             }
             SugorokuNode(
