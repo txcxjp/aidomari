@@ -122,7 +122,7 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1162_noshappu() {
-        val noshappuNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("ノシャップ岬（野寒布岬）") } ?: HokkaidoAct1Route.startNode
+        val noshappuNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "noshappu_cape" } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -140,7 +140,7 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1169_ferry_terminal() {
-        val ferryNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("フェリーターミナル") } ?: HokkaidoAct1Route.startNode
+        val ferryNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "haboro_port" } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -242,6 +242,42 @@ class SugorokuMapScreenshotTest {
         }
 
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_debug_zoomed_out.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step_teshio_area() {
+        val teshioRiverNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "teshio_river_mouth" } ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = teshioRiverNode.stepIndex),
+                    currentNode = teshioRiverNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step_teshio.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step_mombetsu_area() {
+        val garinkoNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "mombetsu_port_garinko" } ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = garinkoNode.stepIndex),
+                    currentNode = garinkoNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step_mombetsu.png")
     }
 
     @Test

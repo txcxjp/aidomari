@@ -797,11 +797,11 @@ private fun DrawScope.drawSugorokuTiles(
 
     val tileSizePx = HokkaidoBoardTrack.TILE_SIZE_DP.dp.toPx()
     val halfTile = tileSizePx / 2f
-    val cornerRadius = CornerRadius(10.dp.toPx(), 10.dp.toPx())
+    val cornerRadius = CornerRadius(11.dp.toPx(), 11.dp.toPx())
 
     val labelPaint = Paint().apply {
         color = android.graphics.Color.rgb(33, 33, 33)
-        textSize = 10.5.dp.toPx()
+        textSize = 10.dp.toPx()
         isAntiAlias = true
         typeface = Typeface.DEFAULT_BOLD
         textAlign = Paint.Align.CENTER
@@ -809,14 +809,14 @@ private fun DrawScope.drawSugorokuTiles(
 
     val stepNumberPaint = Paint().apply {
         color = android.graphics.Color.rgb(120, 144, 156)
-        textSize = 8.dp.toPx()
+        textSize = 8.5.dp.toPx()
         isAntiAlias = true
         typeface = Typeface.DEFAULT_BOLD
         textAlign = Paint.Align.CENTER
     }
 
     val iconPaint = Paint().apply {
-        textSize = 12.dp.toPx()
+        textSize = 13.dp.toPx()
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
     }
@@ -891,7 +891,7 @@ private fun DrawScope.drawSugorokuTiles(
         drawContext.canvas.nativeCanvas.drawText(
             "#${i + 1}",
             cx,
-            top + 11.dp.toPx(),
+            top + 12.dp.toPx(),
             stepNumberPaint,
         )
 
@@ -935,9 +935,9 @@ private fun DrawScope.drawSugorokuTiles(
             drawTileLabel(
                 text = node.name,
                 cx = cx,
-                cy = top + 23.dp.toPx(),
-                maxTextWidthPx = 40.dp.toPx(),
-                baseTextSizePx = 9.5.dp.toPx(),
+                cy = top + 27.dp.toPx(),
+                maxTextWidthPx = 48.dp.toPx(),
+                baseTextSizePx = 10.dp.toPx(),
                 paint = labelPaint,
             )
 
@@ -955,7 +955,7 @@ private fun DrawScope.drawSugorokuTiles(
             drawContext.canvas.nativeCanvas.drawText(
                 iconStr,
                 cx,
-                top + 37.dp.toPx(),
+                top + 45.dp.toPx(),
                 iconPaint,
             )
         }
@@ -963,7 +963,8 @@ private fun DrawScope.drawSugorokuTiles(
 }
 
 /**
- * Draws tile label text gracefully without truncation, wrapping into 2 lines if needed.
+ * Draws tile label text gracefully without truncation, wrapping into 2 lines if needed
+ * and auto-scaling to strictly fit within maxTextWidthPx.
  */
 private fun DrawScope.drawTileLabel(
     text: String,
@@ -977,15 +978,18 @@ private fun DrawScope.drawTileLabel(
     val textWidth = paint.measureText(text)
     if (textWidth <= maxTextWidthPx) {
         drawContext.canvas.nativeCanvas.drawText(text, cx, cy, paint)
-    } else if (text.length >= 4) {
+    } else {
         val (line1, line2) = splitJapaneseTileName(text)
-        paint.textSize = (baseTextSizePx * 0.82f).coerceAtLeast(8.dp.toPx())
+        paint.textSize = (baseTextSizePx * 0.85f).coerceAtLeast(8.dp.toPx())
+        val l1w = paint.measureText(line1)
+        val l2w = paint.measureText(line2)
+        val maxLw = maxOf(l1w, l2w)
+        if (maxLw > maxTextWidthPx) {
+            paint.textSize = (paint.textSize * (maxTextWidthPx / maxLw)).coerceAtLeast(7.dp.toPx())
+        }
         val lineHeight = paint.fontSpacing * 0.88f
         drawContext.canvas.nativeCanvas.drawText(line1, cx, cy - lineHeight * 0.42f, paint)
         drawContext.canvas.nativeCanvas.drawText(line2, cx, cy + lineHeight * 0.58f, paint)
-    } else {
-        paint.textSize = baseTextSizePx * (maxTextWidthPx / textWidth)
-        drawContext.canvas.nativeCanvas.drawText(text, cx, cy, paint)
     }
 }
 
@@ -993,13 +997,44 @@ private fun DrawScope.drawTileLabel(
  * Gracefully splits Japanese landmark and street names at natural word boundaries.
  */
 private fun splitJapaneseTileName(text: String): Pair<String, String> {
+    if (text.startsWith("道の駅")) {
+        return Pair("道の駅", text.removePrefix("道の駅"))
+    }
+    val customSplits = mapOf(
+        "北緯45度モニュメント" to Pair("北緯45度", "モニュメント"),
+        "ガリンコ号のりば" to Pair("ガリンコ号", "のりば"),
+        "カニの爪オブジェ" to Pair("カニの爪", "オブジェ"),
+        "常呂カーリング" to Pair("常呂", "カーリング"),
+        "ウスタイベ千畳岩" to Pair("ウスタイベ", "千畳岩"),
+        "小清水原生花園" to Pair("小清水", "原生花園"),
+        "みなとま〜れ寿都" to Pair("みなとま〜れ", "寿都"),
+        "よってけ！島牧" to Pair("よってけ！", "島牧"),
+        "オスコイ！かもえない" to Pair("オスコイ！", "かもえない"),
+        "あいろーど厚田" to Pair("あいろーど", "厚田"),
+        "おびら鰊番屋" to Pair("おびら", "鰊番屋"),
+        "風Wとままえ" to Pair("風W", "とままえ"),
+        "三毛別羆事件跡" to Pair("三毛別", "羆事件跡"),
+        "留萌 黄金岬" to Pair("留萌", "黄金岬"),
+        "流氷街道網走" to Pair("流氷街道", "網走"),
+        "愛ランド湧別" to Pair("愛ランド", "湧別"),
+        "天に続く道" to Pair("天に", "続く道"),
+        "大沼国定公園" to Pair("大沼", "国定公園"),
+        "浜益海浜公園" to Pair("浜益", "海浜公園"),
+        "雄冬岬展望台" to Pair("雄冬岬", "展望台"),
+        "北見神威岬" to Pair("北見", "神威岬"),
+        "キムアネップ岬" to Pair("キムアネップ", "岬"),
+    )
+    customSplits[text]?.let { return it }
+
     val keywords = listOf(
         "タワー前", "交差点", "公園前", "駅前通", "本町通", "温泉街", "市街地",
-        "タワー", "公園", "駅前", "本町", "温泉", "案内所", "展望台", "灯台", "漁港", "海岸", "通り", "神社", "寺院", "岬",
+        "タワー", "公園", "駅前", "本町", "温泉", "案内所", "展望台", "灯台", "漁港", "海岸", "通り", "神社", "寺院", "岬", "峠", "湖", "運河", "線", "岩", "河口", "原野", "蒸溜所", "酒造",
     )
     for (kw in keywords) {
         val idx = text.indexOf(kw)
-        if (idx in 2..4) {
+        if (idx in 2..5 && idx != text.length - 1) {
+            return Pair(text.substring(0, idx), text.substring(idx))
+        } else if (idx > 0 && idx == text.length - kw.length && text.length > 4) {
             return Pair(text.substring(0, idx), text.substring(idx))
         }
     }

@@ -10,9 +10,9 @@ class HokkaidoAct1RouteTest {
 
     @Test
     fun route_hasExactCuratedNodes() {
-        assertEquals(67, HokkaidoAct1Route.totalNodes)
-        assertEquals(67, HokkaidoAct1Route.routeNodes.size)
-        assertEquals(66, HokkaidoAct1Route.maxStepIndex)
+        assertEquals(68, HokkaidoAct1Route.totalNodes)
+        assertEquals(68, HokkaidoAct1Route.routeNodes.size)
+        assertEquals(67, HokkaidoAct1Route.maxStepIndex)
     }
 
     @Test
@@ -25,18 +25,20 @@ class HokkaidoAct1RouteTest {
         assertEquals(SugorokuNodeType.START_HAKODATE, startNode.type)
         assertEquals(1, startNode.rank)
         assertTrue(startNode.isAnchor)
+        assertTrue("Start node should have non-empty description", startNode.description.isNotBlank())
     }
 
     @Test
     fun goalNode_isAidomari() {
         val goalNode = HokkaidoAct1Route.goalNode
         assertEquals("aidomari_bridge", goalNode.id)
-        assertEquals(66, goalNode.stepIndex)
-        assertEquals("相泊橋（最果ての終着点・車道終点）", goalNode.name)
+        assertEquals(67, goalNode.stepIndex)
+        assertEquals("相泊橋", goalNode.name)
         assertEquals("羅臼町", goalNode.municipality)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
         assertEquals(1, goalNode.rank)
         assertTrue(goalNode.isAnchor)
+        assertTrue("Goal node should have non-empty description", goalNode.description.isNotBlank())
     }
 
     @Test
@@ -48,6 +50,7 @@ class HokkaidoAct1RouteTest {
             assertEquals("Node at index $index must have stepIndex $index", index, node.stepIndex)
             assertTrue("Node at index $index should have non-empty name", node.name.isNotBlank())
             assertTrue("Node at index $index should have non-empty municipality", node.municipality.isNotBlank())
+            assertTrue("Node at index $index should have non-empty description", node.description.isNotBlank())
             assertTrue("Node at index $index x coordinate should be within 0..2000", node.x in 0f..2000f)
             assertTrue("Node at index $index y coordinate should be within 0..2000", node.y in 0f..2000f)
             assertTrue("All nodes must be anchors", node.isAnchor)
@@ -60,14 +63,14 @@ class HokkaidoAct1RouteTest {
         assertNotNull(node0)
         assertEquals("函館駅前", node0?.name)
 
-        val nodeSoya = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("宗谷岬") && it.name.contains("碑") }
+        val nodeSoya = HokkaidoAct1Route.nodes.firstOrNull { it.id == "soya_cape_monument" }
         assertNotNull(nodeSoya)
-        assertEquals("日本最北端の地の碑（宗谷岬）", nodeSoya?.name)
+        assertEquals("宗谷岬", nodeSoya?.name)
         assertEquals(SugorokuNodeType.SCENIC_SPOT, nodeSoya?.type)
 
         val nodeGoal = HokkaidoAct1Route.getNodeByStepIndex(HokkaidoAct1Route.maxStepIndex)
         assertNotNull(nodeGoal)
-        assertEquals("相泊橋（最果ての終着点・車道終点）", nodeGoal?.name)
+        assertEquals("相泊橋", nodeGoal?.name)
 
         assertNull(HokkaidoAct1Route.getNodeByStepIndex(-1))
         assertNull(HokkaidoAct1Route.getNodeByStepIndex(HokkaidoAct1Route.totalNodes))
@@ -75,29 +78,36 @@ class HokkaidoAct1RouteTest {
 
     @Test
     fun getNodeById_returnsCorrectNode() {
-        val nodeSoya = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("宗谷岬") && it.name.contains("碑") }
+        val nodeSoya = HokkaidoAct1Route.nodes.firstOrNull { it.id == "soya_cape_monument" }
         assertNotNull(nodeSoya)
         val fetchedNode = HokkaidoAct1Route.getNodeById(nodeSoya!!.id)
         assertNotNull(fetchedNode)
         assertEquals(nodeSoya.stepIndex, fetchedNode?.stepIndex)
-        assertEquals("日本最北端の地の碑（宗谷岬）", fetchedNode?.name)
+        assertEquals("宗谷岬", fetchedNode?.name)
 
         assertNull(HokkaidoAct1Route.getNodeById("non_existent_node"))
     }
 
     @Test
-    fun anchors_areRank1AndHaveUniqueSemanticIds() {
+    fun anchors_haveUniqueSemanticIdsAndValidRanks() {
         val anchors = HokkaidoAct1Route.anchors
         assertEquals(HokkaidoAct1Route.totalNodes, anchors.size)
         assertEquals("hakodate_station", anchors.first().id)
         assertEquals("aidomari_bridge", anchors.last().id)
 
         anchors.forEach { anchor ->
-            assertEquals(1, anchor.rank)
+            assertTrue("Rank must be between 1 and 3", anchor.rank in 1..3)
             assertTrue("Anchor id should not be blank", anchor.id.isNotBlank())
             assertTrue("Anchor name should not be blank", anchor.name.isNotBlank())
             assertTrue("Anchor municipality should not be blank", anchor.municipality.isNotBlank())
+            assertTrue("Anchor description should not be blank", anchor.description.isNotBlank())
         }
+
+        val rank2Anchors = anchors.filter { it.rank == 2 }
+        assertEquals(1, rank2Anchors.size)
+        assertEquals("teshio_river_mouth", rank2Anchors.first().id)
+        assertEquals("天塩川河口", rank2Anchors.first().name)
+
         val ids = anchors.map { it.id }.toSet()
         assertEquals(anchors.size, ids.size)
     }
