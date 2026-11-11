@@ -16,7 +16,7 @@ class SugorokuProgressTest {
         assertEquals(0, progress.currentProgressInStep)
         assertEquals(1, progress.targetQuestionsPerStep)
         assertEquals(0, progress.totalQuestionsAnswered)
-        assertEquals(setOf("node_0000"), progress.visitedNodeIds)
+        assertEquals(setOf("hakodate_station"), progress.visitedNodeIds)
         assertEquals(0f, progress.progressRatioInStep, 0.001f)
     }
 
@@ -50,8 +50,8 @@ class SugorokuProgressTest {
         assertEquals(1, advanced.currentStepIndex)
         assertEquals(0, advanced.currentProgressInStep)
         assertEquals(1, advanced.totalQuestionsAnswered)
-        assertTrue(advanced.visitedNodeIds.contains("node_0000"))
-        assertTrue(advanced.visitedNodeIds.contains("node_0001"))
+        assertTrue(advanced.visitedNodeIds.contains("hakodate_station"))
+        assertTrue(advanced.visitedNodeIds.contains("goryokaku_park"))
     }
 
     @Test
@@ -62,7 +62,7 @@ class SugorokuProgressTest {
         assertEquals(0, advanced.currentStepIndex)
         assertEquals(3, advanced.currentProgressInStep)
         assertEquals(3, advanced.totalQuestionsAnswered)
-        assertEquals(setOf("node_0000"), advanced.visitedNodeIds)
+        assertEquals(setOf("hakodate_station"), advanced.visitedNodeIds)
     }
 
     @Test
@@ -73,11 +73,11 @@ class SugorokuProgressTest {
         assertEquals(3, advanced.currentStepIndex)
         assertEquals(0, advanced.currentProgressInStep)
         assertEquals(3, advanced.totalQuestionsAnswered)
-        assertTrue(advanced.visitedNodeIds.contains("node_0000"))
-        assertTrue(advanced.visitedNodeIds.contains("node_0001"))
-        assertTrue(advanced.visitedNodeIds.contains("node_0002"))
-        assertTrue(advanced.visitedNodeIds.contains("node_0003"))
-        assertFalse(advanced.visitedNodeIds.contains("node_0004"))
+        assertTrue(advanced.visitedNodeIds.contains("hakodate_station"))
+        assertTrue(advanced.visitedNodeIds.contains("goryokaku_park"))
+        assertTrue(advanced.visitedNodeIds.contains("onuma_park"))
+        assertTrue(advanced.visitedNodeIds.contains("mori_station"))
+        assertFalse(advanced.visitedNodeIds.contains("yakumo"))
     }
 
     @Test
@@ -93,7 +93,7 @@ class SugorokuProgressTest {
         assertEquals(maxStep, advanced.currentStepIndex)
         assertEquals(0, advanced.currentProgressInStep)
         assertEquals(100, advanced.totalQuestionsAnswered)
-        assertTrue(advanced.visitedNodeIds.contains(String.format("node_%04d", maxStep)))
+        assertTrue(advanced.visitedNodeIds.contains("aidomari_bridge"))
     }
 
     @Test
@@ -104,7 +104,7 @@ class SugorokuProgressTest {
             currentProgressInStep = 0,
             targetQuestionsPerStep = 1,
             totalQuestionsAnswered = 10,
-            visitedNodeIds = setOf("node_0000", "node_0001", "node_0005", "node_0010"),
+            visitedNodeIds = setOf("hakodate_station", "goryokaku_park", "oshamambe", "raiden_onsen"),
             updatedAt = 123456789L,
         )
 
@@ -127,6 +127,6 @@ class SugorokuProgressTest {
             visitedNodeIdsJson = "",
         )
         val domain = malformedEntity.toDomain()
-        assertEquals(setOf("node_0000"), domain.visitedNodeIds)
+        assertEquals(setOf("hakodate_station"), domain.visitedNodeIds)
     }
 }

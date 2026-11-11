@@ -18,20 +18,22 @@ class HokkaidoAct1RouteTest {
     @Test
     fun startNode_isHakodateStation() {
         val startNode = HokkaidoAct1Route.startNode
-        assertEquals("node_0000", startNode.id)
+        assertEquals("hakodate_station", startNode.id)
         assertEquals(0, startNode.stepIndex)
         assertEquals("函館駅前", startNode.name)
         assertEquals(SugorokuNodeType.START_HAKODATE, startNode.type)
+        assertEquals(1, startNode.rank)
         assertTrue(startNode.isAnchor)
     }
 
     @Test
     fun goalNode_isAidomari() {
         val goalNode = HokkaidoAct1Route.goalNode
-        assertEquals("node_0066", goalNode.id)
+        assertEquals("aidomari_bridge", goalNode.id)
         assertEquals(66, goalNode.stepIndex)
         assertEquals("相泊橋（最果ての終着点・車道終点）", goalNode.name)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
+        assertEquals(1, goalNode.rank)
         assertTrue(goalNode.isAnchor)
     }
 
@@ -81,19 +83,34 @@ class HokkaidoAct1RouteTest {
     }
 
     @Test
-    fun anchors_areCorrectlyDefinedAndMonotonic() {
+    fun anchors_areRank1AndHaveUniqueSemanticIds() {
         val anchors = HokkaidoAct1Route.anchors
         assertEquals(HokkaidoAct1Route.totalNodes, anchors.size)
-        assertEquals(0, anchors.first().stepIndex)
-        assertEquals(HokkaidoAct1Route.maxStepIndex, anchors.last().stepIndex)
+        assertEquals("hakodate_station", anchors.first().id)
+        assertEquals("aidomari_bridge", anchors.last().id)
 
-        for (i in 0 until anchors.size - 1) {
-            assertTrue(
-                "Anchors must be strictly monotonic: ${anchors[i].stepIndex} < ${anchors[i+1].stepIndex}",
-                anchors[i].stepIndex < anchors[i + 1].stepIndex
-            )
-            assertEquals("Anchors must be sequential 0..maxStepIndex", i, anchors[i].stepIndex)
+        anchors.forEach { anchor ->
+            assertEquals(1, anchor.rank)
+            assertTrue("Anchor id should not be blank", anchor.id.isNotBlank())
+            assertTrue("Anchor name should not be blank", anchor.name.isNotBlank())
         }
+        val ids = anchors.map { it.id }.toSet()
+        assertEquals(anchors.size, ids.size)
+    }
+
+    @Test
+    fun nextAndPrevAnchor_navigateCorrectly() {
+        val start = HokkaidoAct1Route.startAnchor
+        val next = HokkaidoAct1Route.getNextAnchor(start.id)
+        assertNotNull(next)
+        assertEquals("goryokaku_park", next?.id)
+
+        val prev = HokkaidoAct1Route.getPrevAnchor(next!!.id)
+        assertNotNull(prev)
+        assertEquals(start.id, prev?.id)
+
+        assertNull(HokkaidoAct1Route.getPrevAnchor(start.id))
+        assertNull(HokkaidoAct1Route.getNextAnchor(HokkaidoAct1Route.goalAnchor.id))
     }
 
     @Test

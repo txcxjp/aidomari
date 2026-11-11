@@ -2,100 +2,117 @@ package com.aidomari.app.domain.model
 
 /**
  * アンカーポイント定義。
- * 公式測地GPS座標（経度・緯度）および純粋等角メルカトル図法によるSVG座標。
+ * 階層ランク（Rank 1: 主要拠点, Rank 2: 中間拠点, Rank 3: 詳細拠点）および公式一次測地GPS座標・SVG座標。
  */
 data class RouteAnchor(
-    val stepIndex: Int,
+    val id: String,
+    val rank: Int,
+    val name: String,
     val lon: Double,
     val lat: Double,
     val x: Float,
     val y: Float,
-    val name: String,
 )
 
 /**
  * 北海道一周すごろく（第1部：函館駅前 〜 相泊終点）厳選ルートデータ。
- * 旅行の目的地としてふさわしい主要ランドマーク・景勝地・岬・道の駅・温泉のみを厳選した全67マスのルートです。
- * 海岸線沿いの一筆書き順（函館 → 寿都 → 積丹 → 留萌 → 稚内・宗谷岬 → オホーツク → 知床相泊）で構成されます。
+ * 旅行の目的地としてふさわしい主要ランドマーク・景勝地・岬・道の駅・温泉のみを厳選したルートです。
+ * 海岸線沿いの一筆書き順（函館 → 寿都 → 積丹 → 留萌 → 稚内・宗谷岬 → オホーツク → 知床相泊）の順序付きリストで管理されます。
  */
 object HokkaidoAct1Route {
 
-    val totalNodes: Int = 67
-    val maxStepIndex: Int = totalNodes - 1
-
-    /** 公式一次測地データに基づくアンカーポイント（全67箇所） */
+    /** 公式一次測地データに基づくアンカーポイント（初期全67箇所のRank 1アンカー） */
     val anchors: List<RouteAnchor> = listOf(
-        RouteAnchor(0, 140.7264, 41.7738, 185.64f, 342.97f, "函館駅前"),
-        RouteAnchor(1, 140.7538, 41.7945, 187.39f, 341.20f, "五稜郭公園（五稜郭タワー）"),
-        RouteAnchor(2, 140.6723, 41.9814, 182.19f, 325.17f, "大沼国定公園"),
-        RouteAnchor(3, 140.5750, 42.1090, 175.98f, 314.20f, "森駅（名物いかめし）"),
-        RouteAnchor(4, 140.2678, 42.2514, 156.36f, 301.94f, "八雲（木彫り熊発祥の地）"),
-        RouteAnchor(5, 140.3750, 42.5125, 163.21f, 279.37f, "長万部（名物かにめし）"),
-        RouteAnchor(6, 140.2318, 42.7954, 154.07f, 254.81f, "道の駅みなとま〜れ寿都"),
-        RouteAnchor(7, 140.1895, 42.8253, 151.37f, 252.21f, "弁慶岬"),
-        RouteAnchor(8, 140.0134, 42.6867, 140.12f, 264.26f, "道の駅よってけ！島牧"),
-        RouteAnchor(9, 139.8278, 42.6144, 128.27f, 270.54f, "茂津多岬"),
-        RouteAnchor(10, 140.4028, 42.9242, 164.98f, 243.60f, "雷電温泉郷"),
-        RouteAnchor(11, 140.5168, 42.9834, 172.26f, 238.43f, "道の駅いわない（岩内港）"),
-        RouteAnchor(12, 140.4531, 43.1129, 168.19f, 227.12f, "盃温泉郷"),
-        RouteAnchor(13, 140.3880, 43.1653, 164.04f, 222.53f, "道の駅オスコイ！かもえない"),
-        RouteAnchor(14, 140.3380, 43.2603, 160.85f, 214.21f, "ジュウボウ岬（西の河原）"),
-        RouteAnchor(15, 140.3480, 43.3337, 161.48f, 207.77f, "神威岬"),
-        RouteAnchor(16, 140.4814, 43.3731, 170.00f, 204.31f, "積丹出岬灯台（島武意海岸）"),
-        RouteAnchor(17, 140.6019, 43.3027, 177.69f, 210.49f, "黄金岬（美国）"),
-        RouteAnchor(18, 140.6872, 43.2554, 183.14f, 214.64f, "セタカムイ岩（義経伝説の奇岩）"),
-        RouteAnchor(19, 140.7917, 43.1875, 189.81f, 220.59f, "ニッカウヰスキー余市蒸溜所"),
-        RouteAnchor(20, 140.8646, 43.2079, 194.47f, 218.80f, "忍路港"),
-        RouteAnchor(21, 141.0030, 43.1979, 203.30f, 219.68f, "小樽運河（浅草橋街園）"),
-        RouteAnchor(22, 141.0161, 43.2383, 204.14f, 216.14f, "日和山灯台（祝津）"),
-        RouteAnchor(23, 141.1600, 43.1452, 213.32f, 224.29f, "銭函（縁起の良いレトロ駅・海岸）"),
-        RouteAnchor(24, 141.3606, 43.2569, 226.13f, 214.51f, "石狩灯台（はまなすの丘公園）"),
-        RouteAnchor(25, 141.4313, 43.4046, 230.64f, 201.55f, "道の駅石狩「あいろーど厚田」"),
-        RouteAnchor(26, 141.3868, 43.5848, 227.80f, 185.69f, "浜益海浜公園（はまますピリカ・ビーチ）"),
-        RouteAnchor(27, 141.3450, 43.7407, 225.13f, 171.93f, "雄冬岬展望台"),
-        RouteAnchor(28, 141.5246, 43.8579, 236.60f, 161.56f, "国稀酒造（日本最北の造り酒屋）"),
-        RouteAnchor(29, 141.6296, 43.9461, 243.30f, 153.75f, "黄金岬（留萌）"),
-        RouteAnchor(30, 141.6561, 44.1374, 245.00f, 136.76f, "道の駅おびら鰊番屋（小平町）"),
-        RouteAnchor(31, 141.6565, 44.3133, 245.02f, 121.09f, "道の駅風Wとままえ（風車と夕日の温泉）"),
-        RouteAnchor(32, 141.7995, 44.1315, 254.15f, 137.28f, "三毛別羆事件復元地"),
-        RouteAnchor(33, 141.7010, 44.3680, 247.86f, 116.20f, "羽幌港（フェリーターミナル）"),
-        RouteAnchor(34, 141.7739, 44.5631, 252.52f, 98.75f, "金比羅岬（海中鳥居）"),
-        RouteAnchor(35, 141.7921, 44.7137, 253.68f, 85.24f, "遠別（道の駅富士見）"),
-        RouteAnchor(36, 141.7478, 44.8845, 250.85f, 69.87f, "天塩（天塩川河口・道の駅てしお）"),
-        RouteAnchor(37, 141.6813, 45.0023, 246.60f, 59.25f, "北緯45度モニュメント"),
-        RouteAnchor(38, 141.6400, 45.1500, 243.97f, 45.89f, "サロベツ原野"),
-        RouteAnchor(39, 141.6211, 45.3107, 242.76f, 31.33f, "抜海港（アザラシ越冬地）"),
-        RouteAnchor(40, 141.6447, 45.4490, 244.27f, 18.76f, "ノシャップ岬（野寒布岬）"),
-        RouteAnchor(41, 141.6770, 45.4168, 246.33f, 21.69f, "JR日本最北端の駅・稚内駅"),
-        RouteAnchor(42, 141.8942, 45.4911, 260.20f, 14.92f, "宗谷丘陵（白い道・風車群）"),
-        RouteAnchor(43, 141.9366, 45.5228, 262.90f, 12.04f, "日本最北端の地の碑（宗谷岬）"),
-        RouteAnchor(44, 142.2480, 45.2450, 282.78f, 37.29f, "猿払村道エサヌカ線"),
-        RouteAnchor(45, 142.3500, 45.1270, 289.30f, 47.98f, "クッチャロ湖（浜頓別）"),
-        RouteAnchor(46, 142.5014, 45.0589, 298.96f, 54.13f, "北見神威岬公園"),
-        RouteAnchor(47, 142.5823, 44.9589, 304.13f, 63.16f, "ウスタイベ岬（千畳岩）"),
-        RouteAnchor(48, 142.9630, 44.5832, 328.43f, 96.95f, "雄武港（道の駅おうむ）"),
-        RouteAnchor(49, 143.0620, 44.5321, 334.75f, 101.53f, "日の出岬（ガラスの展望台）"),
-        RouteAnchor(50, 143.1239, 44.4699, 338.70f, 107.10f, "興部（道の駅おこっぺ）"),
-        RouteAnchor(51, 143.3680, 44.3350, 354.29f, 119.15f, "紋別港（ガリンコ号乗り場）"),
-        RouteAnchor(52, 143.3774, 44.3277, 354.89f, 119.80f, "カニの爪オブジェ（紋別のシンボル）"),
-        RouteAnchor(53, 143.7191, 44.1314, 376.70f, 137.29f, "道の駅愛ランド湧別（湧別町）"),
-        RouteAnchor(54, 143.9118, 44.1083, 389.00f, 139.35f, "キムアネップ岬（サロマ湖夕日展望地）"),
-        RouteAnchor(55, 143.9382, 44.0805, 390.69f, 141.82f, "浜佐呂間（サロマ湖東岸）"),
-        RouteAnchor(56, 144.0560, 44.1213, 398.21f, 138.19f, "アドヴィックス常呂カーリングホール（カーリングの聖地）"),
-        RouteAnchor(57, 144.2431, 44.1122, 410.15f, 139.00f, "能取岬（流氷展望の白亜灯台）"),
-        RouteAnchor(58, 144.2750, 44.0240, 412.19f, 146.84f, "網走港（道の駅流氷街道網走）"),
-        RouteAnchor(59, 144.4134, 43.9419, 421.03f, 154.12f, "小清水原生花園"),
-        RouteAnchor(60, 144.7987, 43.9068, 445.63f, 157.23f, "天に続く道（遥かなる一本道）"),
-        RouteAnchor(61, 144.9960, 44.0680, 458.22f, 142.93f, "ウトロ港（知床観光船乗り場）"),
-        RouteAnchor(62, 145.0805, 44.1222, 463.62f, 138.11f, "知床五湖フィールドハウス"),
-        RouteAnchor(63, 145.1100, 44.0500, 465.50f, 144.53f, "知床峠（標高738m）"),
-        RouteAnchor(64, 145.1921, 44.0174, 470.74f, 147.42f, "道の駅知床・らうす（羅臼港）"),
-        RouteAnchor(65, 145.3175, 44.1845, 478.75f, 132.57f, "相泊温泉（日本最北東端の温泉）"),
-        RouteAnchor(66, 145.3230, 44.1904, 479.10f, 132.04f, "相泊橋（最果ての終着点・車道終点）"),
+        RouteAnchor(id = "hakodate_station", rank = 1, name = "函館駅前", lon = 140.7264, lat = 41.7738, x = 185.64f, y = 342.97f),
+        RouteAnchor(id = "goryokaku_park", rank = 1, name = "五稜郭公園（五稜郭タワー）", lon = 140.7538, lat = 41.7945, x = 187.39f, y = 341.20f),
+        RouteAnchor(id = "onuma_park", rank = 1, name = "大沼国定公園", lon = 140.6723, lat = 41.9814, x = 182.19f, y = 325.17f),
+        RouteAnchor(id = "mori_station", rank = 1, name = "森駅（名物いかめし）", lon = 140.5750, lat = 42.1090, x = 175.98f, y = 314.20f),
+        RouteAnchor(id = "yakumo", rank = 1, name = "八雲（木彫り熊発祥の地）", lon = 140.2678, lat = 42.2514, x = 156.36f, y = 301.94f),
+        RouteAnchor(id = "oshamambe", rank = 1, name = "長万部（名物かにめし）", lon = 140.3750, lat = 42.5125, x = 163.21f, y = 279.37f),
+        RouteAnchor(id = "suttsu_michinoeki", rank = 1, name = "道の駅みなとま〜れ寿都", lon = 140.2318, lat = 42.7954, x = 154.07f, y = 254.81f),
+        RouteAnchor(id = "benkei_cape", rank = 1, name = "弁慶岬", lon = 140.1895, lat = 42.8253, x = 151.37f, y = 252.21f),
+        RouteAnchor(id = "shimamaki_michinoeki", rank = 1, name = "道の駅よってけ！島牧", lon = 140.0134, lat = 42.6867, x = 140.12f, y = 264.26f),
+        RouteAnchor(id = "motsuta_cape", rank = 1, name = "茂津多岬", lon = 139.8278, lat = 42.6144, x = 128.27f, y = 270.54f),
+        RouteAnchor(id = "raiden_onsen", rank = 1, name = "雷電温泉郷", lon = 140.4028, lat = 42.9242, x = 164.98f, y = 243.60f),
+        RouteAnchor(id = "iwanai_michinoeki", rank = 1, name = "道の駅いわない（岩内港）", lon = 140.5168, lat = 42.9834, x = 172.26f, y = 238.43f),
+        RouteAnchor(id = "sakazuki_onsen", rank = 1, name = "盃温泉郷", lon = 140.4531, lat = 43.1129, x = 168.19f, y = 227.12f),
+        RouteAnchor(id = "kamoenai_michinoeki", rank = 1, name = "道の駅オスコイ！かもえない", lon = 140.3880, lat = 43.1653, x = 164.04f, y = 222.53f),
+        RouteAnchor(id = "jubo_cape", rank = 1, name = "ジュウボウ岬（西の河原）", lon = 140.3380, lat = 43.2603, x = 160.85f, y = 214.21f),
+        RouteAnchor(id = "kamui_cape", rank = 1, name = "神威岬", lon = 140.3480, lat = 43.3337, x = 161.48f, y = 207.77f),
+        RouteAnchor(id = "shakotan_demisaki_lighthouse", rank = 1, name = "積丹出岬灯台（島武意海岸）", lon = 140.4814, lat = 43.3731, x = 170.00f, y = 204.31f),
+        RouteAnchor(id = "ogon_cape_bikuni", rank = 1, name = "黄金岬（美国）", lon = 140.6019, lat = 43.3027, x = 177.69f, y = 210.49f),
+        RouteAnchor(id = "setakamui_rock", rank = 1, name = "セタカムイ岩（義経伝説の奇岩）", lon = 140.6872, lat = 43.2554, x = 183.14f, y = 214.64f),
+        RouteAnchor(id = "nikka_yoichi_distillery", rank = 1, name = "ニッカウヰスキー余市蒸溜所", lon = 140.7917, lat = 43.1875, x = 189.81f, y = 220.59f),
+        RouteAnchor(id = "oshoro_port", rank = 1, name = "忍路港", lon = 140.8646, lat = 43.2079, x = 194.47f, y = 218.80f),
+        RouteAnchor(id = "otaru_canal", rank = 1, name = "小樽運河（浅草橋街園）", lon = 141.0030, lat = 43.1979, x = 203.30f, y = 219.68f),
+        RouteAnchor(id = "hiyoriyama_lighthouse", rank = 1, name = "日和山灯台（祝津）", lon = 141.0161, lat = 43.2383, x = 204.14f, y = 216.14f),
+        RouteAnchor(id = "zenibako", rank = 1, name = "銭函（縁起の良いレトロ駅・海岸）", lon = 141.1600, lat = 43.1452, x = 213.32f, y = 224.29f),
+        RouteAnchor(id = "ishikari_lighthouse", rank = 1, name = "石狩灯台（はまなすの丘公園）", lon = 141.3606, lat = 43.2569, x = 226.13f, y = 214.51f),
+        RouteAnchor(id = "atsuta_michinoeki", rank = 1, name = "道の駅石狩「あいろーど厚田」", lon = 141.4313, lat = 43.4046, x = 230.64f, y = 201.55f),
+        RouteAnchor(id = "hamamasu_beach_park", rank = 1, name = "浜益海浜公園（はまますピリカ・ビーチ）", lon = 141.3868, lat = 43.5848, x = 227.80f, y = 185.69f),
+        RouteAnchor(id = "ofuyu_cape_observatory", rank = 1, name = "雄冬岬展望台", lon = 141.3450, lat = 43.7407, x = 225.13f, y = 171.93f),
+        RouteAnchor(id = "kunimare_brewery", rank = 1, name = "国稀酒造（日本最北の造り酒屋）", lon = 141.5246, lat = 43.8579, x = 236.60f, y = 161.56f),
+        RouteAnchor(id = "ogon_cape_rumoi", rank = 1, name = "黄金岬（留萌）", lon = 141.6296, lat = 43.9461, x = 243.30f, y = 153.75f),
+        RouteAnchor(id = "obira_michinoeki", rank = 1, name = "道の駅おびら鰊番屋（小平町）", lon = 141.6561, lat = 44.1374, x = 245.00f, y = 136.76f),
+        RouteAnchor(id = "tomamae_michinoeki", rank = 1, name = "道の駅風Wとままえ（風車と夕日の温泉）", lon = 141.6565, lat = 44.3133, x = 245.02f, y = 121.09f),
+        RouteAnchor(id = "sankebetsu_bear_incident_site", rank = 1, name = "三毛別羆事件復元地", lon = 141.7995, lat = 44.1315, x = 254.15f, y = 137.28f),
+        RouteAnchor(id = "haboro_port", rank = 1, name = "羽幌港（フェリーターミナル）", lon = 141.7010, lat = 44.3680, x = 247.86f, y = 116.20f),
+        RouteAnchor(id = "konpira_cape", rank = 1, name = "金比羅岬（海中鳥居）", lon = 141.7739, lat = 44.5631, x = 252.52f, y = 98.75f),
+        RouteAnchor(id = "embetsu_michinoeki", rank = 1, name = "遠別（道の駅富士見）", lon = 141.7921, lat = 44.7137, x = 253.68f, y = 85.24f),
+        RouteAnchor(id = "teshio_michinoeki", rank = 1, name = "天塩（天塩川河口・道の駅てしお）", lon = 141.7478, lat = 44.8845, x = 250.85f, y = 69.87f),
+        RouteAnchor(id = "latitude_45_monument", rank = 1, name = "北緯45度モニュメント", lon = 141.6813, lat = 45.0023, x = 246.60f, y = 59.25f),
+        RouteAnchor(id = "sarobetsu_plain", rank = 1, name = "サロベツ原野", lon = 141.6400, lat = 45.1500, x = 243.97f, y = 45.89f),
+        RouteAnchor(id = "bakkai_port", rank = 1, name = "抜海港（アザラシ越冬地）", lon = 141.6211, lat = 45.3107, x = 242.76f, y = 31.33f),
+        RouteAnchor(id = "noshappu_cape", rank = 1, name = "ノシャップ岬（野寒布岬）", lon = 141.6447, lat = 45.4490, x = 244.27f, y = 18.76f),
+        RouteAnchor(id = "wakkanai_station", rank = 1, name = "JR日本最北端の駅・稚内駅", lon = 141.6770, lat = 45.4168, x = 246.33f, y = 21.69f),
+        RouteAnchor(id = "soya_hills_white_path", rank = 1, name = "宗谷丘陵（白い道・風車群）", lon = 141.8942, lat = 45.4911, x = 260.20f, y = 14.92f),
+        RouteAnchor(id = "soya_cape_monument", rank = 1, name = "日本最北端の地の碑（宗谷岬）", lon = 141.9366, lat = 45.5228, x = 262.90f, y = 12.04f),
+        RouteAnchor(id = "esanuka_line", rank = 1, name = "猿払村道エサヌカ線", lon = 142.2480, lat = 45.2450, x = 282.78f, y = 37.29f),
+        RouteAnchor(id = "kucharo_lake", rank = 1, name = "クッチャロ湖（浜頓別）", lon = 142.3500, lat = 45.1270, x = 289.30f, y = 47.98f),
+        RouteAnchor(id = "kitami_kamui_cape_park", rank = 1, name = "北見神威岬公園", lon = 142.5014, lat = 45.0589, x = 298.96f, y = 54.13f),
+        RouteAnchor(id = "usutaibe_cape", rank = 1, name = "ウスタイベ岬（千畳岩）", lon = 142.5823, lat = 44.9589, x = 304.13f, y = 63.16f),
+        RouteAnchor(id = "oumu_michinoeki", rank = 1, name = "雄武港（道の駅おうむ）", lon = 142.9630, lat = 44.5832, x = 328.43f, y = 96.95f),
+        RouteAnchor(id = "hinode_cape", rank = 1, name = "日の出岬（ガラスの展望台）", lon = 143.0620, lat = 44.5321, x = 334.75f, y = 101.53f),
+        RouteAnchor(id = "okoppe_michinoeki", rank = 1, name = "興部（道の駅おこっぺ）", lon = 143.1239, lat = 44.4699, x = 338.70f, y = 107.10f),
+        RouteAnchor(id = "mombetsu_port_garinko", rank = 1, name = "紋別港（ガリンコ号乗り場）", lon = 143.3680, lat = 44.3350, x = 354.29f, y = 119.15f),
+        RouteAnchor(id = "crab_claw_sculpture", rank = 1, name = "カニの爪オブジェ（紋別のシンボル）", lon = 143.3774, lat = 44.3277, x = 354.89f, y = 119.80f),
+        RouteAnchor(id = "yubetsu_michinoeki", rank = 1, name = "道の駅愛ランド湧別（湧別町）", lon = 143.7191, lat = 44.1314, x = 376.70f, y = 137.29f),
+        RouteAnchor(id = "kimuaneppu_cape", rank = 1, name = "キムアネップ岬（サロマ湖夕日展望地）", lon = 143.9118, lat = 44.1083, x = 389.00f, y = 139.35f),
+        RouteAnchor(id = "hamasaroma", rank = 1, name = "浜佐呂間（サロマ湖東岸）", lon = 143.9382, lat = 44.0805, x = 390.69f, y = 141.82f),
+        RouteAnchor(id = "tokoro_curling_hall", rank = 1, name = "アドヴィックス常呂カーリングホール（カーリングの聖地）", lon = 144.0560, lat = 44.1213, x = 398.21f, y = 138.19f),
+        RouteAnchor(id = "notoro_cape", rank = 1, name = "能取岬（流氷展望の白亜灯台）", lon = 144.2431, lat = 44.1122, x = 410.15f, y = 139.00f),
+        RouteAnchor(id = "abashiri_michinoeki", rank = 1, name = "網走港（道の駅流氷街道網走）", lon = 144.2750, lat = 44.0240, x = 412.19f, y = 146.84f),
+        RouteAnchor(id = "koshimizu_primeval_garden", rank = 1, name = "小清水原生花園", lon = 144.4134, lat = 43.9419, x = 421.03f, y = 154.12f),
+        RouteAnchor(id = "road_to_heaven", rank = 1, name = "天に続く道（遥かなる一本道）", lon = 144.7987, lat = 43.9068, x = 445.63f, y = 157.23f),
+        RouteAnchor(id = "utoro_port", rank = 1, name = "ウトロ港（知床観光船乗り場）", lon = 144.9960, lat = 44.0680, x = 458.22f, y = 142.93f),
+        RouteAnchor(id = "shiretoko_five_lakes", rank = 1, name = "知床五湖フィールドハウス", lon = 145.0805, lat = 44.1222, x = 463.62f, y = 138.11f),
+        RouteAnchor(id = "shiretoko_pass", rank = 1, name = "知床峠（標高738m）", lon = 145.1100, lat = 44.0500, x = 465.50f, y = 144.53f),
+        RouteAnchor(id = "rausu_michinoeki", rank = 1, name = "道の駅知床・らうす（羅臼港）", lon = 145.1921, lat = 44.0174, x = 470.74f, y = 147.42f),
+        RouteAnchor(id = "aidomari_onsen", rank = 1, name = "相泊温泉（日本最北東端の温泉）", lon = 145.3175, lat = 44.1845, x = 478.75f, y = 132.57f),
+        RouteAnchor(id = "aidomari_bridge", rank = 1, name = "相泊橋（最果ての終着点・車道終点）", lon = 145.3230, lat = 44.1904, x = 479.10f, y = 132.04f),
     )
 
-    fun getAnchor(stepIndex: Int): RouteAnchor? =
-        anchors.getOrNull(stepIndex.coerceIn(0, maxStepIndex))
+    val totalNodes: Int get() = anchors.size
+    val maxStepIndex: Int get() = totalNodes - 1
+
+    val startAnchor: RouteAnchor get() = anchors.first()
+    val goalAnchor: RouteAnchor get() = anchors.last()
+
+    fun getAnchor(index: Int): RouteAnchor? = anchors.getOrNull(index.coerceIn(0, maxStepIndex))
+    fun getAnchorById(id: String): RouteAnchor? = anchors.firstOrNull { it.id == id }
+    fun getAnchorByIndex(index: Int): RouteAnchor? = anchors.getOrNull(index)
+
+    /** 指定したアンカーIDの次のアンカーを取得します */
+    fun getNextAnchor(currentId: String): RouteAnchor? {
+        val index = anchors.indexOfFirst { it.id == currentId }
+        return if (index in 0 until anchors.lastIndex) anchors[index + 1] else null
+    }
+
+    /** 指定したアンカーIDの前のアンカーを取得します */
+    fun getPrevAnchor(currentId: String): RouteAnchor? {
+        val index = anchors.indexOfFirst { it.id == currentId }
+        return if (index in 1..anchors.lastIndex) anchors[index - 1] else null
+    }
 
     val routeNodes: List<SugorokuNode> by lazy { nodes }
     val startNode: SugorokuNode by lazy { nodes[0] }
@@ -115,7 +132,7 @@ object HokkaidoAct1Route {
                 else -> SugorokuNodeType.NORMAL
             }
             SugorokuNode(
-                id = String.format("node_%04d", index),
+                id = anchor.id,
                 stepIndex = index,
                 name = anchor.name,
                 municipality = "",
@@ -123,7 +140,9 @@ object HokkaidoAct1Route {
                 x = anchor.x,
                 y = anchor.y,
                 description = "",
+                roadName = "",
                 isAnchor = true,
+                rank = anchor.rank,
             )
         }
     }
