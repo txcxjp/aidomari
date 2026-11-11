@@ -50,8 +50,8 @@ class SugorokuMapViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(0, state.progress.currentStepIndex)
         assertEquals("函館駅前", state.currentNode.name)
-        assertEquals(2000, state.totalNodes)
-        assertEquals(1999, state.remainingSteps)
+        assertEquals(HokkaidoAct1Route.totalNodes, state.totalNodes)
+        assertEquals(HokkaidoAct1Route.maxStepIndex, state.remainingSteps)
         assertNull(state.selectedNode)
     }
 
@@ -80,7 +80,7 @@ class SugorokuMapViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(5, state.progress.currentStepIndex)
         assertEquals(5, state.currentNode.stepIndex)
-        assertEquals(1994, state.remainingSteps)
+        assertEquals(HokkaidoAct1Route.maxStepIndex - 5, state.remainingSteps)
     }
 
     private class FakeSugorokuWordsRepository : WordsRepository {

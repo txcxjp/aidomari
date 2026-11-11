@@ -82,17 +82,18 @@ class SugorokuProgressTest {
 
     @Test
     fun advanceByQuestions_capsAtGoal() {
+        val maxStep = HokkaidoAct1Route.maxStepIndex
         val initial = SugorokuProgress(
-            currentStepIndex = 1995,
+            currentStepIndex = maxStep - 5,
             currentProgressInStep = 0,
             targetQuestionsPerStep = 1,
         )
         val advanced = initial.advanceByQuestions(100)
 
-        assertEquals(1999, advanced.currentStepIndex)
+        assertEquals(maxStep, advanced.currentStepIndex)
         assertEquals(0, advanced.currentProgressInStep)
         assertEquals(100, advanced.totalQuestionsAnswered)
-        assertTrue(advanced.visitedNodeIds.contains("node_1999"))
+        assertTrue(advanced.visitedNodeIds.contains(String.format("node_%04d", maxStep)))
     }
 
     @Test

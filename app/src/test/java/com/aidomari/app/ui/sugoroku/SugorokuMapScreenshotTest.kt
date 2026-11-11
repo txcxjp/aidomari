@@ -78,11 +78,11 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step250_suttsu_area() {
-        val suttsuNode = HokkaidoAct1Route.getNodeByStepIndex(250) ?: HokkaidoAct1Route.startNode
+        val suttsuNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("寿都") } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
-                    progress = SugorokuProgress(currentStepIndex = 250),
+                    progress = SugorokuProgress(currentStepIndex = suttsuNode.stepIndex),
                     currentNode = suttsuNode,
                 ),
                 onBack = {},
@@ -104,11 +104,11 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step377_kabuto_cape() {
-        val kabutoNode = HokkaidoAct1Route.getNodeByStepIndex(377) ?: HokkaidoAct1Route.startNode
+        val kabutoNode = HokkaidoAct1Route.nodes.firstOrNull { it.name == "兜岬" } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
-                    progress = SugorokuProgress(currentStepIndex = 377),
+                    progress = SugorokuProgress(currentStepIndex = kabutoNode.stepIndex),
                     currentNode = kabutoNode,
                 ),
                 onBack = {},
@@ -122,11 +122,11 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1162_noshappu() {
-        val noshappuNode = HokkaidoAct1Route.getNodeByStepIndex(1162) ?: HokkaidoAct1Route.startNode
+        val noshappuNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("ノシャップ岬（野寒布岬）") } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
-                    progress = SugorokuProgress(currentStepIndex = 1162),
+                    progress = SugorokuProgress(currentStepIndex = noshappuNode.stepIndex),
                     currentNode = noshappuNode,
                 ),
                 onBack = {},
@@ -140,11 +140,11 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1169_ferry_terminal() {
-        val ferryNode = HokkaidoAct1Route.getNodeByStepIndex(1169) ?: HokkaidoAct1Route.startNode
+        val ferryNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("フェリーターミナル") } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
-                    progress = SugorokuProgress(currentStepIndex = 1169),
+                    progress = SugorokuProgress(currentStepIndex = ferryNode.stepIndex),
                     currentNode = ferryNode,
                 ),
                 onBack = {},
@@ -158,11 +158,11 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1495_saruru_cape() {
-        val saruruNode = HokkaidoAct1Route.getNodeByStepIndex(1495) ?: HokkaidoAct1Route.startNode
+        val saruruNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("沙留岬") } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
-                    progress = SugorokuProgress(currentStepIndex = 1495),
+                    progress = SugorokuProgress(currentStepIndex = saruruNode.stepIndex),
                     currentNode = saruruNode,
                 ),
                 onBack = {},
@@ -176,11 +176,11 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1218_soya() {
-        val soyaNode = HokkaidoAct1Route.getNodeByStepIndex(1218) ?: HokkaidoAct1Route.startNode
+        val soyaNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("宗谷岬") } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
-                    progress = SugorokuProgress(currentStepIndex = 1218),
+                    progress = SugorokuProgress(currentStepIndex = soyaNode.stepIndex),
                     currentNode = soyaNode,
                 ),
                 onBack = {},
@@ -194,11 +194,11 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1218_soya_wide() {
-        val soyaNode = HokkaidoAct1Route.getNodeByStepIndex(1218) ?: HokkaidoAct1Route.startNode
+        val soyaNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("宗谷岬") } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
-                    progress = SugorokuProgress(currentStepIndex = 1218),
+                    progress = SugorokuProgress(currentStepIndex = soyaNode.stepIndex),
                     currentNode = soyaNode,
                 ),
                 onBack = {},
