@@ -10,9 +10,9 @@ class HokkaidoAct1RouteTest {
 
     @Test
     fun route_hasExactCuratedNodes() {
-        assertEquals(333, HokkaidoAct1Route.totalNodes)
-        assertEquals(333, HokkaidoAct1Route.routeNodes.size)
-        assertEquals(332, HokkaidoAct1Route.maxStepIndex)
+        assertEquals(319, HokkaidoAct1Route.totalNodes)
+        assertEquals(319, HokkaidoAct1Route.routeNodes.size)
+        assertEquals(318, HokkaidoAct1Route.maxStepIndex)
     }
 
     @Test
@@ -32,7 +32,7 @@ class HokkaidoAct1RouteTest {
     fun goalNode_isAidomari() {
         val goalNode = HokkaidoAct1Route.goalNode
         assertEquals("aidomari_bridge", goalNode.id)
-        assertEquals(332, goalNode.stepIndex)
+        assertEquals(318, goalNode.stepIndex)
         assertEquals("相泊橋", goalNode.name)
         assertEquals("羅臼町", goalNode.municipality)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
@@ -113,17 +113,17 @@ class HokkaidoAct1RouteTest {
         assertTrue(rank2Anchors.any { it.id == "teshio_river_mouth" && it.name == "天塩川河口" })
 
         val rank3Anchors = anchors.filter { it.rank == 3 }
-        assertEquals(89, rank3Anchors.size)
+        assertEquals(86, rank3Anchors.size)
         assertTrue(rank3Anchors.any { it.id == "kawaguchi_ruins_scenic_forest" && it.name == "川口遺跡風景林" })
         assertTrue(rank3Anchors.any { it.id == "sembodai_observatory" && it.name == "千望台" })
 
         val rank4Anchors = anchors.filter { it.rank == 4 }
-        assertEquals(76, rank4Anchors.size)
+        assertEquals(68, rank4Anchors.size)
         assertTrue(rank4Anchors.any { it.id == "goryokaku_station" && it.name == "五稜郭駅" })
         assertTrue(rank4Anchors.any { it.id == "michi_no_eki_hot_haboro" && it.name == "道の駅 ほっと・はぼろ" })
 
         val rank5Anchors = anchors.filter { it.rank == 5 }
-        assertEquals(27, rank5Anchors.size)
+        assertEquals(24, rank5Anchors.size)
         assertTrue(rank5Anchors.any { it.id == "showa_park" && it.name == "昭和公園" })
         assertTrue(rank5Anchors.any { it.id == "enoshima_coast" && it.name == "江ノ島海岸" })
 
@@ -218,5 +218,19 @@ class HokkaidoAct1RouteTest {
         assertTrue("富丘簡易郵便局 should not be present", "富丘簡易郵便局" !in names)
         assertTrue("サロマ湖展望館 should not be present", "サロマ湖展望館" !in names)
         assertTrue("ふれあいセンター清里 should not be present", "ふれあいセンター清里" !in names)
+        assertTrue("力昼港 should not be present", "力昼港" !in names)
+        assertTrue("鬼鹿港 should not be present", "鬼鹿港" !in names)
+        assertTrue("止別駅 should not be present", "止別駅" !in names)
+        assertTrue("熱郛駅 should not be present", "熱郛駅" !in names)
+        assertTrue("川下海浜施設 should not be present", "川下海浜施設" !in names)
+        assertTrue("東大沼キャンプ場 should not be present", "東大沼キャンプ場" !in names)
+        assertTrue("旧浜松駅跡 should not be present", "旧浜松駅跡" !in names)
+        assertTrue("日暮山展望台 should not be present", "日暮山展望台" !in names)
+        assertTrue("豊岬駅跡 should not be present", "豊岬駅跡" !in names)
+        assertTrue("コムケ国際キャンプ場 should not be present", "コムケ国際キャンプ場" !in names)
+        assertTrue("ほしみ駅 should not be present", "ほしみ駅" !in names)
+        assertTrue("藻琴駅 should not be present", "藻琴駅" !in names)
+        assertTrue("ウスタイベ千畳岩キャンプ場 should not be present", "ウスタイベ千畳岩キャンプ場" !in names)
+        assertTrue("小平町鰊番屋 should not be present", "小平町鰊番屋" !in names)
     }
 }
