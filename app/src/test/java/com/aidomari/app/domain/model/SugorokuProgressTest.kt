@@ -51,7 +51,7 @@ class SugorokuProgressTest {
         assertEquals(0, advanced.currentProgressInStep)
         assertEquals(1, advanced.totalQuestionsAnswered)
         assertTrue(advanced.visitedNodeIds.contains("hakodate_station"))
-        assertTrue(advanced.visitedNodeIds.contains("chiyogadai_park"))
+        assertTrue(advanced.visitedNodeIds.contains(HokkaidoAct1Route.routeNodes[1].id))
     }
 
     @Test
@@ -73,11 +73,10 @@ class SugorokuProgressTest {
         assertEquals(3, advanced.currentStepIndex)
         assertEquals(0, advanced.currentProgressInStep)
         assertEquals(3, advanced.totalQuestionsAnswered)
-        assertTrue(advanced.visitedNodeIds.contains("hakodate_station"))
-        assertTrue(advanced.visitedNodeIds.contains("chiyogadai_park"))
-        assertTrue(advanced.visitedNodeIds.contains("goryokaku_park"))
-        assertTrue(advanced.visitedNodeIds.contains("michinoeki_nanairo_nanae"))
-        assertFalse(advanced.visitedNodeIds.contains("onuma_park"))
+        for (i in 0..3) {
+            assertTrue(advanced.visitedNodeIds.contains(HokkaidoAct1Route.routeNodes[i].id))
+        }
+        assertFalse(advanced.visitedNodeIds.contains(HokkaidoAct1Route.routeNodes[4].id))
     }
 
     @Test

@@ -23,21 +23,32 @@ data class RouteAnchor(
  */
 object HokkaidoAct1Route {
 
-    /** 公式一次測地データに基づくアンカーポイント（Rank 1主要拠点: 67, Rank 2中間拠点: 58, Rank 3詳細拠点: 1：全126箇所） */
+    /** 公式一次測地データに基づくアンカーポイント（Rank 1主要拠点: 67, Rank 2中間拠点: 60, Rank 3詳細拠点: 10：全137箇所） */
     val anchors: List<RouteAnchor> = listOf(
         RouteAnchor(id = "hakodate_station", rank = 1, name = "函館駅前", municipality = "函館市", lon = 140.7264, lat = 41.7738, x = 185.64f, y = 342.97f, description = "函館駅前。北海道一周すごろく第1部の出発点。"),
+        RouteAnchor(id = "omori_park", rank = 3, name = "大森公園", municipality = "函館市", lon = 140.7392, lat = 41.7702, x = 186.46f, y = 343.28f, description = "函館の市街地に位置し、大森浜の潮風を感じる市民憩いの都市公園。"),
         RouteAnchor(id = "chiyogadai_park", rank = 2, name = "千代台公園", municipality = "函館市", lon = 140.7473, lat = 41.7855, x = 186.98f, y = 341.97f, description = "オーシャンスタジアムや陸上競技場を擁する函館市民のスポーツ拠点。"),
         RouteAnchor(id = "goryokaku_park", rank = 1, name = "五稜郭タワー", municipality = "函館市", lon = 140.7540, lat = 41.7946, x = 187.40f, y = 341.19f, description = "特別史跡五稜郭公園と、星形の城郭を一望できる五稜郭タワー。"),
+        RouteAnchor(id = "kikyo_station", rank = 3, name = "桔梗駅", municipality = "函館市", lon = 140.7225, lat = 41.8464, x = 185.39f, y = 336.76f, description = "函館市北部の住宅街と田園が広がるJR函館本線の駅。"),
         RouteAnchor(id = "michinoeki_nanairo_nanae", rank = 2, name = "道の駅なないろ・ななえ", municipality = "七飯町", lon = 140.6575, lat = 41.9255, x = 181.24f, y = 329.97f, description = "国道5号沿い道南屈指の人気道の駅。特産リンゴスイーツが有名。"),
+        RouteAnchor(id = "niyama_station", rank = 3, name = "仁山駅", municipality = "七飯町", lon = 140.6397, lat = 41.9297, x = 180.11f, y = 329.61f, description = "七飯町の山裾に位置し、かつてスイッチバックがあった風情ある無人駅。"),
         RouteAnchor(id = "onuma_park", rank = 1, name = "大沼国定公園", municipality = "七飯町", lon = 140.6701, lat = 41.9808, x = 182.05f, y = 325.23f, description = "秀峰・駒ヶ岳を望む大沼・小沼の絶景が広がる国定公園。"),
+        RouteAnchor(id = "komagatake_station", rank = 2, name = "駒ヶ岳駅", municipality = "森町", lon = 140.6102, lat = 42.0386, x = 178.22f, y = 320.26f, description = "秀峰・駒ヶ岳の雄大な山容を間近に仰ぐJR函館本線の山麓駅。"),
         RouteAnchor(id = "mori_station", rank = 1, name = "森駅", municipality = "森町", lon = 140.5734, lat = 42.1090, x = 175.87f, y = 314.20f, description = "名物「元祖いかめし」で全国的に有名な函館本線の駅。"),
+        RouteAnchor(id = "otoshibe_station", rank = 3, name = "落部駅", municipality = "八雲町", lon = 140.4214, lat = 42.1877, x = 166.17f, y = 307.43f, description = "噴火湾（内浦湾）の海岸線沿いに佇む八雲町南部の玄関口駅。"),
         RouteAnchor(id = "funka_wan_panorama_park", rank = 2, name = "噴火湾パノラマパーク", municipality = "八雲町", lon = 140.3101, lat = 42.2306, x = 159.06f, y = 303.73f, description = "噴火湾（内浦湾）を一望する丘の上の大規模公園。"),
+        RouteAnchor(id = "hamamatsu_station_site", rank = 3, name = "旧浜松駅跡", municipality = "八雲町", lon = 140.2986, lat = 42.2389, x = 158.33f, y = 303.01f, description = "国道5号沿い、噴火湾の美しい海を望む旧JR函館本線の駅跡。"),
         RouteAnchor(id = "yakumo_station", rank = 1, name = "八雲駅", municipality = "八雲町", lon = 140.2729, lat = 42.2538, x = 156.69f, y = 301.73f, description = "北海道の木彫り熊発祥の地・八雲町の中心駅。"),
+        RouteAnchor(id = "washinosu_station_site", rank = 3, name = "旧鷲ノ巣駅跡", municipality = "八雲町", lon = 140.2699, lat = 42.2782, x = 156.50f, y = 299.62f, description = "八雲市街の北に位置し、秘境駅として鉄道ファンに親しまれた歴史ある遺構。"),
         RouteAnchor(id = "kuroiwa_odd_rocks", rank = 2, name = "黒岩奇岩", municipality = "八雲町", lon = 140.2893, lat = 42.3626, x = 157.74f, y = 292.34f, description = "八雲町北部の国道5号沿い、噴火湾の波打ち際にそびえる歴史ある奇岩名勝。"),
+        RouteAnchor(id = "kunnui_station_site", rank = 3, name = "旧国縫駅跡", municipality = "長万部町", lon = 140.3208, lat = 42.4419, x = 159.75f, y = 285.48f, description = "かつて日本海側の瀬棚線が分岐していた歴史を持つ交通の要衝駅跡。"),
         RouteAnchor(id = "oshamambe_station", rank = 1, name = "長万部駅", municipality = "長万部町", lon = 140.3751, lat = 42.5125, x = 163.21f, y = 279.37f, description = "名物「かにめし」や温泉街で知られる交通の要衝駅。"),
+        RouteAnchor(id = "warabitai_station_site", rank = 3, name = "旧蕨岱駅跡", municipality = "長万部町", lon = 140.3347, lat = 42.6108, x = 160.64f, y = 270.85f, description = "胆振と後志の境界近く、静かな山あいに佇む旧函館本線の木造待合所跡。"),
         RouteAnchor(id = "michinoeki_kuromatsunai", rank = 2, name = "道の駅くろまつない", municipality = "黒松内町", lon = 140.3800, lat = 42.6727, x = 163.53f, y = 265.48f, description = "天然記念物「歌才ブナ自生北限地帯」に位置する人気の道の駅。"),
+        RouteAnchor(id = "neppu_station", rank = 3, name = "熱郛駅", municipality = "黒松内町", lon = 140.3061, lat = 42.7058, x = 158.81f, y = 262.60f, description = "歌才ブナ自生北限の町・黒松内町の山間に位置するJR函館本線の駅。"),
         RouteAnchor(id = "suttsu_wind_park", rank = 2, name = "寿都風力発電所", municipality = "寿都町", lon = 140.2369, lat = 42.7822, x = 154.39f, y = 255.96f, description = "風のまち寿都を象徴する海岸沿いの巨大風車群。"),
         RouteAnchor(id = "suttsu_michinoeki", rank = 1, name = "みなとま〜れ寿都", municipality = "寿都町", lon = 140.2320, lat = 42.7956, x = 154.08f, y = 254.80f, description = "寿都湾を望む道の駅。新鮮な生しらすや海産物が名物。"),
+        RouteAnchor(id = "suttsu_onsen_yubetsunoyu", rank = 2, name = "寿都温泉ゆべつのゆ", municipality = "寿都町", lon = 140.2014, lat = 42.8097, x = 152.13f, y = 253.57f, description = "寿都湾を望む湯別地区に湧く、塩化物泉と硫黄泉の2つの泉質を持つ名湯。"),
         RouteAnchor(id = "benkei_cape", rank = 1, name = "弁慶岬", municipality = "寿都町", lon = 140.1898, lat = 42.8249, x = 151.38f, y = 252.25f, description = "義経・弁慶伝説が残る寿都湾屈指の景勝地。"),
         RouteAnchor(id = "honme_cape", rank = 2, name = "本目岬", municipality = "島牧村", lon = 140.1144, lat = 42.7450, x = 146.57f, y = 259.20f, description = "白黒六角形の本目岬灯台が立ち、日本海と夕日を一望する名勝。"),
         RouteAnchor(id = "shimamaki_michinoeki", rank = 1, name = "よってけ！島牧", municipality = "島牧村", lon = 140.0108, lat = 42.6670, x = 139.96f, y = 265.97f, description = "後志南部の海岸線に位置する道の駅。海産物直売所が人気。"),
