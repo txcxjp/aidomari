@@ -21,6 +21,7 @@ class HokkaidoAct1RouteTest {
         assertEquals("hakodate_station", startNode.id)
         assertEquals(0, startNode.stepIndex)
         assertEquals("函館駅前", startNode.name)
+        assertEquals("函館市", startNode.municipality)
         assertEquals(SugorokuNodeType.START_HAKODATE, startNode.type)
         assertEquals(1, startNode.rank)
         assertTrue(startNode.isAnchor)
@@ -32,6 +33,7 @@ class HokkaidoAct1RouteTest {
         assertEquals("aidomari_bridge", goalNode.id)
         assertEquals(66, goalNode.stepIndex)
         assertEquals("相泊橋（最果ての終着点・車道終点）", goalNode.name)
+        assertEquals("羅臼町", goalNode.municipality)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
         assertEquals(1, goalNode.rank)
         assertTrue(goalNode.isAnchor)
@@ -45,6 +47,7 @@ class HokkaidoAct1RouteTest {
         HokkaidoAct1Route.routeNodes.forEachIndexed { index, node ->
             assertEquals("Node at index $index must have stepIndex $index", index, node.stepIndex)
             assertTrue("Node at index $index should have non-empty name", node.name.isNotBlank())
+            assertTrue("Node at index $index should have non-empty municipality", node.municipality.isNotBlank())
             assertTrue("Node at index $index x coordinate should be within 0..2000", node.x in 0f..2000f)
             assertTrue("Node at index $index y coordinate should be within 0..2000", node.y in 0f..2000f)
             assertTrue("All nodes must be anchors", node.isAnchor)
@@ -93,6 +96,7 @@ class HokkaidoAct1RouteTest {
             assertEquals(1, anchor.rank)
             assertTrue("Anchor id should not be blank", anchor.id.isNotBlank())
             assertTrue("Anchor name should not be blank", anchor.name.isNotBlank())
+            assertTrue("Anchor municipality should not be blank", anchor.municipality.isNotBlank())
         }
         val ids = anchors.map { it.id }.toSet()
         assertEquals(anchors.size, ids.size)
