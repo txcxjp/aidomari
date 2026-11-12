@@ -18,7 +18,7 @@ data class RouteAnchor(
  */
 object HokkaidoAct1Route {
 
-    /** 公式一次測地データに基づくアンカーポイント（Rank 1主要拠点: 63, Rank 2中間拠点: 61, Rank 3詳細拠点: 77, Rank 4追加拠点: 62, Rank 5詳細拠点: 28, Rank 6追加拠点: 6：全297箇所） */
+    /** 公式一次測地データに基づくアンカーポイント（Rank 1主要拠点: 63, Rank 2中間拠点: 63, Rank 3詳細拠点: 78, Rank 4追加拠点: 62, Rank 5詳細拠点: 28, Rank 6追加拠点: 6：全300箇所） */
     val anchors: List<RouteAnchor> = listOf(
         RouteAnchor(id = "hakodate_station", rank = 1, name = "函館駅前", municipality = "函館市", lon = 140.7264, lat = 41.7738, x = 185.64f, y = 342.97f, description = "函館駅前。北海道一周すごろく第1部の出発点。"),
         RouteAnchor(id = "omori_park", rank = 3, name = "大森公園", municipality = "函館市", lon = 140.7392, lat = 41.7702, x = 186.46f, y = 343.28f, description = "函館の市街地に位置し、大森浜の潮風を感じる市民憩いの都市公園。"),
@@ -43,6 +43,7 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "oniushi_park", rank = 3, name = "オニウシ公園", municipality = "森町", lon = 140.5843, lat = 42.1009, x = 176.57f, y = 314.90f, description = "森駅手前の高台にある桜の名所公園。道の駅隣接。"),
         RouteAnchor(id = "mori_station", rank = 1, name = "森駅", municipality = "森町", lon = 140.5734, lat = 42.109, x = 175.87f, y = 314.20f, description = "名物「元祖いかめし」で全国的に有名な函館本線の駅。"),
         RouteAnchor(id = "michi_no_eki_you_yu_mori", rank = 6, name = "道の駅 YOU･遊･もり", municipality = "森町", lon = 140.5687, lat = 42.0989, x = 175.57f, y = 315.07f, description = "国道5号沿いにあり、駒ヶ岳を望む展望タワーといかめし等で賑わう人気の道の駅。"),
+        RouteAnchor(id = "washinoki_port", rank = 3, name = "鷲ノ木漁港", municipality = "森町", lon = 140.5444211, lat = 42.1160117, x = 174.02f, y = 313.60f, description = "噴火湾に面し、豊かな海の恵みと対岸の室蘭方面を見晴らす森町の沿岸漁港。"),
         RouteAnchor(id = "moto_ishikura_station_site", rank = 5, name = "本石倉駅跡", municipality = "森町", lon = 140.471972, lat = 42.159667, x = 169.40f, y = 309.84f, description = "噴火湾の海原を目の前に望む旧JR函館本線の駅跡。"),
         RouteAnchor(id = "ishikura_station", rank = 4, name = "石倉駅", municipality = "森町", lon = 140.458472, lat = 42.172833, x = 168.54f, y = 308.71f, description = "噴火湾の海岸線沿いに佇むJR函館本線の駅。"),
         RouteAnchor(id = "otoshibe_station", rank = 3, name = "落部駅", municipality = "八雲町", lon = 140.4214, lat = 42.1877, x = 166.17f, y = 307.43f, description = "噴火湾（内浦湾）の海岸線沿いに佇む八雲町南部の玄関口駅。"),
@@ -99,6 +100,7 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "kawashiraki_port", rank = 3, name = "川白漁港", municipality = "神恵内村", lon = 140.3274, lat = 43.2274, x = 160.17f, y = 217.10f, description = "西の河原へ向かう西積丹最北端の漁港。平らな岩礁と透明な海が特徴。"),
         RouteAnchor(id = "annai_observatory_park", rank = 5, name = "あんない展望公園", municipality = "神恵内村", lon = 140.3326, lat = 43.2423, x = 160.50f, y = 215.79f, description = "国道229号沿いの断崖にあり、積丹西海岸の奇岩群を見晴らす絶景パーキング。"),
         RouteAnchor(id = "jubo_cape", rank = 1, name = "西の河原", municipality = "積丹町", lon = 140.34, lat = 43.262, x = 160.97f, y = 214.06f, description = "ジュウボウ岬の南に位置する積丹半島屈指の海岸霊場。"),
+        RouteAnchor(id = "kouzaki_fishing_port", rank = 2, name = "神岬漁港", municipality = "積丹町", lon = 140.3592, lat = 43.3142, x = 162.20f, y = 209.48f, description = "西積丹の断崖道路沿いにあり、奇岩と透明な海に囲まれた神威岬手前の漁港。"),
         RouteAnchor(id = "kamui_cape", rank = 1, name = "神威岬", municipality = "積丹町", lon = 140.3547, lat = 43.33, x = 161.91f, y = 208.10f, description = "積丹ブルーの海に鋭く突き出るシャコタン半島随一の絶景岬。"),
         RouteAnchor(id = "raikishi_fishing_port_park", rank = 3, name = "来岸漁港公園", municipality = "積丹町", lon = 140.3944, lat = 43.3309, x = 164.45f, y = 208.02f, description = "神威岬クルーズの拠点となる静かな港に隣接した海浜公園。"),
         RouteAnchor(id = "nozuka_camp_site", rank = 2, name = "道営野塚野営場", municipality = "積丹町", lon = 140.4448, lat = 43.3343, x = 167.66f, y = 207.72f, description = "積丹ブルーの美しい砂浜と夕日を望む道営の無料野営場。"),
@@ -173,6 +175,7 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "obira_central_park", rank = 3, name = "小平中央公園", municipality = "小平町", lon = 141.675, lat = 44.015, x = 246.20f, y = 147.64f, description = "小平町市街地にある文化ホール隣接の町民公園。"),
         RouteAnchor(id = "obira_boyodai_campground", rank = 4, name = "小平町望洋台キャンプ場", municipality = "小平町", lon = 141.666466, lat = 44.032257, x = 245.66f, y = 146.10f, description = "日本海と水平線に沈む夕日を一望できる丘の上のキャンプ場。"),
         RouteAnchor(id = "otodo_station_site", rank = 3, name = "旧大椴駅跡", municipality = "小平町", lon = 141.6628, lat = 44.0684, x = 245.42f, y = 142.89f, description = "かつて国鉄羽幌線が走った歴史を今に伝える、日本海沿いの静かな集落遺構。"),
+        RouteAnchor(id = "michinoeki_obira_nishinbanya", rank = 2, name = "道の駅 おびら鰊番屋", municipality = "小平町", lon = 141.6558, lat = 44.1368, x = 244.98f, y = 136.81f, description = "国指定重要文化財「旧花田家番屋」に隣接し、オロロンラインの歴史を伝える道の駅。"),
         RouteAnchor(id = "kamihira_wind_farm", rank = 2, name = "上平グリーンヒル", municipality = "苫前町", lon = 141.6774, lat = 44.2574, x = 246.36f, y = 126.07f, description = "オロロンライン沿いの丘陵に39基の巨大風車が林立する壮大な牧場。"),
         RouteAnchor(id = "michi_no_eki_wind_w_tomamae", rank = 3, name = "道の駅 風Wとままえ", municipality = "苫前町", lon = 141.656472, lat = 44.313303, x = 245.02f, y = 121.09f, description = "日本海と天売・焼尻島を望む温泉併設の人気の道の駅。"),
         RouteAnchor(id = "haboro_port", rank = 1, name = "羽幌港", municipality = "羽幌町", lon = 141.6967, lat = 44.3608, x = 247.59f, y = 116.85f, description = "日本海の離島・天売島と焼尻島へのフェリーが発着する港。"),
