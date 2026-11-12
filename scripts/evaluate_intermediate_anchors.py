@@ -337,7 +337,7 @@ def evaluate_intervals(
     min_interval_km=1.0,
     min_dist_to_anchors=0.5,
     max_perp_km=5.0,
-    max_detour_ratio=1.40,
+    max_detour_ratio=1.30,
 ):
     """すべての隣接区間を厳密な幾何・地理ルールで評価し、各区間に最適な中間アンカー（最大1件）を選定する。"""
     existing_names = set(a["name"] for a in anchors)
@@ -353,17 +353,19 @@ def evaluate_intervals(
             seen.add(key)
             dedup_candidates.append(c)
 
-    # 2. 全既存アンカーとの離隔を事前計算（d >= 1.0km を満たすもののみ残す）
+    # 2. 全既存アンカーとの離隔を事前計算（d >= min_dist_to_anchors を満たすもののみ残す）
     valid_candidates = []
     for c in dedup_candidates:
         all_d = [
             (haversine(a["lat"], a["lon"], c["lat"], c["lon"]), idx)
             for idx, a in enumerate(anchors)
         ]
-        min_d, closest_idx = min(all_d)
+        all_d.sort(key=lambda x: x[0])
+        min_d = all_d[0][0]
         if min_d >= min_dist_to_anchors:
             c["min_anchor_dist"] = min_d
-            c["closest_anchor_idx"] = closest_idx
+            c["closest_anchor_idx"] = all_d[0][1]
+            c["closest_two_indices"] = {all_d[0][1], all_d[1][1]}
             valid_candidates.append(c)
 
     # 3. 区間ごとの候補マッチング
@@ -424,10 +426,9 @@ def evaluate_intervals(
             if is_facility_duplicate(c["name"], a1["name"]) or is_facility_duplicate(c["name"], a2["name"]):
                 continue
 
-            # ボロノイ近傍性チェック（直前・直後アンカーの近傍であること）
-            if c["closest_anchor_idx"] not in (i, i + 1) and c["closest_anchor_idx"] not in (i - 1, i + 2):
-                if c["min_anchor_dist"] < min(d1, d2) - 0.5:
-                    continue
+            # 新規アンカーにとって最も近い別のアンカーは元となった2地点 (i, i+1) であること（Uターン・他アンカー接近を根絶）
+            if c["closest_two_indices"] != {i, i + 1}:
+                continue
 
             # 北海道陸地ポリゴン判定
             sx, sy = gps_to_svg(c["lon"], c["lat"])

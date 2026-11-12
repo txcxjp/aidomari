@@ -18,7 +18,7 @@ data class RouteAnchor(
  */
 object HokkaidoAct1Route {
 
-    /** 公式一次測地データに基づくアンカーポイント（Rank 1主要拠点: 63, Rank 2中間拠点: 63, Rank 3詳細拠点: 82, Rank 4追加拠点: 69, Rank 5詳細拠点: 35, Rank 6追加拠点: 8：全320箇所） */
+    /** 公式一次測地データに基づくアンカーポイント（Rank 1主要拠点: 63, Rank 2中間拠点: 63, Rank 3詳細拠点: 81, Rank 4追加拠点: 67, Rank 5詳細拠点: 33, Rank 6追加拠点: 7：全314箇所） */
     val anchors: List<RouteAnchor> = listOf(
         RouteAnchor(id = "hakodate_station", rank = 1, name = "函館駅前", municipality = "函館市", lon = 140.7264, lat = 41.7738, x = 185.64f, y = 342.97f, description = "函館駅前。北海道一周すごろく第1部の出発点。"),
         RouteAnchor(id = "matsukazecho_station", rank = 4, name = "松風町駅", municipality = "函館市", lon = 140.733315, lat = 41.771395, x = 186.08f, y = 343.18f, description = "函館市電の停留場。大森浜や函館駅前へ通じる市街地の電停。"),
@@ -58,7 +58,6 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "washinosu_station_site", rank = 3, name = "旧鷲ノ巣駅跡", municipality = "八雲町", lon = 140.2699, lat = 42.2782, x = 156.50f, y = 299.62f, description = "八雲市街の北に位置し、秘境駅として鉄道ファンに親しまれた歴史ある遺構。"),
         RouteAnchor(id = "yamazaki_station", rank = 4, name = "山崎駅", municipality = "八雲町", lon = 140.274306, lat = 42.314278, x = 156.78f, y = 296.51f, description = "噴火湾沿いの国道5号に面するJR函館本線の駅。"),
         RouteAnchor(id = "kuroiwa_odd_rocks", rank = 2, name = "黒岩奇岩", municipality = "八雲町", lon = 140.2893, lat = 42.3626, x = 157.74f, y = 292.34f, description = "八雲町北部の国道5号沿い、噴火湾の波打ち際にそびえる歴史ある奇岩名勝。"),
-        RouteAnchor(id = "kuroiwa_station", rank = 4, name = "黒岩駅", municipality = "八雲町", lon = 140.288180, lat = 42.368355, x = 157.67f, y = 291.84f, description = "JR函館本線の駅。噴火湾沿い黒岩奇岩近くに位置する駅。"),
         RouteAnchor(id = "kunnui_station_site", rank = 3, name = "旧国縫駅跡", municipality = "長万部町", lon = 140.3208, lat = 42.4419, x = 159.75f, y = 285.48f, description = "かつて日本海側の瀬棚線が分岐していた歴史を持つ交通の要衝駅跡。"),
         RouteAnchor(id = "nakanosawa_station", rank = 4, name = "中ノ沢駅", municipality = "長万部町", lon = 140.346111, lat = 42.477917, x = 161.36f, y = 282.36f, description = "内浦湾沿いに位置するJR函館本線の駅。"),
         RouteAnchor(id = "oshamambe_town_center", rank = 5, name = "長万部町民センター", municipality = "長万部町", lon = 140.368, lat = 42.505, x = 162.76f, y = 280.02f, description = "鉄道と温泉の町・長万部の中心部にある町民会館。"),
@@ -143,10 +142,8 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "temiya_cave", rank = 2, name = "手宮洞窟保存館", municipality = "小樽市", lon = 141.0031, lat = 43.2121, x = 203.31f, y = 218.44f, description = "続縄文時代の古代文字や陰刻画が壁面に残る国指定史跡。"),
         RouteAnchor(id = "otaru_aquarium", rank = 1, name = "おたる水族館", municipality = "小樽市", lon = 141.0114, lat = 43.237, x = 203.84f, y = 216.25f, description = "トドの豪快なダイビングショーや海獣公園で知られる北海道屈指の大規模水族館。"),
         RouteAnchor(id = "nagahashi_naebo_park", rank = 3, name = "長橋なえぼ公園", municipality = "小樽市", lon = 140.9782, lat = 43.2003, x = 201.72f, y = 219.47f, description = "道内最古の森林公園。豊かな森と小鳥、リスが息づく自然生態観察公園。"),
-        RouteAnchor(id = "asahi_observatory", rank = 5, name = "旭展望台", municipality = "小樽市", lon = 140.984618, lat = 43.197003, x = 202.13f, y = 219.76f, description = "小樽市街や小樽港を一望できる高台の絶景展望台。"),
         RouteAnchor(id = "minami_otaru_station", rank = 4, name = "南小樽駅", municipality = "小樽市", lon = 141.008, lat = 43.187, x = 203.62f, y = 220.63f, description = "小樽のオルゴール堂やメルヘン交差点最寄りのJR駅。"),
         RouteAnchor(id = "otaru_marina", rank = 2, name = "小樽港マリーナ", municipality = "小樽市", lon = 141.0246, lat = 43.1851, x = 204.68f, y = 220.80f, description = "ヨットハーバーやベイエリア商業施設が広がる小樽の港湾スポット。"),
-        RouteAnchor(id = "hiraiso_cape", rank = 6, name = "平磯岬", municipality = "小樽市", lon = 141.036002, lat = 43.182634, x = 205.41f, y = 221.02f, description = "小樽港マリーナ東側に位置し、石狩湾を見渡す岬。"),
         RouteAnchor(id = "boyo_schanze_auto_campground", rank = 6, name = "望洋シャンツェオートキャンプ場", municipality = "小樽市", lon = 141.024442, lat = 43.159179, x = 204.67f, y = 223.07f, description = "小樽港と石狩湾を一望する高台に位置するオートキャンプ場。"),
         RouteAnchor(id = "kenashiyama_observatory", rank = 5, name = "毛無山展望所", municipality = "小樽市", lon = 141.0107, lat = 43.1547, x = 203.79f, y = 223.46f, description = "標高約470mから小樽市街・石狩湾・増毛連山を一望する小樽屈指のパノラマ夜景スポット。"),
         RouteAnchor(id = "asarigawa_onsen", rank = 4, name = "朝里川温泉", municipality = "小樽市", lon = 141.035, lat = 43.15, x = 205.34f, y = 223.87f, description = "小樽市街近郊の山あいに広がる閑静な温泉郷。"),
@@ -154,7 +151,6 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "asari_station", rank = 3, name = "朝里駅", municipality = "小樽市", lon = 141.0639, lat = 43.178, x = 207.19f, y = 221.42f, description = "ホームの目の前に日本海の波打ち際が広がる、JR函館本線の海の見える駅。"),
         RouteAnchor(id = "hariusu_station_site", rank = 4, name = "張碓駅跡", municipality = "小樽市", lon = 141.118, lat = 43.142, x = 210.64f, y = 224.57f, description = "海岸絶壁の下にかつて存在した伝説の秘境駅跡。"),
         RouteAnchor(id = "zenibako_station", rank = 1, name = "銭函駅", municipality = "小樽市", lon = 141.1597, lat = 43.1437, x = 213.30f, y = 224.42f, description = "鰊漁の豊漁で銭箱が積み上がったとされる縁起の良い駅。"),
-        RouteAnchor(id = "hoshimi_station", rank = 5, name = "ほしみ駅", municipality = "札幌市手稲区", lon = 141.191500, lat = 43.133460, x = 215.34f, y = 225.32f, description = "JR函館本線の駅。小樽市と札幌市の境界近くに位置する駅。"),
         RouteAnchor(id = "hoshioki_green_space", rank = 4, name = "星置緑地", municipality = "小樽市/札幌市境", lon = 141.195, lat = 43.138, x = 215.56f, y = 224.92f, description = "ミズバショウ自生地として知られる緑地公園。"),
         RouteAnchor(id = "zenibako_central_park", rank = 4, name = "銭函中央公園", municipality = "小樽市", lon = 141.215, lat = 43.148, x = 216.84f, y = 224.05f, description = "銭函駅東側の住宅街・海岸通りに面する都市公園。"),
         RouteAnchor(id = "ishikari_shinko", rank = 2, name = "石狩湾新港", municipality = "石狩市", lon = 141.3079, lat = 43.2149, x = 222.77f, y = 218.19f, description = "日本海沿岸の物流・エネルギーを支える北海道屈指の重要港湾。"),
@@ -263,7 +259,6 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "otoshibe_cape", rank = 4, name = "音標岬", municipality = "枝幸町", lon = 142.812, lat = 44.705, x = 318.79f, y = 86.02f, description = "オホーツクライン沿い、雄大な水平線と奇岩が広がる枝幸町南部の岬。"),
         RouteAnchor(id = "motoineppu_fishing_port", rank = 3, name = "元稲府漁港", municipality = "雄武町", lon = 142.845, lat = 44.685, x = 320.90f, y = 87.82f, description = "雄武町北部のオホーツク海岸沿いの漁港。"),
         RouteAnchor(id = "oumu_michinoeki", rank = 1, name = "道の駅おうむ", municipality = "雄武町", lon = 142.9596, lat = 44.5831, x = 328.21f, y = 96.96f, description = "旧国鉄興浜南線雄武駅跡地に立つ道の駅。オホーツク海を望む展望塔がある。"),
-        RouteAnchor(id = "hinodemisaki_observatory_la_luna", rank = 3, name = "日の出岬展望台 ラ・ルーナ", municipality = "雄武町", lon = 143.061292, lat = 44.530801, x = 334.71f, y = 101.65f, description = "雄武町日の出岬に立つ総ガラス張りの展望台。オホーツク海の絶景を望む。"),
         RouteAnchor(id = "sawaki_fishing_port", rank = 2, name = "沢木漁港", municipality = "雄武町", lon = 143.062113, lat = 44.517498, x = 334.76f, y = 102.84f, description = "日の出岬の手前にあるホタテ漁の漁港。"),
         RouteAnchor(id = "hinode_cape", rank = 1, name = "日の出岬", municipality = "雄武町", lon = 143.055, lat = 44.528, x = 334.30f, y = 101.90f, description = "オホーツク海の水平線と総ガラス張りの展望台ラ・ルーナが名所。"),
         RouteAnchor(id = "okkoppe_park", rank = 2, name = "興部公園", municipality = "興部町", lon = 143.125, lat = 44.462, x = 338.77f, y = 107.80f, description = "旧興部駅跡・道の駅の近くにある町民公園。"),
@@ -314,7 +309,6 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "abashiri_prison_museum", rank = 4, name = "博物館網走監獄", municipality = "網走市", lon = 144.235, lat = 44.005, x = 409.64f, y = 148.52f, description = "明治時代からの網走刑務所旧建造物を保存公開する博物館。"),
         RouteAnchor(id = "abashiri_station", rank = 3, name = "網走駅", municipality = "網走市", lon = 144.2589, lat = 44.0205, x = 411.16f, y = 147.15f, description = "JR石北本線・釧網本線の主要ターミナル駅。"),
         RouteAnchor(id = "abashiri_michinoeki", rank = 1, name = "流氷街道網走", municipality = "網走市", lon = 144.2743, lat = 44.0219, x = 412.15f, y = 147.02f, description = "網走港に面し、流氷観光砕氷船おーろら号が発着する道の駅。"),
-        RouteAnchor(id = "katsuradai_station", rank = 4, name = "桂台駅", municipality = "網走市", lon = 144.273235, lat = 44.016970, x = 412.08f, y = 147.46f, description = "JR釧網本線の駅。網走市街地の台地下に位置する駅。"),
         RouteAnchor(id = "masuura_station", rank = 3, name = "鱒浦駅", municipality = "網走市", lon = 144.296633, lat = 43.982758, x = 413.57f, y = 150.50f, description = "オホーツク海を望むJR釧網本線の海岸沿いの駅。"),
         RouteAnchor(id = "mokoto_station", rank = 4, name = "藻琴駅", municipality = "網走市", lon = 144.32001, lat = 43.968395, x = 415.06f, y = 151.77f, description = "オホーツク海沿いに佇み、駅舎内喫茶「トロッコ」で親しまれるJR釧網本線の木造駅舎。"),
         RouteAnchor(id = "jr_kitahama_station", rank = 2, name = "JR北浜駅", municipality = "網走市", lon = 144.3527, lat = 43.9585, x = 417.15f, y = 152.65f, description = "オホーツク海に一番近い駅として有名な木造駅舎（流氷展望デッキ）。"),
