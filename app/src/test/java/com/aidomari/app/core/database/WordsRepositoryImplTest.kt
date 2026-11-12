@@ -39,7 +39,7 @@ class WordsRepositoryImplTest {
         assertEquals(0, progress.currentStepIndex)
         assertEquals(0, progress.currentProgressInStep)
         assertEquals(1, progress.targetQuestionsPerStep)
-        assertEquals(setOf("hakodate_station"), progress.visitedNodeIds)
+        assertEquals(setOf("hakodateyama"), progress.visitedNodeIds)
 
         // Verify it was persisted
         val secondCall = repository.getSugorokuProgressSync()

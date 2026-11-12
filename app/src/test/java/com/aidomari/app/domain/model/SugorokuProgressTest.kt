@@ -16,7 +16,7 @@ class SugorokuProgressTest {
         assertEquals(0, progress.currentProgressInStep)
         assertEquals(1, progress.targetQuestionsPerStep)
         assertEquals(0, progress.totalQuestionsAnswered)
-        assertEquals(setOf("hakodate_station"), progress.visitedNodeIds)
+        assertEquals(setOf("hakodateyama"), progress.visitedNodeIds)
         assertEquals(0f, progress.progressRatioInStep, 0.001f)
     }
 
@@ -50,7 +50,7 @@ class SugorokuProgressTest {
         assertEquals(1, advanced.currentStepIndex)
         assertEquals(0, advanced.currentProgressInStep)
         assertEquals(1, advanced.totalQuestionsAnswered)
-        assertTrue(advanced.visitedNodeIds.contains("hakodate_station"))
+        assertTrue(advanced.visitedNodeIds.contains("hakodateyama"))
         assertTrue(advanced.visitedNodeIds.contains(HokkaidoAct1Route.routeNodes[1].id))
     }
 
@@ -62,7 +62,7 @@ class SugorokuProgressTest {
         assertEquals(0, advanced.currentStepIndex)
         assertEquals(3, advanced.currentProgressInStep)
         assertEquals(3, advanced.totalQuestionsAnswered)
-        assertEquals(setOf("hakodate_station"), advanced.visitedNodeIds)
+        assertEquals(setOf("hakodateyama"), advanced.visitedNodeIds)
     }
 
     @Test
@@ -103,7 +103,7 @@ class SugorokuProgressTest {
             currentProgressInStep = 0,
             targetQuestionsPerStep = 1,
             totalQuestionsAnswered = 10,
-            visitedNodeIds = setOf("hakodate_station", "goryokaku_park", "oshamambe", "raiden_onsen"),
+            visitedNodeIds = setOf("hakodateyama", "goryokaku_park", "oshamambe", "raiden_onsen"),
             updatedAt = 123456789L,
         )
 
@@ -126,6 +126,6 @@ class SugorokuProgressTest {
             visitedNodeIdsJson = "",
         )
         val domain = malformedEntity.toDomain()
-        assertEquals(setOf("hakodate_station"), domain.visitedNodeIds)
+        assertEquals(setOf("hakodateyama"), domain.visitedNodeIds)
     }
 }

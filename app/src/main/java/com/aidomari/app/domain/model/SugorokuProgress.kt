@@ -6,7 +6,7 @@ data class SugorokuProgress(
     val currentProgressInStep: Int = 0,
     val targetQuestionsPerStep: Int = 1,
     val totalQuestionsAnswered: Int = 0,
-    val visitedNodeIds: Set<String> = setOf("hakodate_station"),
+    val visitedNodeIds: Set<String> = setOf("hakodateyama"),
     val updatedAt: Long = System.currentTimeMillis(),
 ) {
     val progressRatioInStep: Float

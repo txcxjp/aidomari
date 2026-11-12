@@ -49,7 +49,7 @@ class SugorokuMapViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals(0, state.progress.currentStepIndex)
-        assertEquals("函館駅前", state.currentNode.name)
+        assertEquals("函館山", state.currentNode.name)
         assertEquals(HokkaidoAct1Route.totalNodes, state.totalNodes)
         assertEquals(HokkaidoAct1Route.maxStepIndex, state.remainingSteps)
         assertNull(state.selectedNode)

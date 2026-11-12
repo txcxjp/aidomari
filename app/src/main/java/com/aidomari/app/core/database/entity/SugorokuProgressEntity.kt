@@ -18,7 +18,7 @@ data class SugorokuProgressEntity(
     @ColumnInfo(name = "total_questions_answered")
     val totalQuestionsAnswered: Int = 0,
     @ColumnInfo(name = "visited_node_ids_json")
-    val visitedNodeIdsJson: String = "[\"hakodate_station\"]",
+    val visitedNodeIdsJson: String = "[\"hakodateyama\"]",
     @ColumnInfo(name = "updated_at")
     val updatedAt: Long = System.currentTimeMillis(),
 ) {
@@ -39,7 +39,7 @@ data class SugorokuProgressEntity(
             currentProgressInStep = currentProgressInStep,
             targetQuestionsPerStep = targetQuestionsPerStep,
             totalQuestionsAnswered = totalQuestionsAnswered,
-            visitedNodeIds = visitedIds.ifEmpty { setOf("hakodate_station") },
+            visitedNodeIds = visitedIds.ifEmpty { setOf("hakodateyama") },
             updatedAt = updatedAt,
         )
     }
