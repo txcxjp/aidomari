@@ -116,6 +116,14 @@ def is_facility_duplicate(name1: str, name2: str) -> bool:
     """同一敷地・同一施設の名称揺れ（公園と公園内キャンプ場など）を検知する。"""
     if name1 == name2:
         return True
+
+    # 道の駅同士の重複（例: 道の駅 富士見 と 道の駅えんべつ富士見）
+    if "道の駅" in name1 and "道の駅" in name2:
+        c1 = name1.replace("道の駅", "").replace(" ", "").replace("・", "")
+        c2 = name2.replace("道の駅", "").replace(" ", "").replace("・", "")
+        if c1 in c2 or c2 in c1:
+            return True
+
     for suffix in [
         "オートキャンプ場",
         "キャンプ場",
@@ -223,7 +231,7 @@ def load_authoritative_candidates(notes_dir: str):
                         "lon": float(p.get("P35_002")),
                         "lat": float(p.get("P35_001")),
                         "category": "道の駅",
-                        "weight": 85,
+                        "weight": 75,
                         "description": f"{muni}に位置する道の駅。",
                     }
                 )
@@ -251,7 +259,7 @@ def load_authoritative_candidates(notes_dir: str):
                         "lon": lon,
                         "lat": lat,
                         "category": "駅",
-                        "weight": 85,
+                        "weight": 75,
                         "description": f"{line}の鉄道駅。",
                     }
                 )
@@ -293,7 +301,10 @@ def load_authoritative_candidates(notes_dir: str):
                 continue
             cat = "その他"
             w = 70
-            if any(
+            if "漁港" in name:
+                cat = "漁港"
+                w = 30
+            elif any(
                 k in name for k in ["岬", "灯台", "展望台", "展望所", "花園", "原生花園"]
             ):
                 cat = "景勝地"
@@ -323,10 +334,10 @@ def evaluate_intervals(
     anchors,
     candidates,
     poly,
-    min_interval_km=2.0,
-    min_dist_to_anchors=1.0,
-    max_lateral_ratio=0.35,
-    max_detour_ratio=1.25,
+    min_interval_km=1.0,
+    min_dist_to_anchors=0.5,
+    max_perp_km=5.0,
+    max_detour_ratio=1.40,
 ):
     """すべての隣接区間を厳密な幾何・地理ルールで評価し、各区間に最適な中間アンカー（最大1件）を選定する。"""
     existing_names = set(a["name"] for a in anchors)
@@ -394,16 +405,15 @@ def evaluate_intervals(
             if d1 < min_dist_to_anchors or d2 < min_dist_to_anchors:
                 continue
 
-            # 進行方向射影 t: 0.15 <= t <= 0.85
+            # 進行方向射影 t: 0.05 <= t <= 0.95 (両端の離隔は d1, d2 >= min_dist_to_anchors で担保)
             t, perp = project_to_segment(
                 a1["lat"], a1["lon"], a2["lat"], a2["lon"], c["lat"], c["lon"]
             )
-            if not (0.15 <= t <= 0.85):
+            if not (0.05 <= t <= 0.95):
                 continue
 
-            # 側方偏位の制限
-            max_perp = min(5.0, max_lateral_ratio * dist_inter)
-            if perp > max_perp:
+            # 側方偏位の制限（比率ルール撤廃、絶対上限 max_perp_km）
+            if perp > max_perp_km:
                 continue
 
             # 迂回率の制限
@@ -487,13 +497,13 @@ def evaluate_intervals(
 
 
 def verify_route_integrity(anchors):
-    """隣接アンカー間の距離ルール (>= 1.0km) および単調性を検証する。"""
+    """隣接アンカー間の距離ルール (>= 0.5km) および単調性を検証する。"""
     violations = []
     for i in range(len(anchors) - 1):
         a1 = anchors[i]
         a2 = anchors[i + 1]
         dist = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
-        if dist < 1.0:
+        if dist < 0.5:
             violations.append((i, a1["name"], a2["name"], dist))
     return violations
 
@@ -551,7 +561,7 @@ def main():
         c = entry["candidate"]
         a1, a2 = anchors[i], anchors[i + 1]
         dist_inter = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
-        new_rank = max(a1["rank"], a2["rank"]) + 1
+        new_rank = min(6, max(a1["rank"], a2["rank"]) + 1)
 
         print(
             f"[{i:03d}]  {a1['name']:<14} {a2['name']:<14} {dist_inter:.2f}km  {c['name']:<20} {c['category']:<12} {entry['t']:.2f}    {entry['perp']:.2f}km  Rank {new_rank}"
@@ -593,7 +603,7 @@ def main():
             if i in assigned:
                 entry = assigned[i]
                 c = entry["candidate"]
-                new_rank = max(a["rank"], anchors[i + 1]["rank"]) + 1
+                new_rank = min(6, max(a["rank"], anchors[i + 1]["rank"]) + 1)
                 # ID 生成
                 cid = re.sub(r"[^a-z0-9_]+", "", c["name"].lower()) or f"anchor_{i}"
                 new_anchors.append(
@@ -619,7 +629,7 @@ def main():
             sys.exit(1)
 
         print(
-            f"検証合格: 更新後全 {len(new_anchors)} 箇所のアンカー間離隔はすべて >= 1.0km を満たしています。"
+            f"検証合格: 更新後全 {len(new_anchors)} 箇所のアンカー間離隔はすべて >= 0.5km を満たしています。"
         )
     else:
         print(

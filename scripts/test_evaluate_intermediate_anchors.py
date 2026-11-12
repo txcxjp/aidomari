@@ -197,8 +197,8 @@ class TestOverallSelectionIntegrity(unittest.TestCase):
             dist = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
             self.assertGreaterEqual(
                 dist,
-                1.0,
-                f"Distance violation between {a1['name']} and {a2['name']}: {dist:.2f}km < 1.0km",
+                0.5,
+                f"Distance violation between {a1['name']} and {a2['name']}: {dist:.2f}km < 0.5km",
             )
 
     def test_selected_candidates_inside_polygon(self):
