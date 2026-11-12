@@ -33,6 +33,7 @@ class StudyViewModel(
     private var totalInPart: Int = 0
     private var completedCount: Int = 0
     private var savedCompletedParts: Set<Int> = emptySet()
+    private var cardSequenceIndex: Int = 0
 
     fun loadDeckAndPart(deckId: String, partIndex: Int) {
         viewModelScope.launch {
@@ -229,6 +230,7 @@ class StudyViewModel(
 
             queueCardIds.clear()
             retryCardIds.clear()
+            cardSequenceIndex = 0
 
             if (canResume) {
                 checkNotNull(savedSession)
@@ -275,6 +277,7 @@ class StudyViewModel(
                     hasNextPart = hasNextPart,
                     subjectCards = subjectCards,
                     isRandomMode = isAnyRandomMode,
+                    cardSequenceIndex = 0,
                 )
             }
         }
@@ -558,6 +561,7 @@ class StudyViewModel(
         totalInPart = activePartCards.size
         queueCardIds.clear()
         retryCardIds.clear()
+        cardSequenceIndex = 0
 
         val cardIds = if (deck.shuffleMode) {
             activePartCards.map { it.id }.shuffled()
@@ -580,6 +584,7 @@ class StudyViewModel(
                 completedCount = 0,
                 retryCount = 0,
                 isPartCompleted = firstCard == null,
+                cardSequenceIndex = 0,
             )
         }
 
@@ -611,6 +616,7 @@ class StudyViewModel(
     }
 
     private fun advanceToNextCard() {
+        cardSequenceIndex++
         // If current queue is empty but retry queue has cards, start retry round
         if (queueCardIds.isEmpty() && retryCardIds.isNotEmpty()) {
             queueCardIds.addAll(retryCardIds)
@@ -632,6 +638,7 @@ class StudyViewModel(
                 completedCount = completedCount,
                 retryCount = retryCardIds.size,
                 isPartCompleted = isFinished,
+                cardSequenceIndex = cardSequenceIndex,
             )
         }
 

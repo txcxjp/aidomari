@@ -427,6 +427,63 @@ class StudyScreenTest {
         assertEquals(listOf("旅、旅行", "journey"), spokenTexts)
     }
 
+    @Test
+    fun studyScreen_lastCardRetried_remainsDisplayedAndReSpeaksFront() {
+        val singleCardDeck = Deck(
+            id = "deck-retry-last",
+            subjectId = "sub-1",
+            name = "Retry Last Deck",
+            splitSize = 10,
+            autoSpeak = true,
+            reverseMode = false,
+        )
+        val singleCard = listOf(
+            Card(id = "rl1", deckId = "deck-retry-last", front = "Last Card", back = "最後の意味", orderIndex = 0),
+        )
+        fakeRepository.decks.add(singleCardDeck)
+        fakeRepository.cards.addAll(singleCard)
+
+        val spokenTexts = mutableListOf<String>()
+
+        composeTestRule.setContent {
+            StudyScreen(
+                deckId = "deck-retry-last",
+                partIndex = 0,
+                viewModel = viewModel,
+                onNavigateBack = {},
+                onNavigateToPart = {},
+                onSpeakText = { spokenTexts.add(it) },
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // 1. Initial display: front is shown and spoken
+        composeTestRule.onNodeWithText("Last Card").assertIsDisplayed()
+        assertEquals(listOf("Last Card"), spokenTexts)
+
+        // 2. Flip to back face
+        composeTestRule.runOnUiThread {
+            viewModel.flipCard()
+        }
+        composeTestRule.waitForIdle()
+        assertEquals(listOf("Last Card", "最後の意味"), spokenTexts)
+
+        // 3. Mark retry (last remaining card is marked retry -> re-rendered as front of new presentation)
+        composeTestRule.runOnUiThread {
+            viewModel.markRetry()
+        }
+        composeTestRule.waitForIdle()
+
+        // 4. Card should still be displayed at front face, not disappeared!
+        composeTestRule.onNodeWithText("Last Card").assertIsDisplayed()
+        assertFalse(viewModel.uiState.value.isPartCompleted)
+        assertFalse(viewModel.uiState.value.isFlipped)
+
+        // Auto-speak re-speaks the front face of the card
+        assertEquals(listOf("Last Card", "最後の意味", "Last Card"), spokenTexts)
+    }
+
     private class FakeStudyWordsRepository : WordsRepository {
         val subjects = mutableListOf<Subject>()
         val decks = mutableListOf<Deck>()

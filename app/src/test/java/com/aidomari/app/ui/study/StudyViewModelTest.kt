@@ -217,6 +217,57 @@ class StudyViewModelTest {
     }
 
     @Test
+    fun singleCardInRetry_markingRetry_incrementsCardSequenceIndexAndKeepsCardActive() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        // Initial state: 3 cards in part (c1, c2, c3). cardSequenceIndex = 0
+        assertEquals(0, viewModel.uiState.value.cardSequenceIndex)
+
+        // c1 -> done
+        viewModel.markDone()
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.cardSequenceIndex)
+
+        // c2 -> done
+        viewModel.markDone()
+        advanceUntilIdle()
+        assertEquals(2, viewModel.uiState.value.cardSequenceIndex)
+
+        // c3 is the last card in part. Mark c3 -> retry
+        viewModel.markRetry()
+        advanceUntilIdle()
+
+        // Active queue was empty, so retry queue with c3 rolled over immediately
+        val stateAfterFirstRetry = viewModel.uiState.value
+        assertEquals("c3", stateAfterFirstRetry.currentCard?.id)
+        assertFalse(stateAfterFirstRetry.isPartCompleted)
+        assertEquals(1, stateAfterFirstRetry.queueSize)
+        assertEquals(0, stateAfterFirstRetry.retryCount)
+        assertEquals(3, stateAfterFirstRetry.cardSequenceIndex)
+
+        // Mark c3 -> retry again! (The bug reported in #69: last card retried again)
+        viewModel.markRetry()
+        advanceUntilIdle()
+
+        val stateAfterSecondRetry = viewModel.uiState.value
+        assertEquals("c3", stateAfterSecondRetry.currentCard?.id)
+        assertFalse(stateAfterSecondRetry.isPartCompleted)
+        assertEquals(1, stateAfterSecondRetry.queueSize)
+        assertEquals(0, stateAfterSecondRetry.retryCount)
+        assertEquals(4, stateAfterSecondRetry.cardSequenceIndex)
+
+        // Finally mark c3 -> done
+        viewModel.markDone()
+        advanceUntilIdle()
+
+        val completedState = viewModel.uiState.value
+        assertNull(completedState.currentCard)
+        assertTrue(completedState.isPartCompleted)
+        assertEquals(5, completedState.cardSequenceIndex)
+    }
+
+    @Test
     fun volumeKeys_handleProperStudyFlow() = runTest {
         viewModel.loadDeckAndPart("deck-1", 0)
         advanceUntilIdle()
