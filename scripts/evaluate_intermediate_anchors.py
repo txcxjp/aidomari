@@ -336,10 +336,8 @@ def evaluate_intervals(
     poly,
     min_interval_km=1.0,
     min_dist_to_anchors=0.5,
-    max_perp_km=5.0,
-    max_detour_ratio=1.30,
 ):
-    """すべての隣接区間を厳密な幾何・地理ルールで評価し、各区間に最適な中間アンカー（最大1件）を選定する。"""
+    """すべての隣接区間を確定ルール（最寄り2点制約・陸地判定・重みづけ選抜）で評価し、各区間に最適な中間アンカー（最大1件）を選定する。"""
     existing_names = set(a["name"] for a in anchors)
 
     # 1. 候補の重複排除 & 妥当な名称チェック
@@ -414,12 +412,8 @@ def evaluate_intervals(
             if not (0.05 <= t <= 0.95):
                 continue
 
-            # 側方偏位の制限（比率ルール撤廃、絶対上限 max_perp_km）
-            if perp > max_perp_km:
-                continue
-
-            # 迂回率の制限
-            if (d1 + d2) > max_detour_ratio * dist_inter:
+            # 距離制約: AC <= 0.70*AB かつ BC <= 0.70*AB（元となった2地点の70%の距離を超えないこと）
+            if d1 > 0.70 * dist_inter or d2 > 0.70 * dist_inter:
                 continue
 
             # 前後アンカーとの名称重複（同施設）を防止
@@ -435,8 +429,8 @@ def evaluate_intervals(
             if not poly.contains(sx, sy):
                 continue
 
-            # スコアリング（カテゴリ魅力度 + 中間地点らしさボーナス - 側方離隔ペナルティ）
-            score = c["weight"] - 25.0 * abs(t - 0.5) - 2.0 * perp
+            # スコアリング（カテゴリ魅力度 + 中間地点らしさボーナス）
+            score = c["weight"] - 25.0 * abs(t - 0.5)
             candidates_in_interval.append(
                 {
                     "score": score,
