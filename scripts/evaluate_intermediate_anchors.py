@@ -491,6 +491,66 @@ def evaluate_intervals(
     return assigned, interval_summaries
 
 
+LANDMARK_METADATA = {
+    "立待岬物語": ("tachimachi_story", "函館市", "立待岬近くに設置された石碑。津軽海峡と断崖を望む。"),
+    "堀川町駅": ("horikawacho_station", "函館市", "函館市電（路面電車）の停留場。"),
+    "大中山駅": ("onakayama_station", "七飯町", "JR函館本線の駅。七飯町の市街地に位置する。"),
+    "鶉ダムオートキャンプ場・ハチャムの森": ("uzura_dam_autocamp", "厚沢部町", "鶉ダム湖畔に広がる自然豊かなオートキャンプ場。"),
+    "黒岩駅": ("kuroiwa_station", "八雲町", "JR函館本線の駅。噴火湾沿いに位置する。"),
+    "静狩駅": ("shizukari_station", "長万部町", "JR室蘭本線の駅。静狩峠の麓に位置する。"),
+    "黄金岬": ("ogon_cape_shakotan", "積丹町", "美国港のすぐそばにある景勝地。かつてニシン見張り台があった岬。"),
+    "竜ヶ岬": ("ryugamisaki", "小樽市", "小樽市塩谷海岸の断崖絶壁が続く奇岩景勝地。"),
+    "ほしみ駅": ("hoshimi_station", "札幌市手稲区", "JR函館本線の駅。小樽市との境界近くに位置する星置川沿いの駅。"),
+    "厚田展望台": ("atsuta_observatory", "石狩市", "国道231号沿いの高台にある夕日の名所展望台。「恋人の聖地」に認定。"),
+    "小平町望洋台キャンプ場": ("obiracho_boyodai_campground", "小平町", "日本海を見下ろす丘の上に広がる広大なキャンプ場。"),
+    "下沼駅": ("shimonuma_station", "幌延町", "JR宗谷本線の駅。パンケ沼やサロベツ原野への玄関口。"),
+    "豊富駅": ("toyotomi_station", "豊富町", "JR宗谷本線の特急停車駅。豊富温泉やサロベツ原野への拠点。"),
+    "南稚内駅": ("minami_wakkanai_station", "稚内市", "JR宗谷本線の駅。稚内市街南部の交通・商業の拠点。"),
+    "旧天北線 安別駅跡": ("kyu_tenpoku_yasubetsu_station", "猿払村", "旧国鉄天北線の駅跡。オホーツク沿岸の原野に佇む歴史遺構。"),
+    "コムケ国際キャンプ場": ("komuke_campground", "紋別市", "野鳥の楽園コムケ湖畔に位置する静かなキャンプ場。"),
+    "道の駅 愛ランド湧別": ("airando_yubetsu_michinoeki", "湧別町", "サロマ湖を一望する遊園地「ファミリー愛ランドYOU」併設の道の駅。"),
+    "オホーツクの森展望台": ("okhotsk_no_mori_observatory", "網走市", "網走市郊外の丘陵地に広がる森林公園の展望台。能取湖やオホーツク海を一望。"),
+    "藻琴駅": ("mokoto_station", "網走市", "JR釧網本線のオホーツク海に面した木造駅舎の駅。喫茶店「トロッコ」が併設。"),
+    "熊越の滝展望台": ("kumagoe_waterfall_observatory", "羅臼町", "知床峠への登り口近くにある名瀑・熊越の滝を望む展望地。"),
+}
+
+
+def write_updated_route_kt(route_kt_path: str, new_anchors: list):
+    """更新されたアンカーリストを HokkaidoAct1Route.kt に書き出す。"""
+    with open(route_kt_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # val anchors: List<RouteAnchor> = listOf(...) のブロックを置換
+    anchor_lines = []
+    for a in new_anchors:
+        line = (
+            f'        RouteAnchor(id = "{a["id"]}", rank = {a["rank"]}, name = "{a["name"]}", '
+            f'municipality = "{a["municipality"]}", lon = {a["lon"]}, lat = {a["lat"]}, '
+            f'x = {a["x"]:.2f}f, y = {a["y"]:.2f}f, description = "{a["description"]}"),'
+        )
+        anchor_lines.append(line)
+
+    anchors_block = "\n".join(anchor_lines)
+    replacement = (
+        f"    /** ユーザー指定の公式一次測地データに基づく正規アンカーポイント（全{len(new_anchors)}箇所） */\n"
+        f"    val anchors: List<RouteAnchor> = listOf(\n"
+        f"{anchors_block}\n"
+        f"    )"
+    )
+
+    pattern = re.compile(
+        r"    /\*\*.*?\*/\s*val anchors: List<RouteAnchor> = listOf\([\s\S]*?    \)",
+        re.MULTILINE,
+    )
+    new_content, count = pattern.subn(replacement, content)
+    if count == 0:
+        raise RuntimeError("HokkaidoAct1Route.kt の anchors リスト置換に失敗しました。")
+
+    with open(route_kt_path, "w", encoding="utf-8") as f:
+        f.write(new_content)
+    print(f"HokkaidoAct1Route.kt を正常に更新しました。（全 {len(new_anchors)} 箇所）")
+
+
 def verify_route_integrity(anchors):
     """隣接アンカー間の距離ルール (>= 0.5km) および単調性を検証する。"""
     violations = []
@@ -523,6 +583,18 @@ def main():
         help="評価レポート出力パス",
     )
     parser.add_argument(
+        "--min-interval-km",
+        type=float,
+        default=1.0,
+        help="中間アンカー挿入対象とする最小区間長 (km)",
+    )
+    parser.add_argument(
+        "--min-anchor-dist",
+        type=float,
+        default=0.5,
+        help="既存アンカーとの最小離隔距離 (km)",
+    )
+    parser.add_argument(
         "--apply",
         action="store_true",
         help="選定結果を HokkaidoAct1Route.kt に安全に反映する",
@@ -542,7 +614,13 @@ def main():
     print(f"notes/ から抽出した公的ランドマーク候補総数: {len(candidates)} 件")
 
     # 3. 厳密な幾何・地理的検証による選定
-    assigned, summaries = evaluate_intervals(anchors, candidates, poly)
+    assigned, summaries = evaluate_intervals(
+        anchors,
+        candidates,
+        poly,
+        min_interval_km=args.min_interval_km,
+        min_dist_to_anchors=args.min_anchor_dist,
+    )
     print(f"\n【選定結果】挿入適格と判定された区間数: {len(assigned)} 箇所")
 
     print(
@@ -599,26 +677,31 @@ def main():
                 entry = assigned[i]
                 c = entry["candidate"]
                 new_rank = min(6, max(a["rank"], anchors[i + 1]["rank"]) + 1)
-                # ID 生成
-                cid = re.sub(r"[^a-z0-9_]+", "", c["name"].lower()) or f"anchor_{i}"
+                name = c["name"]
+                if name in LANDMARK_METADATA:
+                    cid, muni, desc = LANDMARK_METADATA[name]
+                else:
+                    cid = re.sub(r"[^a-z0-9_]+", "", name.lower()) or f"anchor_{i}"
+                    muni = c["municipality"] or a["municipality"]
+                    desc = c["description"]
+
                 new_anchors.append(
                     {
                         "id": cid,
                         "rank": new_rank,
-                        "name": c["name"],
-                        "municipality": c["municipality"]
-                        or a["municipality"],
+                        "name": name,
+                        "municipality": muni,
                         "lon": c["lon"],
                         "lat": c["lat"],
                         "x": entry["sx"],
                         "y": entry["sy"],
-                        "description": c["description"],
+                        "description": desc,
                     }
                 )
 
         violations = verify_route_integrity(new_anchors)
         if violations:
-            print(f"エラー: 更新後のルートに距離ルール違反が検出されました:")
+            print("エラー: 更新後のルートに距離ルール違反が検出されました:")
             for v in violations:
                 print(f"  区間 {v[0]}: {v[1]} -> {v[2]} (距離: {v[3]:.2f}km)")
             sys.exit(1)
@@ -626,10 +709,12 @@ def main():
         print(
             f"検証合格: 更新後全 {len(new_anchors)} 箇所のアンカー間離隔はすべて >= 0.5km を満たしています。"
         )
+        write_updated_route_kt(args.route_kt, new_anchors)
     else:
         print(
             "\n※ 現在はドライラン（--dry-run）モードです。実際にファイルを更新する場合は --apply を指定してください。"
         )
+
 
 
 if __name__ == "__main__":
