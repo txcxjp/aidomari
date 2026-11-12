@@ -18,7 +18,7 @@ data class RouteAnchor(
  */
 object HokkaidoAct1Route {
 
-    /** 公式一次測地データに基づくアンカーポイント（Rank 1主要拠点: 63, Rank 2中間拠点: 62, Rank 3詳細拠点: 79, Rank 4追加拠点: 67, Rank 5詳細拠点: 28, Rank 6追加拠点: 6：全305箇所） */
+    /** 公式一次測地データに基づくアンカーポイント（Rank 1主要拠点: 63, Rank 2中間拠点: 61, Rank 3詳細拠点: 77, Rank 4追加拠点: 62, Rank 5詳細拠点: 28, Rank 6追加拠点: 6：全297箇所） */
     val anchors: List<RouteAnchor> = listOf(
         RouteAnchor(id = "hakodate_station", rank = 1, name = "函館駅前", municipality = "函館市", lon = 140.7264, lat = 41.7738, x = 185.64f, y = 342.97f, description = "函館駅前。北海道一周すごろく第1部の出発点。"),
         RouteAnchor(id = "omori_park", rank = 3, name = "大森公園", municipality = "函館市", lon = 140.7392, lat = 41.7702, x = 186.46f, y = 343.28f, description = "函館の市街地に位置し、大森浜の潮風を感じる市民憩いの都市公園。"),
@@ -96,12 +96,9 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "kamoenai_michinoeki", rank = 1, name = "オスコイ！かもえない", municipality = "神恵内村", lon = 140.388, lat = 43.1653, x = 164.04f, y = 222.53f, description = "西積丹の海岸線に佇む道の駅。ホタテや海産物が名物。"),
         RouteAnchor(id = "kinaushi_tunnel", rank = 3, name = "キナウシトンネル", municipality = "神恵内村", lon = 140.3651, lat = 43.1787, x = 162.58f, y = 221.36f, description = "西積丹の険しい断崖を抜けるトンネル。前浜海岸の青い海が広がる。"),
         RouteAnchor(id = "sannai_nukumori_onsen", rank = 2, name = "珊内ぬくもり温泉", municipality = "神恵内村", lon = 140.3482, lat = 43.1967, x = 161.50f, y = 219.78f, description = "西積丹の海岸沿いに佇み、日本海と夕日を望む天然温泉。"),
-        RouteAnchor(id = "sannai_fishing_port", rank = 4, name = "珊内漁港", municipality = "神恵内村", lon = 140.384, lat = 43.195, x = 163.78f, y = 219.93f, description = "珊内ぬくもり温泉北の小さな漁港。"),
         RouteAnchor(id = "kawashiraki_port", rank = 3, name = "川白漁港", municipality = "神恵内村", lon = 140.3274, lat = 43.2274, x = 160.17f, y = 217.10f, description = "西の河原へ向かう西積丹最北端の漁港。平らな岩礁と透明な海が特徴。"),
         RouteAnchor(id = "annai_observatory_park", rank = 5, name = "あんない展望公園", municipality = "神恵内村", lon = 140.3326, lat = 43.2423, x = 160.50f, y = 215.79f, description = "国道229号沿いの断崖にあり、積丹西海岸の奇岩群を見晴らす絶景パーキング。"),
-        RouteAnchor(id = "mazemon_arch", rank = 4, name = "沼前門", municipality = "神恵内村", lon = 140.355, lat = 43.238, x = 161.93f, y = 216.17f, description = "荒波に削られた天然の海蝕門。奇岩絶壁が続く西積丹の名勝。"),
         RouteAnchor(id = "jubo_cape", rank = 1, name = "西の河原", municipality = "積丹町", lon = 140.34, lat = 43.262, x = 160.97f, y = 214.06f, description = "ジュウボウ岬の南に位置する積丹半島屈指の海岸霊場。"),
-        RouteAnchor(id = "yobetsu_fishing_port", rank = 2, name = "余別漁港", municipality = "積丹町", lon = 140.358, lat = 43.308, x = 162.12f, y = 210.03f, description = "神威岬南の積丹ブルーの海に面する漁港。"),
         RouteAnchor(id = "kamui_cape", rank = 1, name = "神威岬", municipality = "積丹町", lon = 140.3547, lat = 43.33, x = 161.91f, y = 208.10f, description = "積丹ブルーの海に鋭く突き出るシャコタン半島随一の絶景岬。"),
         RouteAnchor(id = "raikishi_fishing_port_park", rank = 3, name = "来岸漁港公園", municipality = "積丹町", lon = 140.3944, lat = 43.3309, x = 164.45f, y = 208.02f, description = "神威岬クルーズの拠点となる静かな港に隣接した海浜公園。"),
         RouteAnchor(id = "nozuka_camp_site", rank = 2, name = "道営野塚野営場", municipality = "積丹町", lon = 140.4448, lat = 43.3343, x = 167.66f, y = 207.72f, description = "積丹ブルーの美しい砂浜と夕日を望む道営の無料野営場。"),
@@ -110,20 +107,16 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "shakotan_demisaki_lighthouse", rank = 1, name = "島武意海岸", municipality = "積丹町", lon = 140.4774, lat = 43.3731, x = 169.75f, y = 204.31f, description = "日本の渚百選に選ばれた透明度抜群の断崖海岸。積丹出岬灯台を望む。"),
         RouteAnchor(id = "joroko_rock", rank = 2, name = "女郎子岩", municipality = "積丹町", lon = 140.5005, lat = 43.3707, x = 171.22f, y = 204.52f, description = "義経伝説が残る、積丹の海上に立ち尽くす伝説の奇岩。"),
         RouteAnchor(id = "horomui_port", rank = 3, name = "幌武意漁港", municipality = "積丹町", lon = 140.5281, lat = 43.3589, x = 172.98f, y = 205.56f, description = "女郎子岩と黄金岬の間、積丹ブルーの海に面した断崖下の漁港。"),
-        RouteAnchor(id = "shakotan_town_office", rank = 4, name = "積丹町役場", municipality = "積丹町", lon = 140.508, lat = 43.305, x = 171.70f, y = 210.29f, description = "積丹半島東側の美国にある町役場。"),
-        RouteAnchor(id = "bikuni_port", rank = 4, name = "美国港", municipality = "積丹町", lon = 140.518, lat = 43.298, x = 172.34f, y = 210.91f, description = "水中展望船ニューしゃこたん号が発着する観光港。"),
         RouteAnchor(id = "biyano_cape", rank = 5, name = "ビヤノ岬", municipality = "積丹町", lon = 140.5908, lat = 43.3087, x = 176.99f, y = 209.97f, description = "美国湾の北東に突き出し、積丹の奇岩海岸線を見渡す名岬。"),
         RouteAnchor(id = "ogon_cape_bikuni", rank = 1, name = "黄金岬", municipality = "積丹町", lon = 140.6013, lat = 43.3032, x = 177.66f, y = 210.45f, description = "美国港にある黄金岬。夕日に輝く奇岩と宝島を望む展望地。"),
-        RouteAnchor(id = "toyohama_tunnel_monument", rank = 4, name = "豊浜トンネル記念碑", municipality = "古平町", lon = 140.582, lat = 43.268, x = 176.42f, y = 213.54f, description = "古平町と余市町を結ぶトンネルの歴史を伝える記念碑。"),
         RouteAnchor(id = "furubira_town_office", rank = 3, name = "古平町役場", municipality = "古平町", lon = 140.6387, lat = 43.264, x = 180.04f, y = 213.89f, description = "特産タラコと歴史ある神事で知られる古平町の中心庁舎。"),
         RouteAnchor(id = "furubira_port", rank = 2, name = "古平港", municipality = "古平町", lon = 140.6358, lat = 43.2746, x = 179.86f, y = 212.96f, description = "たらこ発祥の地として知られる日本海の良港。丸山公園隣接。"),
         RouteAnchor(id = "setakamui_rock", rank = 1, name = "セタカムイ岩", municipality = "古平町", lon = 140.6872, lat = 43.2555, x = 183.14f, y = 214.63f, description = "遠吠えする犬の姿に見える義経伝説の奇岩。"),
         RouteAnchor(id = "takoana_no_misaki", rank = 4, name = "蛸穴ﾉ岬", municipality = "古平町", lon = 140.708443, lat = 43.252583, x = 184.50f, y = 214.89f, description = "古平町の海岸線に突き出る奇岩と断崖の岬。"),
-        RouteAnchor(id = "toyohama_fishing_port", rank = 3, name = "豊浜漁港", municipality = "余市町", lon = 140.71, lat = 43.22, x = 184.60f, y = 217.74f, description = "ローソク岩を望む余市町西端の漁港。"),
         RouteAnchor(id = "candle_rock", rank = 2, name = "ローソク岩", municipality = "余市町", lon = 140.7301, lat = 43.2411, x = 185.88f, y = 215.89f, description = "余市沖の海上にそびえ立つ高さ約46mの幻想的な一本奇岩。"),
         RouteAnchor(id = "shiripa_cape", rank = 5, name = "シリパ岬", municipality = "余市町", lon = 140.772464, lat = 43.226613, x = 188.58f, y = 217.16f, description = "標高295mの断崖絶壁が海にそそり立つ余市町屈指の景勝岬。"),
-        RouteAnchor(id = "moire_cape", rank = 4, name = "モイレ岬", municipality = "余市町", lon = 140.788336, lat = 43.199683, x = 189.60f, y = 219.52f, description = "余市港北側に突き出た風光明媚な岬。"),
         RouteAnchor(id = "yoichi_port", rank = 3, name = "余市港", municipality = "余市町", lon = 140.7737, lat = 43.2117, x = 188.66f, y = 218.47f, description = "モイレ岬の袂に位置し、旧下ヨイチ運上家に隣接する余市の重要港湾。"),
+        RouteAnchor(id = "moire_cape", rank = 4, name = "モイレ岬", municipality = "余市町", lon = 140.788336, lat = 43.199683, x = 189.60f, y = 219.52f, description = "余市港北側に突き出た風光明媚な岬。"),
         RouteAnchor(id = "michinoeki_space_apple_yoichi", rank = 4, name = "道の駅スペース・アップル余市", municipality = "余市町", lon = 140.776, lat = 43.1895, x = 188.81f, y = 220.41f, description = "宇宙記念館を併設する余市町の道の駅。"),
         RouteAnchor(id = "nikka_yoichi_distillery", rank = 1, name = "余市蒸溜所", municipality = "余市町", lon = 140.7895, lat = 43.1862, x = 189.67f, y = 220.70f, description = "ニッカウヰスキー創業者・竹鶴政孝が築いた歴史あるウイスキー蒸溜所。"),
         RouteAnchor(id = "nitori_fruit_park", rank = 4, name = "ニトリ観光果樹園", municipality = "余市町", lon = 140.812, lat = 43.192, x = 191.11f, y = 220.20f, description = "余市川流域に広がる北海道屈指の大型観光フルーツ園。"),
@@ -167,7 +160,6 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "ofuyu_cape_observatory", rank = 1, name = "雄冬岬展望台", municipality = "増毛町", lon = 141.345, lat = 43.7407, x = 225.13f, y = 171.93f, description = "かつて陸の孤島と呼ばれた雄冬岬の断崖絶壁を見渡す展望台。"),
         RouteAnchor(id = "akaiwa_cape", rank = 3, name = "赤岩岬", municipality = "増毛町", lon = 141.3542, lat = 43.7581, x = 225.72f, y = 170.39f, description = "オロロンライン雄冬海岸の険しい断崖絶壁が海に突き出す名岬。"),
         RouteAnchor(id = "iwao_onsen", rank = 2, name = "岩尾温泉", municipality = "増毛町", lon = 141.3687, lat = 43.7741, x = 226.65f, y = 168.98f, description = "雄冬と増毛の中間に湧く秘湯。日本海と夕日を望む温泉宿。"),
-        RouteAnchor(id = "betsukari_port", rank = 3, name = "別苅漁港", municipality = "増毛町", lon = 141.4494, lat = 43.7826, x = 231.80f, y = 168.23f, description = "雄冬の険しい山道を抜けた先に開ける、白金海岸を望む歴史ある漁港。"),
         RouteAnchor(id = "mashike_riverside_park", rank = 4, name = "増毛リバーサイドパーク", municipality = "増毛町", lon = 141.485, lat = 43.835, x = 234.07f, y = 163.59f, description = "暑寒別川河口近くに広がるキャンプ場とパークゴルフ場。"),
         RouteAnchor(id = "kunimare_brewery", rank = 1, name = "国稀酒造", municipality = "増毛町", lon = 141.5246, lat = 43.8579, x = 236.60f, y = 161.56f, description = "明治35年創業、暑寒別岳の伏流水で仕込む日本最北の造り酒屋。"),
         RouteAnchor(id = "hashibetsu_station_site", rank = 4, name = "箸別駅跡", municipality = "増毛町", lon = 141.5517109618548, lat = 43.85931563348587, x = 238.33f, y = 161.44f, description = "日本海を望む旧留萌本線の木造待合所があった駅跡。"),
