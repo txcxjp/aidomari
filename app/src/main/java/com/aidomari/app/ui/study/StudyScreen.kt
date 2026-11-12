@@ -75,7 +75,7 @@ fun StudyScreen(
     }
 
     // Auto-speak on card display (オモテ面: 設問)
-    LaunchedEffect(currentCardId, autoSpeak) {
+    LaunchedEffect(currentCardId, uiState.cardSequenceIndex, autoSpeak) {
         if (autoSpeak && currentCard != null) {
             val frontText = if (isReverse) currentCard.back else currentCard.front
             onSpeakText(frontText)
@@ -381,7 +381,7 @@ fun StudyContent(
                             }
 
                             // 2. Foreground active card
-                            key(card.id) {
+                            key(card.id, uiState.cardSequenceIndex) {
                                 FlippableCard(
                                     isFlipped = uiState.isFlipped,
                                     onFlip = onFlipCard,

@@ -21,4 +21,5 @@ data class StudyUiState(
     val isRandomMode: Boolean = false,
     val searchQuery: String = "",
     val searchResults: List<Card> = emptyList(),
+    val cardSequenceIndex: Int = 0,
 )
