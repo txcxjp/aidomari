@@ -8,7 +8,7 @@ scripts/evaluate_intermediate_anchors.py
 1. AIの記憶や推測によるハードコード辞書を全廃し、notes/ 配下の公的・一次 GeoJSON（国土数値情報・OSM）のみを入力元とする。
 2. 直線・道なりベクトルの射影パラメータ t (0.15 <= t <= 0.85) により、進行方向の手前〜奥の区間内存在を厳密に保証（逆走・ピンポンを完全防止）。
 3. 垂線距離（側方偏位 <= 35%）および迂回率（<= 1.25）の厳格な制限により、海沿いから山奥への飛び出しや大回り迂回を防止。
-4. ボロノイ近傍性チェック（直前・直後アンカーが最近傍）により、湾や半島の対岸にある地点の誤挿入を防止。
+4. 反対側最近傍アンカー則（Opposite-Side Nearest Anchor Rule: 第1最近傍が一方の端点、反対側半空間での最近傍がもう一方の端点）により、一直線上の正当な中間点を不当に除外せず、湾や半島の対岸・直角迂回地点の誤挿入を防止。
 5. 認可ランドマーク種別（駅、道の駅、岬、灯台、展望台、キャンプ場、温泉、公園等）の厳格フィルタリングにより、単なる地名や不鮮明な名称を排除。
 6. 1区間につき「最大1つ」の厳格な選定（ユーザー指示：複数候補があれば最もインパクトのあるもの1つを選抜）。
 7. 全既存アンカーとの 1.0km 以上離隔ルール（d >= 1.0km）および北海道陸地ポリゴン内判定（inside == True）の自動全数検証。
@@ -370,14 +370,15 @@ def evaluate_intervals(
         if min_d >= min_dist_to_anchors:
             c["min_anchor_dist"] = min_d
             c["closest_anchor_idx"] = all_d[0][1]
-            c["closest_two_indices"] = {all_d[0][1], all_d[1][1]}
+            c["all_anchor_dists"] = all_d
             valid_candidates.append(c)
 
     def find_candidates_for_interval(i, a1, a2, dist_inter, ratio):
-        min_lon = min(a1["lon"], a2["lon"]) - 0.15
-        max_lon = max(a1["lon"], a2["lon"]) + 0.15
-        min_lat = min(a1["lat"], a2["lat"]) - 0.15
-        max_lat = max(a1["lat"], a2["lat"]) + 0.15
+        margin = max(0.20, (dist_inter * ratio) / 75.0)
+        min_lon = min(a1["lon"], a2["lon"]) - margin
+        max_lon = max(a1["lon"], a2["lon"]) + margin
+        min_lat = min(a1["lat"], a2["lat"]) - margin
+        max_lat = max(a1["lat"], a2["lat"]) + margin
 
         candidates_in_interval = []
         for c in valid_candidates:
@@ -407,8 +408,29 @@ def evaluate_intervals(
             if is_facility_duplicate(c["name"], a1["name"]) or is_facility_duplicate(c["name"], a2["name"]):
                 continue
 
-            # 新規アンカーにとって最も近い別のアンカーは元となった2地点 (i, i+1) であること
-            if c["closest_two_indices"] != {i, i + 1}:
+            # 反対側最近傍アンカー則（Opposite-Side Nearest Anchor Rule）:
+            # 1. 候補地から全既存アンカーの中で最も近いアンカー P1 を見つける。P1 は i または i+1 であること。
+            p1_dist, p1_idx = c["all_anchor_dists"][0]
+            if p1_idx not in (i, i + 1):
+                continue
+
+            # 2. 候補地 C を挟んで P1 の反対側（内積 dot(CP1, CQ) < 0）にあるアンカー群の中で最も近い P2 を見つける。
+            #    P2 はもう一方の端点であること。
+            other_idx = i if p1_idx == i + 1 else i + 1
+            p1_a = anchors[p1_idx]
+            cos_lat = math.cos(math.radians(c["lat"]))
+            u_x = (p1_a["lon"] - c["lon"]) * cos_lat
+            u_y = (p1_a["lat"] - c["lat"])
+
+            opposite_anchors = []
+            for dist, idx in c["all_anchor_dists"][1:]:
+                a = anchors[idx]
+                v_x = (a["lon"] - c["lon"]) * cos_lat
+                v_y = (a["lat"] - c["lat"])
+                if u_x * v_x + u_y * v_y < 0:
+                    opposite_anchors.append((dist, idx))
+
+            if not opposite_anchors or opposite_anchors[0][1] != other_idx:
                 continue
 
             # 北海道陸地ポリゴン判定
@@ -416,8 +438,12 @@ def evaluate_intervals(
             if not poly.contains(sx, sy):
                 continue
 
-            # スコアリング（カテゴリ魅力度 + 中間地点らしさボーナス）
-            score = c["weight"] - 25.0 * abs(t - 0.5)
+            # スコアリング（カテゴリ魅力度 + 中間地点らしさボーナス - ルート直線性からの乖離ペナルティ）
+            score = (
+                c["weight"]
+                - 25.0 * abs(t - 0.5)
+                - 5.0 * (perp / max(1.0, dist_inter)) * 10.0
+            )
             candidates_in_interval.append(
                 {
                     "score": score,
@@ -512,11 +538,15 @@ def evaluate_intervals(
 LANDMARK_METADATA = {
     "立待岬物語": ("tachimachi_story", "函館市", "立待岬近くに設置された石碑。津軽海峡と断崖を望む。"),
     "堀川町駅": ("horikawacho_station", "函館市", "函館市電（路面電車）の停留場。"),
+    "桔梗駅": ("kikyo_station", "函館市", "JR函館本線の駅。函館市北部の住宅街に位置する。"),
     "大中山駅": ("onakayama_station", "七飯町", "JR函館本線の駅。七飯町の市街地に位置する。"),
+    "道の駅 YOU･遊･もり": ("you_yu_mori_michinoeki", "森町", "国道5号沿い、内浦湾を一望する展望ラウンジを備えた道の駅。"),
     "鶉ダムオートキャンプ場・ハチャムの森": ("uzura_dam_autocamp", "厚沢部町", "鶉ダム湖畔に広がる自然豊かなオートキャンプ場。"),
     "黒岩駅": ("kuroiwa_station", "八雲町", "JR函館本線の駅。噴火湾沿いに位置する。"),
+    "二股駅": ("futamata_station", "長万部町", "JR函館本線の駅。二股ラヂウム温泉への玄関口。"),
     "静狩駅": ("shizukari_station", "長万部町", "JR室蘭本線の駅。静狩峠の麓に位置する。"),
     "道の駅 みなとま〜れ寿都": ("minatomare_suttsu_michinoeki", "寿都町", "寿都港を望むウォーターフロントに建つ道の駅。名物生しらすや海産物が人気。"),
+    "道の駅 シェルプラザ・港": ("shell_plaza_minato_michinoeki", "蘭越町", "国道229号沿いに位置し、世界中の貝類を展示する「貝の館」が隣接する道の駅。"),
     "あんない展望公園": ("annai_observatory_park", "積丹町", "積丹半島西岸の高台にある公園。日本海のパノラマを一望。"),
     "黄金岬": ("ogon_cape_shakotan", "積丹町", "美国港のすぐそばにある景勝地。かつてニシン見張り台があった岬。"),
     "竜ヶ岬": ("ryugamisaki", "小樽市", "小樽市塩谷海岸の断崖絶壁が続く奇岩景勝地。"),
@@ -528,12 +558,17 @@ LANDMARK_METADATA = {
     "下沼駅": ("shimonuma_station", "幌延町", "JR宗谷本線の駅。パンケ沼やサロベツ原野への玄関口。"),
     "豊富駅": ("toyotomi_station", "豊富町", "JR宗谷本線の特急停車駅。豊富温泉やサロベツ原野への拠点。"),
     "南稚内駅": ("minami_wakkanai_station", "稚内市", "JR宗谷本線の駅。稚内市街南部の交通・商業の拠点。"),
+    "道の駅 さるふつ公園": ("sarufutsu_park_michinoeki", "猿払村", "オホーツク海沿い、広大な敷地にホテルや牧場が広がる日本最北の村の道の駅。"),
     "旧天北線 安別駅跡": ("kyu_tenpoku_yasubetsu_station", "猿払村", "旧国鉄天北線の駅跡。オホーツク沿岸の原野に佇む歴史遺構。"),
+    "北見神威岬灯台": ("kitami_kamui_cape_lighthouse", "浜頓別町", "オホーツク海に突き出た北見神威岬の突端に立つ白亜の灯台。"),
+    "道の駅 おうむ": ("oumu_michinoeki", "雄武町", "オホーツク海沿いに位置する道の駅。展望タワーから雄大な海を一望できる。"),
     "紋別駅跡": ("mombetsu_station_site", "紋別市", "旧名寄本線紋別駅の跡地。オホーツク流氷公園や市街地の拠点。"),
+    "沙留岬": ("saruru_cape", "興部町", "オホーツク海に突き出た岬。流氷観察の名所。"),
     "コムケ国際キャンプ場": ("komuke_campground", "紋別市", "野鳥の楽園コムケ湖畔に位置する静かなキャンプ場。"),
     "道の駅 愛ランド湧別": ("airando_yubetsu_michinoeki", "湧別町", "サロマ湖を一望する遊園地「ファミリー愛ランドYOU」併設の道の駅。"),
     "オホーツクの森展望台": ("okhotsk_no_mori_observatory", "網走市", "網走市郊外の丘陵地に広がる森林公園の展望台。能取湖やオホーツク海を一望。"),
     "藻琴駅": ("mokoto_station", "網走市", "JR釧網本線のオホーツク海に面した木造駅舎の駅。喫茶店「トロッコ」が併設。"),
+    "フレペの滝 展望台": ("furepe_waterfall_observatory", "斜里町", "知床半島の断崖からオホーツク海へ直接流れ落ちる「乙女の涙」フレペの滝を望む展望台。"),
     "熊越の滝展望台": ("kumagoe_waterfall_observatory", "羅臼町", "知床峠への登り口近くにある名瀑・熊越の滝を望む展望地。"),
     "十字街駅": ("jujigai_station", "函館市", "函館市電（路面電車）の電停。函館山の麓、西部地区観光の玄関口。"),
     "新川町駅": ("shinkawacho_station", "函館市", "函館市電の電停。大門地区と五稜郭方面を結ぶ中間地点。"),
