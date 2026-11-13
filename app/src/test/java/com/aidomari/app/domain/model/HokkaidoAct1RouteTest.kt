@@ -10,9 +10,9 @@ class HokkaidoAct1RouteTest {
 
     @Test
     fun route_hasExactCuratedNodes() {
-        assertEquals(83, HokkaidoAct1Route.totalNodes)
-        assertEquals(83, HokkaidoAct1Route.routeNodes.size)
-        assertEquals(82, HokkaidoAct1Route.maxStepIndex)
+        assertEquals(93, HokkaidoAct1Route.totalNodes)
+        assertEquals(93, HokkaidoAct1Route.routeNodes.size)
+        assertEquals(92, HokkaidoAct1Route.maxStepIndex)
     }
 
     @Test
@@ -32,7 +32,7 @@ class HokkaidoAct1RouteTest {
     fun goalNode_isAidomari() {
         val goalNode = HokkaidoAct1Route.goalNode
         assertEquals("aidomari_bridge", goalNode.id)
-        assertEquals(82, goalNode.stepIndex)
+        assertEquals(92, goalNode.stepIndex)
         assertEquals("相泊橋", goalNode.name)
         assertEquals("羅臼町", goalNode.municipality)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
@@ -109,6 +109,8 @@ class HokkaidoAct1RouteTest {
         assertEquals(25, rank2Anchors.size)
         val rank3Anchors = anchors.filter { it.rank == 3 }
         assertEquals(17, rank3Anchors.size)
+        val rank4Anchors = anchors.filter { it.rank == 4 }
+        assertEquals(10, rank4Anchors.size)
         assertTrue(anchors.any { it.id == "kamui_cape" && it.name == "神威岬" && it.rank == 1 })
         assertTrue(anchors.any { it.id == "otaru_canal" && it.name == "小樽運河" && it.rank == 1 })
         assertTrue(anchors.any { it.id == "sapporo_clock_tower" && it.name == "札幌市時計台" && it.rank == 1 })

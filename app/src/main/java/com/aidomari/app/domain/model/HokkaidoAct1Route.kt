@@ -18,7 +18,7 @@ data class RouteAnchor(
  */
 object HokkaidoAct1Route {
 
-    /** ユーザー指定の公式一次測地データに基づく正規アンカーポイント（全83箇所） */
+    /** ユーザー指定の公式一次測地データに基づく正規アンカーポイント（全93箇所） */
     val anchors: List<RouteAnchor> = listOf(
         RouteAnchor(id = "hakodateyama", rank = 1, name = "函館山", municipality = "函館市", lon = 140.70553624563212, lat = 41.744766784111675, x = 184.31f, y = 345.46f, description = "100万ドルの夜景で名高い函館山。津軽海峡と函館市街を一望する山頂展望台。"),
         RouteAnchor(id = "tachimachi_story", rank = 2, name = "立待岬物語", municipality = "函館市", lon = 140.7161344, lat = 41.7531496, x = 184.99f, y = 344.74f, description = "立待岬近くに設置された石碑。津軽海峡と断崖を望む。"),
@@ -26,6 +26,7 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "mashumaru", rank = 1, name = "摩周丸", municipality = "函館市", lon = 140.72304509852597, lat = 41.77256073112773, x = 185.43f, y = 343.08f, description = "函館港旧第2岸壁に保存・係留されている青函連絡船記念館。"),
         RouteAnchor(id = "shinkawacho_station", rank = 3, name = "新川町駅", municipality = "函館市", lon = 140.73540500000001, lat = 41.773425, x = 186.22f, y = 343.01f, description = "函館市電の電停。大門地区と五稜郭方面を結ぶ中間地点。"),
         RouteAnchor(id = "horikawacho_station", rank = 2, name = "堀川町駅", municipality = "函館市", lon = 140.74406, lat = 41.780325, x = 186.77f, y = 342.42f, description = "函館市電（路面電車）の停留場。"),
+        RouteAnchor(id = "chiyogadai_station", rank = 4, name = "千代台駅", municipality = "函館市", lon = 140.74868, lat = 41.784115, x = 187.06f, y = 342.09f, description = "函館市電の電停。千代台公園野球場（オーシャンスタジアム）や陸上競技場の最寄り。"),
         RouteAnchor(id = "goryokaku_koen_mae_station", rank = 3, name = "五稜郭公園前駅", municipality = "函館市", lon = 140.75208500000002, lat = 41.78926, x = 187.28f, y = 341.65f, description = "函館市電の電停。特別史跡五稜郭跡・五稜郭タワーの最寄り電停。"),
         RouteAnchor(id = "goryokaku", rank = 1, name = "五稜郭", municipality = "函館市", lon = 140.75679445417336, lat = 41.796991557953135, x = 187.58f, y = 340.99f, description = "幕末の歴史を刻む国指定特別史跡の星形要塞。"),
         RouteAnchor(id = "onakayama_station", rank = 2, name = "大中山駅", municipality = "七飯町", lon = 140.7135, lat = 41.864779999999996, x = 184.82f, y = 335.18f, description = "JR函館本線の駅。七飯町の市街地に位置する。"),
@@ -33,6 +34,7 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "shin_hakodate_hokuto_station", rank = 1, name = "新函館北斗駅", municipality = "北斗市", lon = 140.6514055298738, lat = 41.90410586161933, x = 180.85f, y = 331.81f, description = "北海道新幹線の北の終着駅。道南の交通結節点。"),
         RouteAnchor(id = "uzura_dam_autocamp", rank = 2, name = "鶉ダムオートキャンプ場・ハチャムの森", municipality = "厚沢部町", lon = 140.3871154, lat = 41.9488185, x = 163.98f, y = 327.97f, description = "鶉ダム湖畔に広がる自然豊かなオートキャンプ場。"),
         RouteAnchor(id = "funkawan_panorama_park", rank = 1, name = "噴火湾パノラマパーク", municipality = "八雲町", lon = 140.31405732962233, lat = 42.227215716723315, x = 159.32f, y = 304.02f, description = "噴火湾を見下ろす広大な丘陵公園。遊具やハーブ園が広がる絶景地。"),
+        RouteAnchor(id = "yakumo_station", rank = 4, name = "八雲駅", municipality = "八雲町", lon = 140.27390333333335, lat = 42.253080000000004, x = 156.75f, y = 301.79f, description = "JR函館本線の特急停車駅。八雲町の市街地中心部に位置する。"),
         RouteAnchor(id = "yamasaki_station", rank = 3, name = "山崎駅", municipality = "八雲町", lon = 140.27461499999998, lat = 42.31461, x = 156.80f, y = 296.48f, description = "JR函館本線の駅。噴火湾沿いの静かな集落に位置する。"),
         RouteAnchor(id = "kuroiwa_station", rank = 2, name = "黒岩駅", municipality = "八雲町", lon = 140.28818, lat = 42.368354999999994, x = 157.67f, y = 291.84f, description = "JR函館本線の駅。噴火湾沿いに位置する。"),
         RouteAnchor(id = "kunnui_station", rank = 3, name = "国縫駅", municipality = "長万部町", lon = 140.320455, lat = 42.43871, x = 159.73f, y = 285.76f, description = "JR函館本線の駅。かつて瀬棚線が分岐した歴史ある鉄道駅。"),
@@ -44,19 +46,27 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "horoni_railway_park", rank = 1, name = "幌似鉄道記念公園", municipality = "共和町", lon = 140.6139535344062, lat = 42.98665997187308, x = 178.46f, y = 238.15f, description = "旧国鉄岩内線の幌似駅跡を保存した鉄道記念公園。当時の木造駅舎と車両を展示。"),
         RouteAnchor(id = "annai_observatory_park", rank = 2, name = "あんない展望公園", municipality = "積丹町", lon = 140.332648, lat = 43.2423312, x = 160.50f, y = 215.79f, description = "積丹半島西岸の高台にある公園。日本海のパノラマを一望。"),
         RouteAnchor(id = "kamui_cape", rank = 1, name = "神威岬", municipality = "積丹町", lon = 140.3594022649703, lat = 43.32848146798221, x = 162.21f, y = 208.23f, description = "積丹ブルーの海へダイナミックに突き出す大パノラマの絶景岬。"),
+        RouteAnchor(id = "nozuka_campground", rank = 4, name = "野塚野営場", municipality = "積丹町", lon = 140.4442081, lat = 43.3338413, x = 167.63f, y = 207.76f, description = "積丹半島西岸、日本海の白波が打ち寄せる野塚海岸のキャンプ場。"),
         RouteAnchor(id = "joroko_iwa_observatory", rank = 3, name = "女郎子岩展望台", municipality = "積丹町", lon = 140.4983661, lat = 43.3696082, x = 171.08f, y = 204.62f, description = "積丹半島西海岸の奇岩・女郎子岩と日本海を見下ろす絶景展望台。"),
         RouteAnchor(id = "ogon_cape_shakotan", rank = 2, name = "黄金岬", municipality = "積丹町", lon = 140.6013495, lat = 43.3031736, x = 177.66f, y = 210.45f, description = "美国港のすぐそばにある景勝地。かつてニシン見張り台があった岬。"),
         RouteAnchor(id = "takoana_no_misaki", rank = 3, name = "蛸穴ﾉ岬", municipality = "余市町", lon = 140.7084425, lat = 43.2525827, x = 184.50f, y = 214.89f, description = "積丹半島東部、余市町の海岸線に突き出た景勝岬。"),
+        RouteAnchor(id = "shiripa_cape", rank = 4, name = "シリパ岬", municipality = "余市町", lon = 140.7724641, lat = 43.2266132, x = 188.58f, y = 217.16f, description = "余市港を見下ろす標高295mの断崖絶壁。余市のシンボルとして親しまれる名岬。"),
         RouteAnchor(id = "nikka_yoichi_distillery", rank = 1, name = "ニッカウヰスキー 余市蒸溜所", municipality = "余市町", lon = 140.79185822539347, lat = 43.18739590094136, x = 189.82f, y = 220.60f, description = "日本のウイスキーの父・竹鶴政孝が創業した伝統のウイスキー蒸溜所。"),
         RouteAnchor(id = "yoichi_fugoppe_campground", rank = 3, name = "余市フゴッペキャンプ場", municipality = "余市町", lon = 140.833029, lat = 43.1870537, x = 192.45f, y = 220.63f, description = "日本海とフゴッペ洞窟近くの豊かな自然に囲まれたキャンプ場。"),
+        RouteAnchor(id = "ranshima_station", rank = 4, name = "蘭島駅", municipality = "小樽市", lon = 140.854675, lat = 43.196535, x = 193.83f, y = 219.80f, description = "JR函館本線の駅。明治36年開設の北海道最古の海水浴場・蘭島海水浴場の玄関口。"),
         RouteAnchor(id = "ryugamisaki", rank = 2, name = "竜ヶ岬", municipality = "小樽市", lon = 140.8615333, lat = 43.2177318, x = 194.27f, y = 217.94f, description = "小樽市塩谷海岸の断崖絶壁が続く奇岩景勝地。"),
         RouteAnchor(id = "shioya_station", rank = 3, name = "塩谷駅", municipality = "小樽市", lon = 140.92451, lat = 43.202434999999994, x = 198.29f, y = 219.28f, description = "JR函館本線（山線）の駅。塩谷海岸近くの丘陵地に位置する木造駅。"),
         RouteAnchor(id = "otaru_canal", rank = 1, name = "小樽運河", municipality = "小樽市", lon = 141.0020940032056, lat = 43.19918050706471, x = 203.24f, y = 219.57f, description = "石造り倉庫群が連なりガス灯が灯る、小樽を代表する歴史的観光名所。"),
+        RouteAnchor(id = "hiraiso_cape", rank = 4, name = "平磯岬", municipality = "小樽市", lon = 141.0360016, lat = 43.1826345, x = 205.41f, y = 221.02f, description = "小樽港南端に位置する景勝岬。小樽の街並みと石狩湾を一望。"),
         RouteAnchor(id = "asari_station", rank = 3, name = "朝里駅", municipality = "小樽市", lon = 141.0639, lat = 43.176860000000005, x = 207.19f, y = 221.52f, description = "JR函館本線の駅。ホームの目の前に日本海が広がる絶景の駅。"),
         RouteAnchor(id = "hoshimi_station", rank = 2, name = "ほしみ駅", municipality = "札幌市手稲区", lon = 141.19150000000002, lat = 43.13346, x = 215.34f, y = 225.32f, description = "JR函館本線の駅。小樽市との境界近くに位置する星置川沿いの駅。"),
+        RouteAnchor(id = "teine_station", rank = 4, name = "手稲駅", municipality = "札幌市手稲区", lon = 141.24385, lat = 43.120125, x = 218.68f, y = 226.49f, description = "JR函館本線の主要駅。手稲区の行政・交通の中心地。"),
         RouteAnchor(id = "hassamu_station", rank = 3, name = "発寒駅", municipality = "札幌市西区", lon = 141.27663, lat = 43.100184999999996, x = 220.77f, y = 228.23f, description = "JR函館本線の駅。手稲区と西区の境界近くに位置する駅。"),
+        RouteAnchor(id = "hachiken_station", rank = 4, name = "八軒駅", municipality = "札幌市西区", lon = 141.31919333333335, lat = 43.08607, x = 223.49f, y = 229.46f, description = "JR札沼線（学園都市線）の駅。琴似地区北側の住宅街に位置する。"),
         RouteAnchor(id = "sapporo_clock_tower", rank = 1, name = "札幌市時計台", municipality = "札幌市", lon = 141.35342842412132, lat = 43.062788412367794, x = 225.67f, y = 231.50f, description = "明治11年創建の旧札幌農学校演武場。札幌のシンボルとして親しまれる歴史的建造物。"),
+        RouteAnchor(id = "baratogawa_campground", rank = 4, name = "茨戸川キャンプ場", municipality = "石狩市", lon = 141.4016071, lat = 43.1745137, x = 228.75f, y = 221.73f, description = "石狩川旧河道の茨戸川河畔に広がる自然豊かなキャンプ場。"),
         RouteAnchor(id = "eight_campground", rank = 3, name = "えいとキャンプ場", municipality = "石狩市", lon = 141.4312693, lat = 43.2592649, x = 230.64f, y = 214.30f, description = "石狩市厚田区の丘陵地に位置する日本海を望む静かなキャンプ場。"),
+        RouteAnchor(id = "mourai_beach_campground", rank = 4, name = "望来浜中央海水浴場キャンプ場", municipality = "石狩市", lon = 141.4157059, lat = 43.3162415, x = 229.65f, y = 209.31f, description = "石狩市厚田区望来の海岸線に広がる夕日の名所キャンプ場。"),
         RouteAnchor(id = "atsuta_observatory", rank = 2, name = "厚田展望台", municipality = "石狩市", lon = 141.4324888, lat = 43.4058027, x = 230.72f, y = 201.44f, description = "国道231号沿いの高台にある夕日の名所展望台。「恋人の聖地」に認定。"),
         RouteAnchor(id = "ofuyu_cape", rank = 1, name = "雄冬岬", municipality = "増毛町", lon = 141.33591905548778, lat = 43.73280428173676, x = 224.56f, y = 172.63f, description = "かつて陸の孤島と呼ばれたオロロンラインの険しい断崖絶壁が続く名岬。"),
         RouteAnchor(id = "akaiwamisaki", rank = 2, name = "赤岩岬", municipality = "増毛町", lon = 141.3541826, lat = 43.7580764, x = 225.72f, y = 170.39f, description = "日本海に突き出た赤褐色の奇岩断崖が連なる景勝岬。"),
