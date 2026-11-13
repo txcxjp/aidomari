@@ -154,6 +154,7 @@ def is_authorized_landmark(name: str) -> bool:
         or name.startswith("字")
         or name.startswith("国道")
         or name.startswith("道道")
+        or any(k in name for k in ["寿司", "鮨", "食堂", "ラーメン", "焼肉", "居酒屋"])
     ):
         return False
     if any(name.endswith(suffix) for suffix in ALLOWED_SUFFIXES):
@@ -336,8 +337,14 @@ def evaluate_intervals(
     poly,
     min_interval_km=1.0,
     min_dist_to_anchors=0.5,
+    primary_lens_ratio=0.70,
+    fallback_lens_ratio=1.00,
 ):
-    """すべての隣接区間を確定ルール（最寄り2点制約・陸地判定・重みづけ選抜）で評価し、各区間に最適な中間アンカー（最大1件）を選定する。"""
+    """すべての隣接区間を確定ルール（最寄り2点制約・陸地判定・重みづけ選抜）で評価し、各区間に最適な中間アンカー（最大1件）を選定する。
+
+    Stage 1: primary_lens_ratio (0.70) で中央領域の優良候補を探索
+    Stage 2: 候補が得られなかった区間に限り fallback_lens_ratio (1.00) に拡張して探索
+    """
     existing_names = set(a["name"] for a in anchors)
 
     # 1. 候補の重複排除 & 妥当な名称チェック
@@ -366,27 +373,7 @@ def evaluate_intervals(
             c["closest_two_indices"] = {all_d[0][1], all_d[1][1]}
             valid_candidates.append(c)
 
-    # 3. 区間ごとの候補マッチング
-    matches_by_interval = {}
-    interval_summaries = []
-
-    for i in range(len(anchors) - 1):
-        a1, a2 = anchors[i], anchors[i + 1]
-        dist_inter = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
-
-        if dist_inter < min_interval_km:
-            interval_summaries.append(
-                {
-                    "interval": i,
-                    "a1": a1["name"],
-                    "a2": a2["name"],
-                    "d_inter": round(dist_inter, 2),
-                    "status": "SKIP_NARROW",
-                    "reason": f"区間長 {dist_inter:.2f}km < {min_interval_km}km のため離隔ルール不可",
-                }
-            )
-            continue
-
+    def find_candidates_for_interval(i, a1, a2, dist_inter, ratio):
         min_lon = min(a1["lon"], a2["lon"]) - 0.15
         max_lon = max(a1["lon"], a2["lon"]) + 0.15
         min_lat = min(a1["lat"], a2["lat"]) - 0.15
@@ -405,22 +392,22 @@ def evaluate_intervals(
             if d1 < min_dist_to_anchors or d2 < min_dist_to_anchors:
                 continue
 
-            # 進行方向射影 t: 0.05 <= t <= 0.95 (両端の離隔は d1, d2 >= min_dist_to_anchors で担保)
+            # 進行方向射影 t: 0.05 <= t <= 0.95
             t, perp = project_to_segment(
                 a1["lat"], a1["lon"], a2["lat"], a2["lon"], c["lat"], c["lon"]
             )
             if not (0.05 <= t <= 0.95):
                 continue
 
-            # 距離制約: AC <= 0.70*AB かつ BC <= 0.70*AB（元となった2地点の70%の距離を超えないこと）
-            if d1 > 0.70 * dist_inter or d2 > 0.70 * dist_inter:
+            # 距離比率制限: AC <= ratio*AB かつ BC <= ratio*AB
+            if d1 > ratio * dist_inter or d2 > ratio * dist_inter:
                 continue
 
-            # 前後アンカーとの名称重複（同施設）を防止
+            # 前後アンカーとの名称重複防止
             if is_facility_duplicate(c["name"], a1["name"]) or is_facility_duplicate(c["name"], a2["name"]):
                 continue
 
-            # 新規アンカーにとって最も近い別のアンカーは元となった2地点 (i, i+1) であること（Uターン・他アンカー接近を根絶）
+            # 新規アンカーにとって最も近い別のアンカーは元となった2地点 (i, i+1) であること
             if c["closest_two_indices"] != {i, i + 1}:
                 continue
 
@@ -441,12 +428,44 @@ def evaluate_intervals(
                     "d2": d2,
                     "sx": sx,
                     "sy": sy,
+                    "ratio_used": ratio,
                 }
             )
 
         if candidates_in_interval:
             candidates_in_interval.sort(key=lambda x: x["score"], reverse=True)
-            matches_by_interval[i] = candidates_in_interval
+        return candidates_in_interval
+
+    # 3. 区間ごとの候補マッチング（二段階選定）
+    matches_by_interval = {}
+    interval_summaries = []
+
+    for i in range(len(anchors) - 1):
+        a1, a2 = anchors[i], anchors[i + 1]
+        dist_inter = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
+
+        if dist_inter < min_interval_km:
+            interval_summaries.append(
+                {
+                    "interval": i,
+                    "a1": a1["name"],
+                    "a2": a2["name"],
+                    "d_inter": round(dist_inter, 2),
+                    "status": "SKIP_NARROW",
+                    "reason": f"区間長 {dist_inter:.2f}km < {min_interval_km}km のため離隔ルール不可",
+                }
+            )
+            continue
+
+        # Stage 1: primary_lens_ratio (70%) で検索
+        cands = find_candidates_for_interval(i, a1, a2, dist_inter, primary_lens_ratio)
+
+        # Stage 2: 候補なしの場合のみ fallback_lens_ratio (100%) まで緩和
+        if not cands and fallback_lens_ratio > primary_lens_ratio:
+            cands = find_candidates_for_interval(i, a1, a2, dist_inter, fallback_lens_ratio)
+
+        if cands:
+            matches_by_interval[i] = cands
             interval_summaries.append(
                 {
                     "interval": i,
@@ -454,9 +473,8 @@ def evaluate_intervals(
                     "a2": a2["name"],
                     "d_inter": round(dist_inter, 2),
                     "status": "CANDIDATE_FOUND",
-                    "top_candidate": candidates_in_interval[0]["candidate"][
-                        "name"
-                    ],
+                    "top_candidate": cands[0]["candidate"]["name"],
+                    "ratio_used": cands[0]["ratio_used"],
                 }
             )
         else:
@@ -498,15 +516,20 @@ LANDMARK_METADATA = {
     "鶉ダムオートキャンプ場・ハチャムの森": ("uzura_dam_autocamp", "厚沢部町", "鶉ダム湖畔に広がる自然豊かなオートキャンプ場。"),
     "黒岩駅": ("kuroiwa_station", "八雲町", "JR函館本線の駅。噴火湾沿いに位置する。"),
     "静狩駅": ("shizukari_station", "長万部町", "JR室蘭本線の駅。静狩峠の麓に位置する。"),
+    "道の駅 みなとま〜れ寿都": ("minatomare_suttsu_michinoeki", "寿都町", "寿都港を望むウォーターフロントに建つ道の駅。名物生しらすや海産物が人気。"),
+    "あんない展望公園": ("annai_observatory_park", "積丹町", "積丹半島西岸の高台にある公園。日本海のパノラマを一望。"),
     "黄金岬": ("ogon_cape_shakotan", "積丹町", "美国港のすぐそばにある景勝地。かつてニシン見張り台があった岬。"),
     "竜ヶ岬": ("ryugamisaki", "小樽市", "小樽市塩谷海岸の断崖絶壁が続く奇岩景勝地。"),
     "ほしみ駅": ("hoshimi_station", "札幌市手稲区", "JR函館本線の駅。小樽市との境界近くに位置する星置川沿いの駅。"),
     "厚田展望台": ("atsuta_observatory", "石狩市", "国道231号沿いの高台にある夕日の名所展望台。「恋人の聖地」に認定。"),
+    "赤岩岬": ("akaiwamisaki", "増毛町", "日本海に突き出た赤褐色の奇岩断崖が連なる景勝岬。"),
     "小平町望洋台キャンプ場": ("obiracho_boyodai_campground", "小平町", "日本海を見下ろす丘の上に広がる広大なキャンプ場。"),
+    "道の駅 てしお": ("teshio_michinoeki", "天塩町", "天塩川河口の街に位置する道の駅。しじみラーメンや地場産品が名物。"),
     "下沼駅": ("shimonuma_station", "幌延町", "JR宗谷本線の駅。パンケ沼やサロベツ原野への玄関口。"),
     "豊富駅": ("toyotomi_station", "豊富町", "JR宗谷本線の特急停車駅。豊富温泉やサロベツ原野への拠点。"),
     "南稚内駅": ("minami_wakkanai_station", "稚内市", "JR宗谷本線の駅。稚内市街南部の交通・商業の拠点。"),
     "旧天北線 安別駅跡": ("kyu_tenpoku_yasubetsu_station", "猿払村", "旧国鉄天北線の駅跡。オホーツク沿岸の原野に佇む歴史遺構。"),
+    "紋別駅跡": ("mombetsu_station_site", "紋別市", "旧名寄本線紋別駅の跡地。オホーツク流氷公園や市街地の拠点。"),
     "コムケ国際キャンプ場": ("komuke_campground", "紋別市", "野鳥の楽園コムケ湖畔に位置する静かなキャンプ場。"),
     "道の駅 愛ランド湧別": ("airando_yubetsu_michinoeki", "湧別町", "サロマ湖を一望する遊園地「ファミリー愛ランドYOU」併設の道の駅。"),
     "オホーツクの森展望台": ("okhotsk_no_mori_observatory", "網走市", "網走市郊外の丘陵地に広がる森林公園の展望台。能取湖やオホーツク海を一望。"),
@@ -595,6 +618,18 @@ def main():
         help="既存アンカーとの最小離隔距離 (km)",
     )
     parser.add_argument(
+        "--primary-ratio",
+        type=float,
+        default=0.70,
+        help="第1段階の中間レンズ比率 (デフォルト: 0.70)",
+    )
+    parser.add_argument(
+        "--fallback-ratio",
+        type=float,
+        default=1.00,
+        help="候補不在区間に対する第2段階の許容距離比率 (デフォルト: 1.00)",
+    )
+    parser.add_argument(
         "--apply",
         action="store_true",
         help="選定結果を HokkaidoAct1Route.kt に安全に反映する",
@@ -613,20 +648,22 @@ def main():
     candidates = load_authoritative_candidates(args.notes_dir)
     print(f"notes/ から抽出した公的ランドマーク候補総数: {len(candidates)} 件")
 
-    # 3. 厳密な幾何・地理的検証による選定
+    # 3. 厳密な幾何・地理的検証による選定（二段階探索）
     assigned, summaries = evaluate_intervals(
         anchors,
         candidates,
         poly,
         min_interval_km=args.min_interval_km,
         min_dist_to_anchors=args.min_anchor_dist,
+        primary_lens_ratio=args.primary_ratio,
+        fallback_lens_ratio=args.fallback_ratio,
     )
     print(f"\n【選定結果】挿入適格と判定された区間数: {len(assigned)} 箇所")
 
     print(
-        f"{'区間':<6} {'始点':<14} {'終点':<14} {'区間長':<8} {'選定新アンカー':<20} {'カテゴリ':<12} {'進行率t':<8} {'側方偏位':<8} {'新ランク':<6}"
+        f"{'区間':<6} {'始点':<14} {'終点':<14} {'区間長':<8} {'選定新アンカー':<20} {'カテゴリ':<12} {'進行率t':<8} {'側方偏位':<8} {'段階':<8} {'新ランク':<6}"
     )
-    print("-" * 105)
+    print("-" * 115)
 
     evaluation_report = []
     for i in sorted(assigned.keys()):
@@ -635,9 +672,10 @@ def main():
         a1, a2 = anchors[i], anchors[i + 1]
         dist_inter = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
         new_rank = min(6, max(a1["rank"], a2["rank"]) + 1)
+        stage_str = "Stage 1" if entry["ratio_used"] <= args.primary_ratio else "Stage 2"
 
         print(
-            f"[{i:03d}]  {a1['name']:<14} {a2['name']:<14} {dist_inter:.2f}km  {c['name']:<20} {c['category']:<12} {entry['t']:.2f}    {entry['perp']:.2f}km  Rank {new_rank}"
+            f"[{i:03d}]  {a1['name']:<14} {a2['name']:<14} {dist_inter:.2f}km  {c['name']:<20} {c['category']:<12} {entry['t']:.2f}    {entry['perp']:.2f}km  {stage_str:<8} Rank {new_rank}"
         )
 
         evaluation_report.append(

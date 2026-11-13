@@ -18,7 +18,7 @@ data class RouteAnchor(
  */
 object HokkaidoAct1Route {
 
-    /** ユーザー指定の公式一次測地データに基づく正規アンカーポイント（全61箇所） */
+    /** ユーザー指定の公式一次測地データに基づく正規アンカーポイント（全66箇所） */
     val anchors: List<RouteAnchor> = listOf(
         RouteAnchor(id = "hakodateyama", rank = 1, name = "函館山", municipality = "函館市", lon = 140.70553624563212, lat = 41.744766784111675, x = 184.31f, y = 345.46f, description = "100万ドルの夜景で名高い函館山。津軽海峡と函館市街を一望する山頂展望台。"),
         RouteAnchor(id = "tachimachi_story", rank = 2, name = "立待岬物語", municipality = "函館市", lon = 140.7161344, lat = 41.7531496, x = 184.99f, y = 344.74f, description = "立待岬近くに設置された石碑。津軽海峡と断崖を望む。"),
@@ -33,8 +33,10 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "oshamambe_station", rank = 1, name = "長万部駅", municipality = "長万部町", lon = 140.37552466273777, lat = 42.513017969486114, x = 163.24f, y = 279.33f, description = "函館本線と室蘭本線が分岐する交通の要衝。名物「かにめし」発祥の地。"),
         RouteAnchor(id = "shizukari_station", rank = 2, name = "静狩駅", municipality = "長万部町", lon = 140.46003000000002, lat = 42.584064999999995, x = 168.64f, y = 273.17f, description = "JR室蘭本線の駅。静狩峠の麓に位置する。"),
         RouteAnchor(id = "kuromatsunai_michinoeki", rank = 1, name = "道の駅 くろまつない", municipality = "黒松内町", lon = 140.37979736828004, lat = 42.67239712919561, x = 163.51f, y = 265.50f, description = "北限のブナ原生林の里。本格焼きたてピザやパンが人気の道の駅。"),
+        RouteAnchor(id = "minatomare_suttsu_michinoeki", rank = 2, name = "道の駅 みなとま〜れ寿都", municipality = "寿都町", lon = 140.2318241, lat = 42.7955338, x = 154.07f, y = 254.80f, description = "寿都港を望むウォーターフロントに建つ道の駅。名物生しらすや海産物が人気。"),
         RouteAnchor(id = "benkei_cape", rank = 1, name = "弁慶岬", municipality = "寿都町", lon = 140.1887125350538, lat = 42.82183022260921, x = 151.32f, y = 252.51f, description = "義経・弁慶伝説が残る日本海に突き出た名岬。白亜の灯台が立つ。"),
         RouteAnchor(id = "horoni_railway_park", rank = 1, name = "幌似鉄道記念公園", municipality = "共和町", lon = 140.6139535344062, lat = 42.98665997187308, x = 178.46f, y = 238.15f, description = "旧国鉄岩内線の幌似駅跡を保存した鉄道記念公園。当時の木造駅舎と車両を展示。"),
+        RouteAnchor(id = "annai_observatory_park", rank = 2, name = "あんない展望公園", municipality = "積丹町", lon = 140.332648, lat = 43.2423312, x = 160.50f, y = 215.79f, description = "積丹半島西岸の高台にある公園。日本海のパノラマを一望。"),
         RouteAnchor(id = "kamui_cape", rank = 1, name = "神威岬", municipality = "積丹町", lon = 140.3594022649703, lat = 43.32848146798221, x = 162.21f, y = 208.23f, description = "積丹ブルーの海へダイナミックに突き出す大パノラマの絶景岬。"),
         RouteAnchor(id = "ogon_cape_shakotan", rank = 2, name = "黄金岬", municipality = "積丹町", lon = 140.6013495, lat = 43.3031736, x = 177.66f, y = 210.45f, description = "美国港のすぐそばにある景勝地。かつてニシン見張り台があった岬。"),
         RouteAnchor(id = "nikka_yoichi_distillery", rank = 1, name = "ニッカウヰスキー 余市蒸溜所", municipality = "余市町", lon = 140.79185822539347, lat = 43.18739590094136, x = 189.82f, y = 220.60f, description = "日本のウイスキーの父・竹鶴政孝が創業した伝統のウイスキー蒸溜所。"),
@@ -44,6 +46,7 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "sapporo_clock_tower", rank = 1, name = "札幌市時計台", municipality = "札幌市", lon = 141.35342842412132, lat = 43.062788412367794, x = 225.67f, y = 231.50f, description = "明治11年創建の旧札幌農学校演武場。札幌のシンボルとして親しまれる歴史的建造物。"),
         RouteAnchor(id = "atsuta_observatory", rank = 2, name = "厚田展望台", municipality = "石狩市", lon = 141.4324888, lat = 43.4058027, x = 230.72f, y = 201.44f, description = "国道231号沿いの高台にある夕日の名所展望台。「恋人の聖地」に認定。"),
         RouteAnchor(id = "ofuyu_cape", rank = 1, name = "雄冬岬", municipality = "増毛町", lon = 141.33591905548778, lat = 43.73280428173676, x = 224.56f, y = 172.63f, description = "かつて陸の孤島と呼ばれたオロロンラインの険しい断崖絶壁が続く名岬。"),
+        RouteAnchor(id = "akaiwamisaki", rank = 2, name = "赤岩岬", municipality = "増毛町", lon = 141.3541826, lat = 43.7580764, x = 225.72f, y = 170.39f, description = "日本海に突き出た赤褐色の奇岩断崖が連なる景勝岬。"),
         RouteAnchor(id = "kunimare_brewery", rank = 1, name = "国稀酒造", municipality = "増毛町", lon = 141.52321177017552, lat = 43.85776020957361, x = 236.51f, y = 161.58f, description = "明治35年創業、暑寒別岳の伏流水で仕込む日本最北の造り酒屋。"),
         RouteAnchor(id = "ogon_cape_beach_park", rank = 1, name = "黄金岬海浜公園", municipality = "留萌市", lon = 141.62939738242676, lat = 43.94678147706456, x = 243.29f, y = 153.69f, description = "夕日に染まる日本海と荒波が砕ける奇岩が美しい、留萌を代表する夕日スポット。"),
         RouteAnchor(id = "obiracho_boyodai_campground", rank = 2, name = "小平町望洋台キャンプ場", municipality = "小平町", lon = 141.666466, lat = 44.0322567, x = 245.66f, y = 146.10f, description = "日本海を見下ろす丘の上に広がる広大なキャンプ場。"),
@@ -53,6 +56,7 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "toyomisaki_konpira_shrine", rank = 1, name = "豊岬金比羅神社", municipality = "初山別村", lon = 141.77250742378564, lat = 44.56371722986578, x = 252.43f, y = 98.70f, description = "日本海の荒波洗う岩礁の上に朱塗りの鳥居が立つ絶景の神社。"),
         RouteAnchor(id = "enbetsu_fujimi_michinoeki", rank = 1, name = "道の駅 えんべつ富士見", municipality = "遠別町", lon = 141.7921354376884, lat = 44.71405346787859, x = 253.68f, y = 85.21f, description = "日本海と利尻富士の眺望が素晴らしいオロロンライン沿いの道の駅。"),
         RouteAnchor(id = "kagamimuma_campground", rank = 1, name = "鏡沼海浜公園キャンプ場", municipality = "天塩町", lon = 141.7410437260453, lat = 44.87555180875946, x = 250.42f, y = 70.68f, description = "天塩川河口近くの鏡沼湖畔に広がるキャンプ場と温泉施設。"),
+        RouteAnchor(id = "teshio_michinoeki", rank = 2, name = "道の駅 てしお", municipality = "天塩町", lon = 141.7477551, lat = 44.8845723, x = 250.85f, y = 69.87f, description = "天塩川河口の街に位置する道の駅。しじみラーメンや地場産品が名物。"),
         RouteAnchor(id = "otonrui_wind_farm", rank = 1, name = "オトンルイ風力発電所", municipality = "幌延町", lon = 141.69805457576095, lat = 44.97661307686825, x = 247.67f, y = 61.57f, description = "道道106号沿いに28基の巨大風車が直線に立ち並ぶサロベツ原野の壮観。"),
         RouteAnchor(id = "shimonuma_station", rank = 2, name = "下沼駅", municipality = "幌延町", lon = 141.758205, lat = 45.03723, x = 251.51f, y = 56.09f, description = "JR宗谷本線の駅。パンケ沼やサロベツ原野への玄関口。"),
         RouteAnchor(id = "reindeer_ranch", rank = 1, name = "トナカイ観光牧場", municipality = "幌延町", lon = 141.86227257691442, lat = 45.04144807553853, x = 258.16f, y = 55.71f, description = "本物のトナカイとふれあえる日本唯一の観光牧場。"),
@@ -67,6 +71,7 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "ustaibe_senjoiwa", rank = 1, name = "ウスタイベ千畳岩", municipality = "枝幸町", lon = 142.58328025404762, lat = 44.96124993449913, x = 304.19f, y = 62.95f, description = "畳を敷き詰めたような柱状節理の岩礁が広がるオホーツク海の景勝地。"),
         RouteAnchor(id = "la_luna_observatory", rank = 1, name = "ラ・ルーナ", municipality = "雄武町", lon = 143.05934211980704, lat = 44.52636109424547, x = 334.58f, y = 102.04f, description = "オホーツク海を一望する日の出岬に立つ総ガラス張りの展望台。"),
         RouteAnchor(id = "okoppe_michinoeki", rank = 1, name = "道の駅 おこっぺ", municipality = "興部町", lon = 143.11697158295465, lat = 44.46946617628397, x = 338.26f, y = 107.14f, description = "旧名寄本線興部駅跡に整備された道の駅。特産乳製品が人気。"),
+        RouteAnchor(id = "mombetsu_station_site", rank = 2, name = "紋別駅跡", municipality = "紋別市", lon = 143.3519053, lat = 44.3527927, x = 353.26f, y = 117.56f, description = "旧名寄本線紋別駅の跡地。オホーツク流氷公園や市街地の拠点。"),
         RouteAnchor(id = "kani_no_tsume_object", rank = 1, name = "カニの爪オブジェ", municipality = "紋別市", lon = 143.37742655864253, lat = 44.32767506649157, x = 354.89f, y = 119.80f, description = "オホーツク海沿いにそびえ立つ高さ12mの巨大なカニの爪モニュメント。"),
         RouteAnchor(id = "komuke_campground", rank = 2, name = "コムケ国際キャンプ場", municipality = "紋別市", lon = 143.5201814, lat = 44.2555513, x = 364.00f, y = 126.24f, description = "野鳥の楽園コムケ湖畔に位置する静かなキャンプ場。"),
         RouteAnchor(id = "kamiyubetsu_tulip_park", rank = 1, name = "かみゆうべつチューリップ公園", municipality = "湧別町", lon = 143.579464112413, lat = 44.161614057521476, x = 367.79f, y = 134.60f, description = "広大な敷地に約200品種のチューリップが色鮮やかに咲き誇る名所公園。"),
