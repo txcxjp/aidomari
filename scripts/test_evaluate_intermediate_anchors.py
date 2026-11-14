@@ -202,14 +202,23 @@ class TestOverallSelectionIntegrity(unittest.TestCase):
             )
 
     def test_selected_candidates_authentic_and_non_empty(self):
+        # ギャップのある区間で選定された候補が公的ランドマークであることを検証
+        sample_anchors = [self.anchors[0], self.anchors[10]]
         assigned, _ = evaluate_intervals(
-            self.anchors, self.candidates, self.poly
+            sample_anchors, self.candidates, self.poly
         )
         self.assertGreater(len(assigned), 0)
         # ポリゴン判定は撤廃（実在の沿岸・岬スポットがSVG簡略化ポリゴン外れで除外されるのを防ぐため）
         for i, entry in assigned.items():
             c = entry["candidate"]
             self.assertTrue(is_authorized_landmark(c["name"]))
+
+    def test_convergence_reached_for_current_route(self):
+        # 現在の177アンカーで完全収束（新規追加候補0）していることの検証
+        assigned, _ = evaluate_intervals(
+            self.anchors, self.candidates, self.poly
+        )
+        self.assertEqual(len(assigned), 0)
 
 
 if __name__ == "__main__":
