@@ -18,7 +18,7 @@ data class RouteAnchor(
  */
 object HokkaidoAct1Route {
 
-    /** ユーザー指定の公式一次測地データに基づく正規アンカーポイント（全294箇所） */
+    /** ユーザー指定の公式一次測地データに基づく正規アンカーポイント（全302箇所） */
     val anchors: List<RouteAnchor> = listOf(
         RouteAnchor(id = "hakodateyama", rank = 1, name = "函館山", municipality = "函館市", lon = 140.70553624563212, lat = 41.744766784111675, x = 184.31f, y = 345.46f, description = "100万ドルの夜景で名高い函館山。津軽海峡と函館市街を一望する山頂展望台。"),
         RouteAnchor(id = "monument_of_yanagawa_kumakichi", rank = 3, name = "柳川熊吉翁の碑", municipality = "函館市", lon = 140.709009, lat = 41.7513323, x = 184.53f, y = 344.90f, description = "柳川熊吉翁の碑。"),
@@ -141,8 +141,10 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "mount_zenibako_tengu", rank = 5, name = "銭函天狗山", municipality = "小樽市", lon = 141.1628178, lat = 43.1213617, x = 213.50f, y = 226.38f, description = "銭函天狗山。"),
         RouteAnchor(id = "anchor_4082d1b2", rank = 4, name = "ほしの丘の上公園", municipality = "小樽市", lon = 141.1889108, lat = 43.1301594, x = 215.17f, y = 225.61f, description = "ほしの丘の上公園。"),
         RouteAnchor(id = "anchor_f725e155", rank = 6, name = "星置スプリングス公園", municipality = "小樽市", lon = 141.1953146, lat = 43.1372096, x = 215.58f, y = 224.99f, description = "星置スプリングス公園。"),
+        RouteAnchor(id = "anchor_8e4788c9", rank = 6, name = "星置コメット公園", municipality = "小樽市", lon = 141.2075248, lat = 43.1361097, x = 216.36f, y = 225.09f, description = "星置コメット公園。"),
         RouteAnchor(id = "anchor_48477987", rank = 6, name = "稲穂星海公園", municipality = "小樽市", lon = 141.2081292, lat = 43.1314643, x = 216.40f, y = 225.49f, description = "稲穂星海公園。"),
         RouteAnchor(id = "anchor_8f0386ab", rank = 6, name = "いなほりす公園", municipality = "小樽市", lon = 141.2183921, lat = 43.1303131, x = 217.05f, y = 225.60f, description = "いなほりす公園。"),
+        RouteAnchor(id = "anchor_de0c5be5", rank = 6, name = "稲穂公園", municipality = "小樽市", lon = 141.2246847, lat = 43.1263048, x = 217.45f, y = 225.95f, description = "稲穂公園。"),
         RouteAnchor(id = "anchor_5b7a9cd3", rank = 5, name = "稲穂リラ公園", municipality = "小樽市", lon = 141.2206752, lat = 43.1210241, x = 217.20f, y = 226.41f, description = "稲穂リラ公園。"),
         RouteAnchor(id = "anchor_b0e9b721", rank = 6, name = "手稲つばさ公園", municipality = "小樽市", lon = 141.2315978, lat = 43.1174171, x = 217.89f, y = 226.72f, description = "手稲つばさ公園。"),
         RouteAnchor(id = "anchor_640f5450", rank = 6, name = "ていね見晴し公園", municipality = "小樽市", lon = 141.2377436, lat = 43.1135512, x = 218.29f, y = 227.06f, description = "ていね見晴し公園。"),
@@ -160,15 +162,21 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "kita_7_jo_akaimi_park", rank = 6, name = "北7条赤い実公園", municipality = "札幌市", lon = 141.3345304, lat = 43.0677201, x = 224.47f, y = 231.07f, description = "北7条赤い実公園。"),
         RouteAnchor(id = "anchor_3b72a8af", rank = 6, name = "青年寄宿舎跡の碑", municipality = "札幌市", lon = 141.3419791, lat = 43.0657284, x = 224.94f, y = 231.24f, description = "青年寄宿舎跡の碑。"),
         RouteAnchor(id = "sapporo_clock_tower", rank = 1, name = "札幌市時計台", municipality = "札幌市", lon = 141.35342842412132, lat = 43.062788412367794, x = 225.67f, y = 231.50f, description = "明治11年創建の旧札幌農学校演武場。札幌のシンボルとして親しまれる歴史的建造物。"),
+        RouteAnchor(id = "nagayama_memorial_park", rank = 6, name = "永山記念公園", municipality = "札幌市", lon = 141.3645047, lat = 43.0655539, x = 226.38f, y = 231.26f, description = "永山記念公園。"),
         RouteAnchor(id = "shinsei_park", rank = 6, name = "新生公園", municipality = "札幌市", lon = 141.36452, lat = 43.0728509, x = 226.38f, y = 230.62f, description = "新生公園。"),
+        RouteAnchor(id = "kosei_park", rank = 6, name = "光星公園", municipality = "札幌市", lon = 141.3665031, lat = 43.0775656, x = 226.51f, y = 230.21f, description = "光星公園。"),
         RouteAnchor(id = "higashi_kurumi_park", rank = 6, name = "東くるみ公園", municipality = "札幌市", lon = 141.3685888, lat = 43.0818772, x = 226.64f, y = 229.83f, description = "東くるみ公園。"),
+        RouteAnchor(id = "shirayuri_park", rank = 6, name = "しらゆり公園", municipality = "札幌市", lon = 141.3694404, lat = 43.0871425, x = 226.70f, y = 229.37f, description = "しらゆり公園。"),
         RouteAnchor(id = "aozora_park", rank = 6, name = "青空公園", municipality = "札幌市", lon = 141.3744928, lat = 43.0935374, x = 227.02f, y = 228.81f, description = "青空公園。"),
         RouteAnchor(id = "anchor_4a972f4d", rank = 5, name = "こうしんの湯", municipality = "札幌市", lon = 141.3780312, lat = 43.1009623, x = 227.24f, y = 228.16f, description = "こうしんの湯。"),
+        RouteAnchor(id = "sakaemachi_aoitori_park", rank = 6, name = "栄町青い鳥公園", municipality = "札幌市", lon = 141.3793606, lat = 43.105649, x = 227.33f, y = 227.75f, description = "栄町青い鳥公園。"),
         RouteAnchor(id = "sakaemachihigashi_sora_park", rank = 6, name = "栄町東 空公園", municipality = "札幌市", lon = 141.3766864, lat = 43.1121075, x = 227.16f, y = 227.19f, description = "栄町東 空公園。"),
         RouteAnchor(id = "kamishinoro_wakakusa_park", rank = 6, name = "上篠路若草公園", municipality = "札幌市", lon = 141.386604, lat = 43.1293837, x = 227.79f, y = 225.68f, description = "上篠路若草公園。"),
         RouteAnchor(id = "jukken_aozora_park", rank = 6, name = "十軒青空公園", municipality = "札幌市", lon = 141.3818755, lat = 43.133609, x = 227.49f, y = 225.31f, description = "十軒青空公園。"),
         RouteAnchor(id = "anchor_68168c0c", rank = 4, name = "札幌あいの里温泉 なごみ", municipality = "札幌市", lon = 141.3985591, lat = 43.1524948, x = 228.55f, y = 223.65f, description = "札幌あいの里温泉 なごみ。"),
+        RouteAnchor(id = "ainosato_kinoko_park", rank = 6, name = "あいの里きのこ公園", municipality = "札幌市", lon = 141.3884504, lat = 43.1564062, x = 227.91f, y = 223.31f, description = "あいの里きのこ公園。"),
         RouteAnchor(id = "takuhoku_lilac_park", rank = 6, name = "拓北ライラック公園", municipality = "札幌市", lon = 141.3772188, lat = 43.1581935, x = 227.19f, y = 223.16f, description = "拓北ライラック公園。"),
+        RouteAnchor(id = "shinoro_aozora_park", rank = 6, name = "篠路あおぞら公園", municipality = "札幌市", lon = 141.3589305, lat = 43.1572857, x = 226.02f, y = 223.24f, description = "篠路あおぞら公園。"),
         RouteAnchor(id = "barato_satsuki_park", rank = 6, name = "茨戸さつき公園", municipality = "札幌市", lon = 141.3549793, lat = 43.1665498, x = 225.77f, y = 222.42f, description = "茨戸さつき公園。"),
         RouteAnchor(id = "anchor_e4ae4f2f", rank = 5, name = "川の博物館", municipality = "札幌市", lon = 141.3315553, lat = 43.2020312, x = 224.28f, y = 219.32f, description = "川の博物館。"),
         RouteAnchor(id = "anchor_a3f0bde3", rank = 6, name = "ヤウスバ運動公園", municipality = "札幌市", lon = 141.348426, lat = 43.2285568, x = 225.35f, y = 216.99f, description = "ヤウスバ運動公園。"),
