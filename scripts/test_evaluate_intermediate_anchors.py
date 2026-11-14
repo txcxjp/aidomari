@@ -201,19 +201,15 @@ class TestOverallSelectionIntegrity(unittest.TestCase):
                 f"Distance violation between {a1['name']} and {a2['name']}: {dist:.2f}km < 0.5km",
             )
 
-    def test_selected_candidates_inside_polygon(self):
+    def test_selected_candidates_authentic_and_non_empty(self):
         assigned, _ = evaluate_intervals(
             self.anchors, self.candidates, self.poly
         )
+        self.assertGreater(len(assigned), 0)
+        # ポリゴン判定は撤廃（実在の沿岸・岬スポットがSVG簡略化ポリゴン外れで除外されるのを防ぐため）
         for i, entry in assigned.items():
             c = entry["candidate"]
-            from mercator_projection import gps_to_svg
-
-            sx, sy = gps_to_svg(c["lon"], c["lat"])
-            self.assertTrue(
-                self.poly.contains(sx, sy),
-                f"Candidate {c['name']} must be inside mainland polygon",
-            )
+            self.assertTrue(is_authorized_landmark(c["name"]))
 
 
 if __name__ == "__main__":
