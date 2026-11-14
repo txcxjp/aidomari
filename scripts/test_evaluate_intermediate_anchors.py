@@ -16,6 +16,7 @@ from evaluate_intermediate_anchors import (
     haversine,
     is_authorized_landmark,
     is_pocket_park,
+    is_signpost_or_marker,
     load_authoritative_candidates,
     load_route_anchors,
     project_to_segment,
@@ -109,14 +110,36 @@ class TestLandmarkFilter(unittest.TestCase):
             "国道229号",
             "道道106号",
             "ab",
-            "山頂展望台まで1.5km",
-            "登別温泉園地案内図",
-            "遊歩道入口の看板",
         ]
         for name in invalid_names:
             self.assertFalse(
                 is_authorized_landmark(name), f"Should be rejected: {name}"
             )
+
+    def test_signpost_or_marker_identification(self):
+        """案内看板・標識・標柱の識別テスト（除外せず weight=1 として許可）"""
+        signpost_names = [
+            "山頂展望台まで1.5km",
+            "登別温泉園地案内図",
+            "遊歩道入口の看板",
+            "幸福町案内図",
+            "止別海岸治山の森遊歩道の案内図",
+            "ペーパンの未来を育てる会　案内看板",
+        ]
+        for name in signpost_names:
+            self.assertTrue(
+                is_signpost_or_marker(name),
+                f"Should be identified as signpost/marker: {name}",
+            )
+            self.assertTrue(
+                is_authorized_landmark(name),
+                f"Should be accepted as authorized landmark: {name}",
+            )
+
+        # 観光案内所（センター）は看板ではなく通常の観光施設
+        self.assertFalse(
+            is_signpost_or_marker("大通公園 インフォメーションセンター")
+        )
 
     def test_pocket_park_identification(self):
         """住宅街のポケットパーク・小規模児童公園と大規模公園の識別テスト"""
@@ -251,6 +274,42 @@ class TestOverallSelectionIntegrity(unittest.TestCase):
         self.assertGreater(len(pocket_cands), 0)
         for c in pocket_cands:
             self.assertEqual(c["weight"], 1)
+
+    def test_signposts_assigned_weight_one(self):
+        # 案内看板・標識が除外されず weight=1, category='案内看板・標識' で登録されていることを検証
+        signpost_cands = [
+            c for c in self.candidates if is_signpost_or_marker(c["name"])
+        ]
+        self.assertGreater(len(signpost_cands), 0)
+        for c in signpost_cands:
+            self.assertEqual(c["weight"], 1)
+            self.assertEqual(c["category"], "案内看板・標識")
+
+    def test_deduplication_between_kokudo_and_osm(self):
+        # 国土数値情報の道の駅・駅・観光資源がOSM側で二重登録されていないことを検証
+        # 例: 道の駅 なないろ・ななえ、道の駅 みなとま〜れ寿都
+        names_in_candidates = [c["name"] for c in self.candidates]
+        # 各名称の出現頻度（同一名称・同一座標の多重登録がないこと）
+        for target in ["道の駅 なないろ・ななえ", "道の駅 みなとま〜れ寿都"]:
+            count = sum(1 for n in names_in_candidates if n == target)
+            self.assertEqual(
+                count, 1, f"'{target}' should exist exactly once, found {count}"
+            )
+
+        # 1.0km以内の同一道の駅重複が存在しないこと
+        rs_cands = [c for c in self.candidates if "道の駅" in c["name"]]
+        for i in range(len(rs_cands)):
+            for j in range(i + 1, len(rs_cands)):
+                r1, r2 = rs_cands[i], rs_cands[j]
+                d = haversine(r1["lat"], r1["lon"], r2["lat"], r2["lon"])
+                if d < 1.0 and (
+                    r1["name"] == r2["name"]
+                    or r1["name"] in r2["name"]
+                    or r2["name"] in r1["name"]
+                ):
+                    self.fail(
+                        f"Duplicate roadside station found within {d*1000:.0f}m: '{r1['name']}' vs '{r2['name']}'"
+                    )
 
     def test_convergence_reached_for_legacy_dataset(self):
         # export.geojson（従来データセット）基準で177アンカーが完全収束（新規追加候補0）していることの検証

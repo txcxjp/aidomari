@@ -143,8 +143,21 @@ def is_facility_duplicate(name1: str, name2: str) -> bool:
     return False
 
 
-# 案内標識・登山道ポスト・看板の除外パターン
-SIGNPOST_RE = re.compile(r'(まで[0-9.]+[kKmM]|案内板|案内図|看板|標柱|標識|インフォメーション)')
+# 案内標識・登山道ポスト・看板の判定パターン
+SIGNPOST_RE = re.compile(
+    r'(まで[0-9.]+[kKmM]|案内板|案内図|看板|標柱|標識|インフォメーション(?!センター|所))'
+)
+
+
+def is_signpost_or_marker(name: str) -> bool:
+    """案内看板・標識・標柱・登山道ポストなどを判定する。"""
+    return bool(SIGNPOST_RE.search(name))
+
+
+def normalize_name(s: str) -> str:
+    """空白・中黒・記号を除去した正規化名称を返す。"""
+    return re.sub(r'[\s・　\-_（）\(\)]', '', s)
+
 
 # 住宅街のポケットパーク・小規模児童公園の判定
 MAJOR_PARK_EXCEPTIONS = re.compile(
@@ -170,8 +183,6 @@ def is_authorized_landmark(name: str) -> bool:
         return False
     if name in GENERIC_NAMES:
         return False
-    if SIGNPOST_RE.search(name):
-        return False
     if (
         name.startswith("大字")
         or name.startswith("字")
@@ -180,6 +191,9 @@ def is_authorized_landmark(name: str) -> bool:
         or any(k in name for k in ["寿司", "鮨", "食堂", "ラーメン", "焼肉", "居酒屋"])
     ):
         return False
+    # 案内看板・標識・標柱は除外せず許可（重み1点として登録される）
+    if is_signpost_or_marker(name):
+        return True
     if any(name.endswith(suffix) for suffix in ALLOWED_SUFFIXES):
         return True
     if any(
@@ -311,6 +325,14 @@ def load_authoritative_candidates(notes_dir: str, osm_filename: str = None):
                     }
                 )
 
+    # 空間インデックス構築（国土数値情報の既存候補）
+    GRID_SIZE = 0.05
+    grid = {}
+    for c in cands:
+        gx = int(c["lon"] / GRID_SIZE)
+        gy = int(c["lat"] / GRID_SIZE)
+        grid.setdefault((gx, gy), []).append(c)
+
     # 4. OpenStreetMap 実地スポット (hokkaido_landmarks.geojson 優先、無ければ export.geojson)
     if osm_filename:
         osm_path = os.path.join(notes_dir, osm_filename)
@@ -333,6 +355,54 @@ def load_authoritative_candidates(notes_dir: str, osm_filename: str = None):
             if not coords:
                 continue
 
+            olon, olat = coords[0], coords[1]
+            norm_osm = normalize_name(name)
+            gx = int(olon / GRID_SIZE)
+            gy = int(olat / GRID_SIZE)
+
+            # 重複防止: 国土数値情報（正本）および既登録OSMとの近接・同名照合
+            is_dup = False
+            for dx in (-1, 0, 1):
+                if is_dup:
+                    break
+                for dy in (-1, 0, 1):
+                    if is_dup:
+                        break
+                    for k in grid.get((gx + dx, gy + dy), []):
+                        dist = haversine(olat, olon, k["lat"], k["lon"])
+                        norm_k = normalize_name(k["name"])
+                        # 1. 正規化名称一致 かつ 2.0km以内
+                        if norm_osm == norm_k and dist < 2.0:
+                            is_dup = True
+                            break
+                        # 2. 道の駅重複（1.5km以内かつ施設一致）
+                        if "道の駅" in name and "道の駅" in k["name"] and dist < 1.5:
+                            if is_facility_duplicate(name, k["name"]):
+                                is_dup = True
+                                break
+                        # 3. 鉄道駅重複（1.0km以内）
+                        if (
+                            name.endswith("駅")
+                            and k.get("category") == "駅"
+                            and dist < 1.0
+                        ):
+                            if norm_osm == norm_k or is_facility_duplicate(
+                                name, k["name"]
+                            ):
+                                is_dup = True
+                                break
+                        # 4. 施設内重複（500m以内かつ施設名包含関係）
+                        if dist < 0.5 and is_facility_duplicate(name, k["name"]):
+                            is_dup = True
+                            break
+                        # 5. OSM内部同名重複（300m以内）
+                        if norm_osm == norm_k and dist < 0.3:
+                            is_dup = True
+                            break
+
+            if is_dup:
+                continue
+
             cat = props.get("category")
             w = props.get("weight")
             if not cat or not w:
@@ -353,22 +423,24 @@ def load_authoritative_candidates(notes_dir: str, osm_filename: str = None):
                     cat = "公園・施設"
                     w = 75
 
-            # 住宅街のポケットパーク（街区公園・児童公園等）は除外せず重み1点として登録
-            if is_pocket_park(name):
+            # 住宅街のポケットパーク（街区公園・児童公園等）および案内看板・標識は除外せず重み1点として登録
+            if is_pocket_park(name) or is_signpost_or_marker(name):
                 w = 1
+                if is_signpost_or_marker(name):
+                    cat = "案内看板・標識"
 
             muni = props.get("municipality", "")
-            cands.append(
-                {
-                    "name": name,
-                    "municipality": muni,
-                    "lon": coords[0],
-                    "lat": coords[1],
-                    "category": cat,
-                    "weight": w,
-                    "description": f"{name}。",
-                }
-            )
+            cand = {
+                "name": name,
+                "municipality": muni,
+                "lon": olon,
+                "lat": olat,
+                "category": cat,
+                "weight": w,
+                "description": f"{name}。",
+            }
+            cands.append(cand)
+            grid.setdefault((gx, gy), []).append(cand)
 
     return cands
 
