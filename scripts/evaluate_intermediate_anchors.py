@@ -430,8 +430,10 @@ def load_authoritative_candidates(notes_dir: str, osm_filename: str = None):
                     cat = "案内看板・標識"
 
             muni = props.get("municipality", "")
+            name_en = props.get("name:en") or props.get("name:ja-Latn") or ""
             cand = {
                 "name": name,
+                "name_en": name_en,
                 "municipality": muni,
                 "lon": olon,
                 "lat": olat,
@@ -797,6 +799,22 @@ LANDMARK_METADATA = {
     "浜小清水前浜キャンプ場": ("hamakoshimizu_maehama_campground", "小清水町", "オホーツク海を一望する砂浜沿いに広がる海浜キャンプ場。"),
     "北12条駅": ("kita_juni_jo_station", "札幌市北区", "札幌市営地下鉄南北線の駅。北海道大学札幌キャンパスへの最寄り駅。"),
     "新道東駅": ("shindo_higashi_station", "札幌市東区", "札幌市営地下鉄東豊線の駅。札幌新道沿いに位置する。"),
+    "桜成浴場センター": ("onari_bath_center", "函館市", "函館市街に位置する公衆浴場。"),
+    "七飯町健康センター アップル温泉": ("apple_onsen", "七飯町", "七飯町にある天然温泉健康センター。りんごの里の名湯。"),
+    "毛無山": ("kenashiyama", "北斗市", "北斗市と木古内町境に位置する山峰。"),
+    "写万部山": ("shambedake", "長万部町", "長万部町北部にそびえる山峰。"),
+    "寿都温泉 ゆべつのゆ": ("yubetsu_no_yu_onsen", "寿都町", "寿都湾南部に位置する天然温泉施設。塩化物泉の名湯。"),
+    "熊野山": ("kumanoyama", "寿都町", "寿都町南部の日本海を望む山峰。"),
+    "船取山": ("funatoriyama", "余市町", "余市町と小樽市境に位置する山峰。"),
+    "ワオーの森　展望台": ("wao_no_mori_observatory", "小樽市", "小樽市張碓の丘陵に広がるワオーの森の展望地。"),
+    "望洋台展望台": ("boyodai_observatory", "留萌市", "留萌市街と日本海を一望する高台の展望台。"),
+    "初山別村スポーツ公園": ("shosanbetsu_sports_park", "初山別村", "初山別村の日本海を望むスポーツ公園。"),
+    "金浦原生花園": ("konpu_primeval_flower_garden", "遠別町", "遠別町南部の海岸沿いに広がる天然原生花園。"),
+    "宗谷岬牧場天塩分場": ("soya_cape_ranch_teshio", "天塩町", "天塩町の丘陵に広がる広大な放牧場。"),
+    "天塩いつくしま公園": ("teshio_itsukushima_park", "天塩町", "天塩川河口近くに広がる水と緑の憩い公園。"),
+    "豊富町自然公園": ("toyotomi_nature_park", "豊富町", "豊富町の緑豊かな自然公園。"),
+    "稚内天然温泉 港のゆ": ("minato_no_yu_onsen", "稚内市", "稚内港を望む天然温泉施設。"),
+    "クジラの見える丘公園": ("whale_watching_hill_park", "羅臼町", "根室海峡を見下ろしクジラやシャチを観察できる展望公園。"),
 }
 
 
@@ -971,6 +989,8 @@ def main():
     if args.apply:
         print("\n--apply が指定されました。HokkaidoAct1Route.kt を更新します...")
         new_anchors = []
+        existing_ids = set(a["id"] for a in anchors)
+
         for i, a in enumerate(anchors):
             new_anchors.append(a)
             if i in assigned:
@@ -982,10 +1002,23 @@ def main():
                     cid, muni, desc = LANDMARK_METADATA[name]
                 else:
                     import hashlib
+                    name_en = c.get("name_en", "")
+                    slug = (
+                        re.sub(r"[^a-z0-9]+", "_", name_en.lower()).strip("_")
+                        if name_en
+                        else ""
+                    )
                     hash_slug = hashlib.sha256(name.encode("utf-8")).hexdigest()[:8]
-                    cid = re.sub(r"[^a-z0-9_]+", "", name.lower()) or f"anchor_{hash_slug}"
+                    cid = slug if (slug and len(slug) >= 3) else f"anchor_{hash_slug}"
                     muni = c["municipality"] or a["municipality"]
                     desc = c["description"]
+
+                base_cid = cid
+                counter = 2
+                while cid in existing_ids:
+                    cid = f"{base_cid}_{counter}"
+                    counter += 1
+                existing_ids.add(cid)
 
                 new_anchors.append(
                     {
