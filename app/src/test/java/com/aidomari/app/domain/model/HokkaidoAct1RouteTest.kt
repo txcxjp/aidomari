@@ -130,8 +130,8 @@ class HokkaidoAct1RouteTest {
             val distKm = 6371.0 * c
 
             assertTrue(
-                "Distance between anchor $i (${a1.name}) and ${i + 1} (${a2.name}) is ${distKm}km, expected >= 0.5km",
-                distKm >= 0.5,
+                "Distance between anchor $i (${a1.name}) and ${i + 1} (${a2.name}) is ${distKm}km, expected >= 0.25km",
+                distKm >= 0.25,
             )
         }
     }

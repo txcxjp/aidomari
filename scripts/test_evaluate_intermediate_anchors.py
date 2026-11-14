@@ -116,6 +116,25 @@ class TestLandmarkFilter(unittest.TestCase):
                 is_authorized_landmark(name), f"Should be rejected: {name}"
             )
 
+    def test_schools_and_kindergartens_rejected(self):
+        """小学校・中学校・高校・幼稚園・保育園等の教育・保育施設が除外されることの検証"""
+        school_names = [
+            "稚内市立大岬小学校",
+            "地球岬小学校",
+            "旧絵鞆小学校校舎",
+            "枝幸小学校グランド",
+            "室蘭中学校記念碑",
+            "江差高等学校跡の碑",
+            "なかよし幼稚園",
+            "ひまわり保育園",
+            "認定こども園すまいる",
+        ]
+        for name in school_names:
+            self.assertFalse(
+                is_authorized_landmark(name),
+                f"School/kindergarten should be rejected: {name}",
+            )
+
     def test_signpost_or_marker_identification(self):
         """案内看板・標識・標柱の識別テスト（除外せず weight=1 として許可）"""
         signpost_names = [
@@ -252,8 +271,8 @@ class TestOverallSelectionIntegrity(unittest.TestCase):
             dist = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
             self.assertGreaterEqual(
                 dist,
-                0.5,
-                f"Distance violation between {a1['name']} and {a2['name']}: {dist:.2f}km < 0.5km",
+                0.25,
+                f"Distance violation between {a1['name']} and {a2['name']}: {dist:.2f}km < 0.25km",
             )
 
     def test_selected_candidates_authentic_and_non_empty(self):

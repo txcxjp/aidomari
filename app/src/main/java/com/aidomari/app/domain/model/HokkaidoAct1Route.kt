@@ -18,7 +18,7 @@ data class RouteAnchor(
  */
 object HokkaidoAct1Route {
 
-    /** ユーザー指定の公式一次測地データに基づく正規アンカーポイント（全304箇所） */
+    /** ユーザー指定の公式一次測地データに基づく正規アンカーポイント（全303箇所） */
     val anchors: List<RouteAnchor> = listOf(
         RouteAnchor(id = "hakodateyama", rank = 1, name = "函館山", municipality = "函館市", lon = 140.70553624563212, lat = 41.744766784111675, x = 184.31f, y = 345.46f, description = "100万ドルの夜景で名高い函館山。津軽海峡と函館市街を一望する山頂展望台。"),
         RouteAnchor(id = "monument_of_yanagawa_kumakichi", rank = 3, name = "柳川熊吉翁の碑", municipality = "函館市", lon = 140.709009, lat = 41.7513323, x = 184.53f, y = 344.90f, description = "柳川熊吉翁の碑。"),
@@ -245,7 +245,6 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "anchor_9b6cbd52", rank = 3, name = "宗谷岬肉牛牧場", municipality = "稚内市", lon = 141.9349663, lat = 45.498685, x = 262.80f, y = 14.23f, description = "宗谷岬肉牛牧場。"),
         RouteAnchor(id = "anchor_da4ba7d1", rank = 4, name = "宗谷岬郵便局", municipality = "稚内市", lon = 141.9448867, lat = 45.516094, x = 263.43f, y = 12.65f, description = "宗谷岬郵便局。"),
         RouteAnchor(id = "soya_cape", rank = 1, name = "宗谷岬", municipality = "稚内市", lon = 141.93667013638216, lat = 45.52259451811312, x = 262.91f, y = 12.06f, description = "北緯45度31分22秒、日本最北端の地の碑が立つ岬。"),
-        RouteAnchor(id = "anchor_f4f16f1e", rank = 4, name = "稚内市立大岬小学校", municipality = "稚内市", lon = 141.954741, lat = 45.5139742, x = 264.06f, y = 12.84f, description = "稚内市立大岬小学校。"),
         RouteAnchor(id = "mt_moima", rank = 3, name = "萌間山", municipality = "稚内市", lon = 141.9910048, lat = 45.4506042, x = 266.38f, y = 18.61f, description = "萌間山。"),
         RouteAnchor(id = "sarufutsu_park_michinoeki", rank = 2, name = "道の駅 さるふつ公園", municipality = "猿払村", lon = 142.177348, lat = 45.329219, x = 278.27f, y = 29.65f, description = "オホーツク海沿い、広大な敷地にホテルや牧場が広がる日本最北の村の道の駅。"),
         RouteAnchor(id = "esanuka_line", rank = 1, name = "エサヌカ線", municipality = "猿払村", lon = 142.27970649907144, lat = 45.22059445777629, x = 284.81f, y = 39.50f, description = "ガードレールも電柱もない平原をどこまでも一直線に貫くオホーツクの絶景道路。"),

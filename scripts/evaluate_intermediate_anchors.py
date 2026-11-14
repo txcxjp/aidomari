@@ -183,6 +183,24 @@ def is_authorized_landmark(name: str) -> bool:
         return False
     if name in GENERIC_NAMES:
         return False
+    # 小学校・中学校・高校・幼稚園・保育園等の学校・保育施設は除外
+    if any(
+        k in name
+        for k in [
+            "小学校",
+            "中学校",
+            "高校",
+            "高等学校",
+            "中等学校",
+            "特別支援学校",
+            "養護学校",
+            "幼稚園",
+            "保育園",
+            "保育所",
+            "認定こども園",
+        ]
+    ):
+        return False
     if (
         name.startswith("大字")
         or name.startswith("字")
@@ -451,15 +469,15 @@ def evaluate_intervals(
     anchors,
     candidates,
     poly,
-    min_interval_km=1.0,
-    min_dist_to_anchors=0.5,
-    primary_lens_ratio=0.70,
-    fallback_lens_ratio=1.00,
+    min_interval_km=0.50,
+    min_dist_to_anchors=0.25,
+    primary_lens_ratio=1.50,
+    fallback_lens_ratio=1.50,
 ):
     """すべての隣接区間を確定ルール（最寄り2点制約・陸地判定・重みづけ選抜）で評価し、各区間に最適な中間アンカー（最大1件）を選定する。
 
-    Stage 1: primary_lens_ratio (0.70) で中央領域の優良候補を探索
-    Stage 2: 候補が得られなかった区間に限り fallback_lens_ratio (1.00) に拡張して探索
+    Stage 1: primary_lens_ratio (1.50) で中央領域の優良候補を探索
+    Stage 2: 候補が得られなかった区間に限り fallback_lens_ratio (1.50) に拡張して探索
     """
     existing_names = set(a["name"] for a in anchors)
 
@@ -854,14 +872,14 @@ def write_updated_route_kt(route_kt_path: str, new_anchors: list):
     print(f"HokkaidoAct1Route.kt を正常に更新しました。（全 {len(new_anchors)} 箇所）")
 
 
-def verify_route_integrity(anchors):
-    """隣接アンカー間の距離ルール (>= 0.5km) および単調性を検証する。"""
+def verify_route_integrity(anchors, min_dist=0.25):
+    """隣接アンカー間の距離ルール (>= min_dist km) および単調性を検証する。"""
     violations = []
     for i in range(len(anchors) - 1):
         a1 = anchors[i]
         a2 = anchors[i + 1]
         dist = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
-        if dist < 0.5:
+        if dist < min_dist:
             violations.append((i, a1["name"], a2["name"], dist))
     return violations
 
@@ -888,26 +906,26 @@ def main():
     parser.add_argument(
         "--min-interval-km",
         type=float,
-        default=1.0,
+        default=0.50,
         help="中間アンカー挿入対象とする最小区間長 (km)",
     )
     parser.add_argument(
         "--min-anchor-dist",
         type=float,
-        default=0.5,
+        default=0.25,
         help="既存アンカーとの最小離隔距離 (km)",
     )
     parser.add_argument(
         "--primary-ratio",
         type=float,
-        default=0.70,
-        help="第1段階の中間レンズ比率 (デフォルト: 0.70)",
+        default=1.50,
+        help="第1段階の中間レンズ比率 (デフォルト: 1.50)",
     )
     parser.add_argument(
         "--fallback-ratio",
         type=float,
-        default=1.00,
-        help="候補不在区間に対する第2段階の許容距離比率 (デフォルト: 1.00)",
+        default=1.50,
+        help="候補不在区間に対する第2段階の許容距離比率 (デフォルト: 1.50)",
     )
     parser.add_argument(
         "--apply",
@@ -1034,7 +1052,7 @@ def main():
                     }
                 )
 
-        violations = verify_route_integrity(new_anchors)
+        violations = verify_route_integrity(new_anchors, min_dist=args.min_anchor_dist)
         if violations:
             print("エラー: 更新後のルートに距離ルール違反が検出されました:")
             for v in violations:
@@ -1042,7 +1060,7 @@ def main():
             sys.exit(1)
 
         print(
-            f"検証合格: 更新後全 {len(new_anchors)} 箇所のアンカー間離隔はすべて >= 0.5km を満たしています。"
+            f"検証合格: 更新後全 {len(new_anchors)} 箇所のアンカー間離隔はすべて >= {args.min_anchor_dist}km を満たしています。"
         )
         write_updated_route_kt(args.route_kt, new_anchors)
     else:
