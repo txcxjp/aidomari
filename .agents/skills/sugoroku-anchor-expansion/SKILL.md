@@ -3,8 +3,9 @@ name: sugoroku-anchor-expansion
 description: >-
   Use this skill whenever adding, evaluating, or updating intermediate anchors
   for the Hokkaido Sugoroku Act 1 route in Aidomari. Enforces user-defined selection
-  rules, authoritative data source (notes/ GeoJSON), closest-two-anchors isolation,
-  spacing, land polygon check, scoring, and rank determination.
+  rules, authoritative data source (notes/ GeoJSON), opposite-side nearest anchor
+  rule, 70% lens ratio with 100% fallback, 500m spacing, lateral penalty, scoring,
+  and rank determination without simplified polygon check.
 ---
 
 # 北海道一周すごろく 第1部 アンカー追加手順（公式スキル）
@@ -40,7 +41,7 @@ description: >-
 
 4. **複数候補がある場合の選定（重みづけと中間地点）**:
    - できるだけ中間地点に近い部分が都合が良いが、中間地点に無い場合はその限りではない。
-   - 複数候補がある場合は、旅行で行きたくなる魅力度・インパクトを考慮した重みづけを参考にする：
+   - 複数候補がある場合の総合スコアリング（カテゴリ魅力度 + 中間地点らしさ + 側方偏位ペナルティ）：
      - 観光資源: **95点**
      - 景勝地（岬、灯台、展望台、原生花園など）: **90点**
      - 温泉・キャンプ場: **80点**
@@ -48,6 +49,10 @@ description: >-
      - 公園・記念碑: **75点**
      - その他公的スポット: **70点**
      - 漁港: **30点**
+     - **スコア計算式**:
+       $$\text{Score} = \text{カテゴリ点} - 25.0 \times |t - 0.5| - 5.0 \times \left(\frac{\text{側方偏位(km)}}{\max(1.0, \text{区間長(km)})}\right) \times 10.0$$
+       - 区間中央（$t=0.5$）に近いほど加点。
+       - ルートの進行直線からの側方偏位（横ブレ）が大きいほど減点し、道路回廊に沿った正当なスポットを最優先。
 
 5. **新アンカーのランク決定**:
    - 新しく追加するアンカーのランクは、**もとになったアンカーのうち大きいほうに1を足した数字**になる。
