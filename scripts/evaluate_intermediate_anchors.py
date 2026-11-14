@@ -643,6 +643,30 @@ LANDMARK_METADATA = {
     "呼人駅": ("yobito_station", "網走市", "JR石北本線の駅。網走湖の南岸に位置する静かな湖畔の駅。"),
     "鱒浦駅": ("masuura_station", "網走市", "JR釧網本線の駅。オホーツク海岸沿いに位置し海岸の絶景が広がる。"),
     "道の駅 しゃり": ("shari_michinoeki", "斜里町", "世界自然遺産・知床への玄関口、斜里市街中心部に位置する道の駅。"),
+    "鷲ノ木漁港": ("washinoki_port", "森町", "内浦湾に面する森町の漁港。幕末に旧幕府軍が上陸した歴史の地。"),
+    "別苅港北防波堤灯台": ("bekkari_port_lighthouse", "増毛町", "別苅漁港の北防波堤に立つ白亜の灯台。"),
+    "竜神岬": ("ryujin_cape", "神恵内村", "神恵内村の日本海に突き出た景勝岬。奇岩と荒波が織りなす積丹西岸の景勝地。"),
+    "道の駅 オスコイ！かもえない": ("osukoi_kamoenai_michinoeki", "神恵内村", "国道229号沿い、奇岩が連なる積丹半島西岸の道の駅。"),
+    "神岬漁港": ("kamizaki_port", "神恵内村", "神威岬南部の西海岸に位置する静かな漁港。"),
+    "濃昼キャンプ場": ("gokibiru_campground", "石狩市", "かつて陸の孤島と呼ばれた濃昼山道沿いに位置する自然豊かな海沿いのキャンプ場。"),
+    "目梨泊岬": ("menashidomari_cape", "枝幸町", "オホーツク海沿いに位置する景勝岬。荒々しい海岸美が広がる。"),
+    "音標岬": ("otoineppu_cape", "雄武町", "オホーツク海に小さく突き出た岬。オホーツクライン沿いの景勝地。"),
+    "道の駅 うとろ・シリエトク": ("utoro_shirietoku_michinoeki", "斜里町", "知床観光の拠点となる大型道の駅。知床世界遺産センターに隣接する。"),
+    "ポロマイ岬": ("poromai_cape", "小樽市", "小樽市塩谷海岸の奇岩断崖が続く景勝岬。"),
+    "小樽駅": ("otaru_station", "小樽市", "JR函館本線の主要駅。レトロなランプが灯る小樽観光の玄関口。"),
+    "小樽築港駅": ("otaru_chikkou_station", "小樽市", "JR函館本線の駅。小樽港ウォーターフロントの拠点駅。"),
+    "発寒中央駅": ("hassamu_chuo_station", "札幌市西区", "JR函館本線の駅。札幌市西区の住宅街に位置する。"),
+    "丘珠空港飛行場灯台": ("okadama_airport_lighthouse", "札幌市東区", "札幌丘珠空港の航空路を照らす飛行場灯台。"),
+    "ロイズタウン駅": ("roystown_station", "当別町", "JR札沼線（学園都市線）の駅。ロイズカカオ＆チョコレートタウンの最寄り駅。"),
+    "落部駅": ("otoshibe_station", "八雲町", "JR函館本線の駅。噴火湾沿いの落部集落に位置する。"),
+    "山越駅": ("yamakoshi_station", "八雲町", "JR函館本線の駅。日本最北の関所跡「山越内関所」の最寄り駅。"),
+    "石倉漁港": ("ishikura_port", "森町", "内浦湾に面する静かな漁港。"),
+    "遊食広場ニヤマオートキャンプ場": ("niyama_autocamp", "七飯町", "仁山高原に広がる自然豊かなオートキャンプ場。"),
+    "fun Garden りも キャンプ場": ("fun_garden_rimo_campground", "森町", "駒ヶ岳山麓に位置するプライベート感あふれるキャンプ場。"),
+    "女満別湖畔公園野営場": ("memanbetsu_kohan_park_campground", "大空町", "網走湖畔の自然公園に整備された野営場。"),
+    "止別駅": ("yamubetsu_station", "小清水町", "JR釧網本線の駅。駅舎内に名物ラーメン店が入居する人気の無人駅。"),
+    "みどり工房しゃり　そよかぜキャンプ場": ("soyokaze_campground", "斜里町", "斜里市街近く、斜里岳の雄大な姿を望む広々としたキャンプ場。"),
+    "プユニ岬": ("puyuni_cape", "斜里町", "知床半島のオホーツク海沿いに位置する絶景岬。流氷観察の好ポイント。"),
 }
 
 
@@ -827,7 +851,9 @@ def main():
                 if name in LANDMARK_METADATA:
                     cid, muni, desc = LANDMARK_METADATA[name]
                 else:
-                    cid = re.sub(r"[^a-z0-9_]+", "", name.lower()) or f"anchor_{i}"
+                    import hashlib
+                    hash_slug = hashlib.sha256(name.encode("utf-8")).hexdigest()[:8]
+                    cid = re.sub(r"[^a-z0-9_]+", "", name.lower()) or f"anchor_{hash_slug}"
                     muni = c["municipality"] or a["municipality"]
                     desc = c["description"]
 

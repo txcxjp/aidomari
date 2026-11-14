@@ -10,9 +10,9 @@ class HokkaidoAct1RouteTest {
 
     @Test
     fun route_hasExactCuratedNodes() {
-        assertEquals(110, HokkaidoAct1Route.totalNodes)
-        assertEquals(110, HokkaidoAct1Route.routeNodes.size)
-        assertEquals(109, HokkaidoAct1Route.maxStepIndex)
+        assertEquals(141, HokkaidoAct1Route.totalNodes)
+        assertEquals(141, HokkaidoAct1Route.routeNodes.size)
+        assertEquals(140, HokkaidoAct1Route.maxStepIndex)
     }
 
     @Test
@@ -32,7 +32,7 @@ class HokkaidoAct1RouteTest {
     fun goalNode_isAidomari() {
         val goalNode = HokkaidoAct1Route.goalNode
         assertEquals("aidomari_bridge", goalNode.id)
-        assertEquals(109, goalNode.stepIndex)
+        assertEquals(140, goalNode.stepIndex)
         assertEquals("相泊橋", goalNode.name)
         assertEquals("羅臼町", goalNode.municipality)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
