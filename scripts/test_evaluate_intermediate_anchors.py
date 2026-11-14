@@ -15,6 +15,7 @@ from evaluate_intermediate_anchors import (
     evaluate_intervals,
     haversine,
     is_authorized_landmark,
+    is_pocket_park,
     load_authoritative_candidates,
     load_route_anchors,
     project_to_segment,
@@ -108,10 +109,41 @@ class TestLandmarkFilter(unittest.TestCase):
             "国道229号",
             "道道106号",
             "ab",
+            "山頂展望台まで1.5km",
+            "登別温泉園地案内図",
+            "遊歩道入口の看板",
         ]
         for name in invalid_names:
             self.assertFalse(
                 is_authorized_landmark(name), f"Should be rejected: {name}"
+            )
+
+    def test_pocket_park_identification(self):
+        """住宅街のポケットパーク・小規模児童公園と大規模公園の識別テスト"""
+        pocket_names = [
+            "日乃出児童遊園地",
+            "入船児童公園",
+            "青葉町なかよし公園",
+            "もみじ台ちびっこ公園",
+            "農本第一公園",
+            "上篠路あゆみ第2公園",
+        ]
+        for name in pocket_names:
+            self.assertTrue(
+                is_pocket_park(name), f"Should be identified as pocket park: {name}"
+            )
+
+        major_names = [
+            "滝野すずらん丘陵公園",
+            "大通公園",
+            "モエレ沼公園",
+            "三ツ橋公園",
+            "稚内森林公園キャンプ場",
+            "野幌森林公園",
+        ]
+        for name in major_names:
+            self.assertFalse(
+                is_pocket_park(name), f"Should NOT be identified as pocket park: {name}"
             )
 
 
@@ -213,10 +245,20 @@ class TestOverallSelectionIntegrity(unittest.TestCase):
             c = entry["candidate"]
             self.assertTrue(is_authorized_landmark(c["name"]))
 
-    def test_convergence_reached_for_current_route(self):
-        # 現在の177アンカーで完全収束（新規追加候補0）していることの検証
+    def test_pocket_parks_assigned_weight_one(self):
+        # 住宅街のポケットパークが除外されず weight=1 で登録されていることを検証
+        pocket_cands = [c for c in self.candidates if is_pocket_park(c["name"])]
+        self.assertGreater(len(pocket_cands), 0)
+        for c in pocket_cands:
+            self.assertEqual(c["weight"], 1)
+
+    def test_convergence_reached_for_legacy_dataset(self):
+        # export.geojson（従来データセット）基準で177アンカーが完全収束（新規追加候補0）していることの検証
+        legacy_candidates = load_authoritative_candidates(
+            self.notes_dir, osm_filename="export.geojson"
+        )
         assigned, _ = evaluate_intervals(
-            self.anchors, self.candidates, self.poly
+            self.anchors, legacy_candidates, self.poly
         )
         self.assertEqual(len(assigned), 0)
 

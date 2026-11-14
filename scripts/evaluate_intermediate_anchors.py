@@ -143,11 +143,34 @@ def is_facility_duplicate(name1: str, name2: str) -> bool:
     return False
 
 
+# 案内標識・登山道ポスト・看板の除外パターン
+SIGNPOST_RE = re.compile(r'(まで[0-9.]+[kKmM]|案内板|案内図|看板|標柱|標識|インフォメーション)')
+
+# 住宅街のポケットパーク・小規模児童公園の判定
+MAJOR_PARK_EXCEPTIONS = re.compile(
+    r'(国営|道立|国立|総合公園|運動公園|森林公園|海浜公園|自然公園|記念公園|丘陵公園|交通公園|歴史公園|親水公園)'
+)
+POCKET_PARK_INDICATORS = re.compile(
+    r'(ちびっこ|児童公園|児童遊園|幼児公園|幼児遊園|ポケットパーク|街区公園|'
+    r'第[0-9一二三四五六七八九十]+公園|[0-9]+号公園|[0-9]+丁目公園|'
+    r'なかよし公園|わんぱく公園|こども公園)'
+)
+
+
+def is_pocket_park(name: str) -> bool:
+    """住宅街のポケットパーク・小規模街区公園・児童遊園を判定する。"""
+    if MAJOR_PARK_EXCEPTIONS.search(name):
+        return False
+    return bool(POCKET_PARK_INDICATORS.search(name))
+
+
 def is_authorized_landmark(name: str) -> bool:
     name = name.strip()
     if len(name) < 3:
         return False
     if name in GENERIC_NAMES:
+        return False
+    if SIGNPOST_RE.search(name):
         return False
     if (
         name.startswith("大字")
@@ -209,7 +232,7 @@ def load_route_anchors(route_kt_path: str):
     return anchors
 
 
-def load_authoritative_candidates(notes_dir: str):
+def load_authoritative_candidates(notes_dir: str, osm_filename: str = None):
     """notes/ ディレクトリ内の公的 GeoJSON から信頼できるランドマーク候補をロードする。"""
     cands = []
 
@@ -288,38 +311,57 @@ def load_authoritative_candidates(notes_dir: str):
                     }
                 )
 
-    # 4. OpenStreetMap 実地スポット (export.geojson)
-    osm_path = os.path.join(notes_dir, "export.geojson")
+    # 4. OpenStreetMap 実地スポット (hokkaido_landmarks.geojson 優先、無ければ export.geojson)
+    if osm_filename:
+        osm_path = os.path.join(notes_dir, osm_filename)
+    else:
+        new_osm_path = os.path.join(notes_dir, "hokkaido_landmarks.geojson")
+        legacy_osm_path = os.path.join(notes_dir, "export.geojson")
+        osm_path = new_osm_path if os.path.exists(new_osm_path) else legacy_osm_path
+
     if os.path.exists(osm_path):
         with open(osm_path, "r", encoding="utf-8") as f:
             osm_data = json.load(f)
         for feat in osm_data.get("features", []):
-            name = feat.get("properties", {}).get("name", "").strip()
+            props = feat.get("properties", {})
+            name = props.get("name", "").strip()
+            # セミコロン区切り（例: 岩尾温泉;あったま〜る）の整形
+            name = name.replace(";", " ").strip()
             if not name or not is_authorized_landmark(name):
                 continue
             coords = feat.get("geometry", {}).get("coordinates", [])
             if not coords:
                 continue
-            cat = "その他"
-            w = 70
-            if "漁港" in name:
-                cat = "漁港"
-                w = 30
-            elif any(
-                k in name for k in ["岬", "灯台", "展望台", "展望所", "花園", "原生花園"]
-            ):
-                cat = "景勝地"
-                w = 90
-            elif any(k in name for k in ["温泉", "キャンプ", "野営場"]):
-                cat = "温泉・キャンプ"
-                w = 80
-            elif any(k in name for k in ["公園", "港", "モニュメント", "碑"]):
-                cat = "公園・施設"
-                w = 75
+
+            cat = props.get("category")
+            w = props.get("weight")
+            if not cat or not w:
+                cat = "その他"
+                w = 70
+                if "漁港" in name:
+                    cat = "漁港"
+                    w = 30
+                elif any(
+                    k in name for k in ["岬", "灯台", "展望台", "展望所", "花園", "原生花園"]
+                ):
+                    cat = "景勝地"
+                    w = 90
+                elif any(k in name for k in ["温泉", "キャンプ", "野営場"]):
+                    cat = "温泉・キャンプ"
+                    w = 80
+                elif any(k in name for k in ["公園", "港", "モニュメント", "碑"]):
+                    cat = "公園・施設"
+                    w = 75
+
+            # 住宅街のポケットパーク（街区公園・児童公園等）は除外せず重み1点として登録
+            if is_pocket_park(name):
+                w = 1
+
+            muni = props.get("municipality", "")
             cands.append(
                 {
                     "name": name,
-                    "municipality": "",
+                    "municipality": muni,
                     "lon": coords[0],
                     "lat": coords[1],
                     "category": cat,
