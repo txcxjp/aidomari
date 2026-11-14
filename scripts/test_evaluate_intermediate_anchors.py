@@ -311,17 +311,14 @@ class TestOverallSelectionIntegrity(unittest.TestCase):
                         f"Duplicate roadside station found within {d*1000:.0f}m: '{r1['name']}' vs '{r2['name']}'"
                     )
 
-    def test_convergence_reached_for_legacy_dataset(self):
-        # export.geojson（従来データセット）基準で177アンカーが完全収束（新規追加候補0）していることの検証
-        if len(self.anchors) < 177:
+    def test_convergence_reached_for_authoritative_dataset(self):
+        """公的ハイブリッドデータセット（hokkaido_landmarks.geojson + 国土数値情報）基準で完全収束（新規追加候補0）していることの検証"""
+        if len(self.anchors) < 300:
             self.skipTest(
-                f"Convergence test requires fully expanded route (>=177 anchors), current is {len(self.anchors)}"
+                f"Convergence test requires fully expanded route (>=300 anchors), current is {len(self.anchors)}"
             )
-        legacy_candidates = load_authoritative_candidates(
-            self.notes_dir, osm_filename="export.geojson"
-        )
         assigned, _ = evaluate_intervals(
-            self.anchors, legacy_candidates, self.poly
+            self.anchors, self.candidates, self.poly
         )
         self.assertEqual(len(assigned), 0)
 
