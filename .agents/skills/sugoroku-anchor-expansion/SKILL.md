@@ -60,6 +60,26 @@ description: >-
 
 ---
 
+## 運用ワークフローとタグ基準点
+
+### 基準タグ
+- `route-v0-empty`: アンカー0個の完全白紙状態（コミット `ecb6864`）
+- `route-v1-initial-41`: ユーザー指定の初期41アンカー（Rank 1）確定状態（コミット `4feb080`）
+
+### ルール変更時のリビルド手順（確定ワークフロー）
+選定ルールや幾何アルゴリズム、重みづけに変更が生じた場合は、既存の拡張ノードの上に継ぎ足すのではなく、**必ず初期アンカー基準タグに戻ってクリーンに再構築**します：
+
+1. **初期アンカー基準タグからの新ブランチ作成**:
+   ```bash
+   git checkout route-v1-initial-41 -b feat/issue-68-clean-anchor-rebuild-vX
+   ```
+2. **ルール・評価プログラム・スキルの変更コミット**:
+   `scripts/evaluate_intermediate_anchors.py`、`test_evaluate_intermediate_anchors.py`、`SKILL.md` を更新してコミット。
+3. **ラウンド制による順次拡張**:
+   Round 1（Rank 2）、Round 2（Rank 3）……と段階的に `--apply` してテストを通過させ、各ラウンドごとにコミット。
+
+---
+
 ## 実行手順とコマンド
 
 ### 1. 評価スクリプトのドライラン
