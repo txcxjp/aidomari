@@ -466,6 +466,21 @@ fun SugorokuMapContent(
                 }
             }
 
+            // Bottom-Left Hokkaido Overall Mini-Map
+            HokkaidoMiniMap(
+                currentStepIndex = currentStep,
+                totalSteps = allNodes.size,
+                hokkaidoPaths = hokkaidoPaths,
+                lakesPath = lakesPath,
+                highwayPaths = cachedHighwayPaths,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 16.dp, bottom = 20.dp),
+                onMiniMapClick = {
+                    centerOnStep(currentStep)
+                },
+            )
+
             // Right Bottom Controls (Re-center & Zoom adjustment)
             Column(
                 modifier = Modifier
