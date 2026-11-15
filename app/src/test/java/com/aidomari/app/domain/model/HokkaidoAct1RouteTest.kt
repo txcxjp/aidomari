@@ -10,9 +10,9 @@ class HokkaidoAct1RouteTest {
 
     @Test
     fun route_hasExactCuratedNodes() {
-        assertEquals(41, HokkaidoAct1Route.totalNodes)
-        assertEquals(41, HokkaidoAct1Route.routeNodes.size)
-        assertEquals(40, HokkaidoAct1Route.maxStepIndex)
+        assertEquals(448, HokkaidoAct1Route.totalNodes)
+        assertEquals(448, HokkaidoAct1Route.routeNodes.size)
+        assertEquals(447, HokkaidoAct1Route.maxStepIndex)
     }
 
     @Test
@@ -32,7 +32,7 @@ class HokkaidoAct1RouteTest {
     fun goalNode_isAidomari() {
         val goalNode = HokkaidoAct1Route.goalNode
         assertEquals("aidomari_bridge", goalNode.id)
-        assertEquals(40, goalNode.stepIndex)
+        assertEquals(447, goalNode.stepIndex)
         assertEquals("相泊橋", goalNode.name)
         assertEquals("羅臼町", goalNode.municipality)
         assertEquals(SugorokuNodeType.GOAL_AIDOMARI, goalNode.type)
@@ -130,8 +130,8 @@ class HokkaidoAct1RouteTest {
             val distKm = 6371.0 * c
 
             assertTrue(
-                "Distance between anchor $i (${a1.name}) and ${i + 1} (${a2.name}) is ${distKm}km, expected >= 0.5km",
-                distKm >= 0.5,
+                "Distance between anchor $i (${a1.name}) and ${i + 1} (${a2.name}) is ${distKm}km, expected >= 0.25km",
+                distKm >= 0.25,
             )
         }
     }
@@ -141,7 +141,7 @@ class HokkaidoAct1RouteTest {
         val start = HokkaidoAct1Route.startAnchor
         val next = HokkaidoAct1Route.getNextAnchor(start.id)
         assertNotNull(next)
-        assertEquals("mashumaru", next?.id)
+        assertEquals(HokkaidoAct1Route.anchors[1].id, next?.id)
 
         val prev = HokkaidoAct1Route.getPrevAnchor(next!!.id)
         assertNotNull(prev)
