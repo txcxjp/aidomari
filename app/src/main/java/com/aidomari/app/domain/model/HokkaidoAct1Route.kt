@@ -18,7 +18,7 @@ data class RouteAnchor(
  */
 object HokkaidoAct1Route {
 
-    /** ユーザー指定の公式一次測地データに基づく正規アンカーポイント（全444箇所） */
+    /** ユーザー指定の公式一次測地データに基づく正規アンカーポイント（全448箇所） */
     val anchors: List<RouteAnchor> = listOf(
         RouteAnchor(id = "hakodateyama", rank = 1, name = "函館山", municipality = "函館市", lon = 140.70553624563212, lat = 41.744766784111675, x = 184.31f, y = 345.46f, description = "100万ドルの夜景で名高い函館山。津軽海峡と函館市街を一望する山頂展望台。"),
         RouteAnchor(id = "monument_of_yanagawa_kumakichi", rank = 4, name = "柳川熊吉翁の碑", municipality = "函館市", lon = 140.709009, lat = 41.7513323, x = 184.53f, y = 344.90f, description = "函館市に位置する柳川熊吉翁の碑。"),
@@ -118,6 +118,7 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "anchor_50650bcf", rank = 3, name = "道の駅いわない", municipality = "岩内町", lon = 140.5168006, lat = 42.983441, x = 172.26f, y = 238.43f, description = "岩内町に位置する道の駅いわない。"),
         RouteAnchor(id = "anchor_f856369c", rank = 6, name = "旭公園", municipality = "岩内町", lon = 140.5199149, lat = 42.9815481, x = 172.46f, y = 238.59f, description = "岩内町に位置する旭公園。"),
         RouteAnchor(id = "anchor_cc5bf135", rank = 6, name = "みずしま公園", municipality = "岩内町", lon = 140.5225938, lat = 42.9838508, x = 172.63f, y = 238.39f, description = "岩内町に位置するみずしま公園。"),
+        RouteAnchor(id = "anchor_befa45aa", rank = 6, name = "東山公園", municipality = "岩内町", lon = 140.528125, lat = 42.9847994, x = 172.98f, y = 238.31f, description = "岩内町に位置する東山公園。"),
         RouteAnchor(id = "anchor_8c8609e3", rank = 6, name = "発美公園", municipality = "共和町", lon = 140.5336789, lat = 42.9815461, x = 173.34f, y = 238.59f, description = "共和町に位置する発美公園。"),
         RouteAnchor(id = "oikomi_no_3_bridge", rank = 6, name = "老古美3号橋", municipality = "共和町", lon = 140.5345757, lat = 42.9772586, x = 173.40f, y = 238.97f, description = "共和町に位置する老古美3号橋。"),
         RouteAnchor(id = "nakaoikomi_bridge", rank = 5, name = "中老古美橋", municipality = "共和町", lon = 140.5421061, lat = 42.9774963, x = 173.88f, y = 238.95f, description = "共和町に位置する中老古美橋。"),
@@ -236,10 +237,12 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "anchor_ffe9d545", rank = 6, name = "北四条橋", municipality = "札幌市", lon = 141.3557859, lat = 43.0662463, x = 225.82f, y = 231.20f, description = "札幌市に位置する北四条橋。"),
         RouteAnchor(id = "anchor_261aaa18", rank = 6, name = "JRタワー展望台 T38", municipality = "札幌市", lon = 141.3525836, lat = 43.0682157, x = 225.62f, y = 231.02f, description = "札幌市に位置するJRタワー展望台 T38。"),
         RouteAnchor(id = "anchor_83df60a6", rank = 6, name = "北七条橋", municipality = "札幌市", lon = 141.3549044, lat = 43.0697202, x = 225.77f, y = 230.89f, description = "札幌市に位置する北七条橋。"),
+        RouteAnchor(id = "anchor_078cef0a", rank = 6, name = "北9条橋", municipality = "札幌市", lon = 141.3542631, lat = 43.0719661, x = 225.73f, y = 230.70f, description = "札幌市に位置する北9条橋。"),
         RouteAnchor(id = "kita_11_jo_kotobuki_park", rank = 6, name = "北11条ことぶき公園", municipality = "札幌市", lon = 141.3594875, lat = 43.0758838, x = 226.06f, y = 230.35f, description = "札幌市に位置する北11条ことぶき公園。"),
         RouteAnchor(id = "higashi_kuyakusho_mae", rank = 6, name = "東区役所前駅", municipality = "札幌市", lon = 141.3653588, lat = 43.078262, x = 226.43f, y = 230.15f, description = "札幌市に位置する東区役所前駅。"),
         RouteAnchor(id = "kita_13_jo_tamazono_park", rank = 6, name = "北13条たまぞの公園", municipality = "札幌市", lon = 141.3719722, lat = 43.0802058, x = 226.86f, y = 229.98f, description = "札幌市に位置する北13条たまぞの公園。"),
         RouteAnchor(id = "kanjo_dori_higashi", rank = 5, name = "環状通東駅", municipality = "札幌市", lon = 141.3744736, lat = 43.0824253, x = 227.02f, y = 229.78f, description = "札幌市に位置する環状通東駅。"),
+        RouteAnchor(id = "megumi_park", rank = 6, name = "めぐみ公園", municipality = "札幌市", lon = 141.3746936, lat = 43.0861992, x = 227.03f, y = 229.45f, description = "札幌市に位置するめぐみ公園。"),
         RouteAnchor(id = "kusabue_park", rank = 6, name = "草笛公園", municipality = "札幌市", lon = 141.3774179, lat = 43.087828, x = 227.20f, y = 229.31f, description = "札幌市に位置する草笛公園。"),
         RouteAnchor(id = "asunaro_park", rank = 6, name = "あすなろ公園", municipality = "札幌市", lon = 141.379896, lat = 43.0892184, x = 227.36f, y = 229.19f, description = "札幌市に位置するあすなろ公園。"),
         RouteAnchor(id = "motomachi_park", rank = 6, name = "元町公園", municipality = "札幌市", lon = 141.3789951, lat = 43.0923398, x = 227.31f, y = 228.92f, description = "札幌市に位置する元町公園。"),
@@ -431,6 +434,7 @@ object HokkaidoAct1Route {
         RouteAnchor(id = "anchor_c95eabce", rank = 3, name = "道の駅はなやか小清水", municipality = "小清水町", lon = 144.4534935, lat = 43.933702, x = 423.59f, y = 154.85f, description = "小清水町に位置する道の駅はなやか小清水。"),
         RouteAnchor(id = "yamubetsu_station", rank = 6, name = "止別駅", municipality = "小清水町", lon = 144.5202015, lat = 43.9215087, x = 427.85f, y = 155.93f, description = "JR釧網本線の駅。駅舎内に名物ラーメン店が入居する人気の無人駅。"),
         RouteAnchor(id = "shari_onsen_yumotokan", rank = 6, name = "斜里温泉湯元館", municipality = "斜里町", lon = 144.6447895, lat = 43.9135729, x = 435.80f, y = 156.63f, description = "斜里町に位置する斜里温泉湯元館。"),
+        RouteAnchor(id = "seishun_bridge", rank = 6, name = "青春橋", municipality = "斜里町", lon = 144.6557745, lat = 43.9093984, x = 436.50f, y = 157.00f, description = "斜里町に位置する青春橋。"),
         RouteAnchor(id = "anchor_976210c6", rank = 6, name = "びんちゃん公園", municipality = "斜里町", lon = 144.6598637, lat = 43.9115493, x = 436.76f, y = 156.81f, description = "斜里町に位置するびんちゃん公園。"),
         RouteAnchor(id = "anchor_55cd48db", rank = 6, name = "グリーン温泉", municipality = "斜里町", lon = 144.6625072, lat = 43.9137634, x = 436.93f, y = 156.62f, description = "斜里町に位置するグリーン温泉。"),
         RouteAnchor(id = "anchor_7662dc95", rank = 5, name = "道の駅しゃり", municipality = "斜里町", lon = 144.6641462, lat = 43.9117935, x = 437.04f, y = 156.79f, description = "斜里町に位置する道の駅しゃり。"),
