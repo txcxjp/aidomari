@@ -58,6 +58,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -119,6 +120,13 @@ fun SugorokuMapContent(
     val teuriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.TEURI_D).toPath() }
     val yagishiriPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.YAGISHIRI_D).toPath() }
     val hokkaidoPaths = remember { listOf(mainlandPath, okushiriPath, rishiriPath, rebunPath, teuriPath, yagishiriPath) }
+
+    // Pre-parse official MLIT Hokkaido major inland lake paths
+    val lakesPath = remember {
+        PathParser().parsePathString(HokkaidoSvgPaths.LAKES_D).toPath().apply {
+            fillType = PathFillType.EvenOdd
+        }
+    }
 
     // Pre-load 34,000+ real GIS high-density highway network paths (built once in memory)
     val highDensityRoadSegments = remember(context) { HokkaidoRoadNetwork.getHighDensitySegments(context) }
@@ -340,10 +348,12 @@ fun SugorokuMapContent(
                     translate(panOffset.x, panOffset.y)
                     scale(zoomScale, zoomScale, Offset.Zero)
                 }) {
-                    // 1. Natural real Hokkaido geography traced directly from official Wikipedia SVG silhouette:
+                    // 1. Natural real Hokkaido geography traced directly from official GSI silhouette:
                     // Land interior is grass green, outside is calm blue sea, with realistic beach & wave coastline.
+                    // Inland major lakes (Saroma, Toya, Shikotsu, Kussharo, etc.) are carved out with blue lake water and sandy shores.
                     drawHokkaidoRealLandscape(
                         paths = hokkaidoPaths,
+                        lakesPath = lakesPath,
                         worldScale = HokkaidoBoardTrack.WORLD_SCALE,
                         density = density,
                     )
@@ -455,15 +465,6 @@ fun SugorokuMapContent(
                     }
                 }
             }
-
-            // Accurate Wikipedia-standard Hokkaido Silhouette Mini-map in Bottom-Left
-            HokkaidoMiniMap(
-                currentStepIndex = currentStep,
-                totalSteps = allNodes.size,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, bottom = 20.dp),
-            )
 
             // Right Bottom Controls (Re-center & Zoom adjustment)
             Column(
@@ -581,11 +582,13 @@ fun SugorokuMapContent(
 }
 
 /**
- * Draws real Hokkaido landmass traced directly from official Wikipedia SVG silhouette.
+ * Draws real Hokkaido landmass and inland lakes traced directly from official GSI and MLIT data.
  * Outer area remains ocean backdrop; inner paths become lush land with sand beach & coastal surf.
+ * Inland lakes are carved out with blue water, sandy beaches, wave foam, and coastline borders.
  */
 private fun DrawScope.drawHokkaidoRealLandscape(
     paths: List<Path>,
+    lakesPath: Path,
     worldScale: Float,
     density: Float,
 ) {
@@ -593,9 +596,11 @@ private fun DrawScope.drawHokkaidoRealLandscape(
     val beachColor = Color(0xFFFFE082) // Sandy beach
     val waveColor = Color(0xFFE1F5FE) // Shoreline surf
     val borderColor = Color(0xFF66BB6A) // Coastline contour
+    val lakeWaterColor = Color(0xFF81D4FA) // Calm blue ocean & lake water
 
     val scaleFactor = worldScale * density
     scale(scaleFactor, scaleFactor, pivot = Offset.Zero) {
+        // 1. Hokkaido landmasses
         paths.forEach { path ->
             // 1. Solid land polygon
             drawPath(path = path, color = landColor)
@@ -606,6 +611,16 @@ private fun DrawScope.drawHokkaidoRealLandscape(
             // 4. Clean coastline border
             drawPath(path = path, color = borderColor, style = Stroke(width = 0.8.dp.toPx() / scaleFactor))
         }
+
+        // 2. Major inland lakes
+        // Solid lake water polygon (carving out land)
+        drawPath(path = lakesPath, color = lakeWaterColor)
+        // Sand beach perimeter around lake shorelines
+        drawPath(path = lakesPath, color = beachColor, style = Stroke(width = 2.0.dp.toPx() / scaleFactor))
+        // Shoreline wave foam along lake shores
+        drawPath(path = lakesPath, color = waveColor, style = Stroke(width = 1.0.dp.toPx() / scaleFactor))
+        // Lake perimeter contour border
+        drawPath(path = lakesPath, color = borderColor, style = Stroke(width = 0.6.dp.toPx() / scaleFactor))
     }
 }
 
