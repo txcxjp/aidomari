@@ -626,69 +626,87 @@ private fun DrawScope.drawHokkaidoRealLandscape(
 
 /**
  * Draws the real highway network across Hokkaido directly on the landmass.
- * Over 34,000 real GIS points render authentic curved asphalt highways, borders, and centerlines.
+ * Uses two-pass layered rendering (all roadbeds first, then all asphalt surfaces)
+ * so that intersections, T-junctions, and connecting branches merge seamlessly
+ * without dark borders cutting across connecting road surfaces.
  */
 private fun DrawScope.drawHokkaidoRoadNetwork(
     highwayPaths: List<Pair<HighwaySegment, Path>>,
     zoomScale: Float,
 ) {
-    for ((segment, roadPath) in highwayPaths) {
-        if (segment.waypoints.size < 2) continue
+    if (highwayPaths.isEmpty()) return
 
-        // When zoomed out to wide prefecture view, draw crisp high-visibility lines
-        if (zoomScale < 0.05f) {
-            val strokeWidth = when (segment.category) {
+    val hierarchy = listOf(
+        HighwayCategory.PREFECTURAL_ROAD,
+        HighwayCategory.SCENIC_ROAD,
+        HighwayCategory.NATIONAL_HIGHWAY,
+    )
+
+    if (zoomScale < 0.05f) {
+        // Wide view: draw minor roads first, major highways on top for clean hierarchy
+        for (targetCat in hierarchy) {
+            val strokeWidth = when (targetCat) {
                 HighwayCategory.NATIONAL_HIGHWAY -> 2.5.dp.toPx() / zoomScale
                 HighwayCategory.SCENIC_ROAD -> 2.0.dp.toPx() / zoomScale
                 HighwayCategory.PREFECTURAL_ROAD -> 1.5.dp.toPx() / zoomScale
             }
-            val roadColor = when (segment.category) {
+            val roadColor = when (targetCat) {
                 HighwayCategory.NATIONAL_HIGHWAY -> Color(0xFF1565C0) // Crisp blue highway
                 HighwayCategory.SCENIC_ROAD -> Color(0xFF00897B) // Scenic teal
                 HighwayCategory.PREFECTURAL_ROAD -> Color(0xFF546E7A) // Slate grey
             }
-            drawPath(
-                path = roadPath,
-                color = roadColor,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
-            )
-        } else {
-            // Local / zoomed-in view: draw realistic asphalt highway with roadbed
-            val borderWidth = when (segment.category) {
+            val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            for ((segment, roadPath) in highwayPaths) {
+                if (segment.category == targetCat) {
+                    drawPath(path = roadPath, color = roadColor, style = stroke)
+                }
+            }
+        }
+    } else {
+        // Detailed view: Two-Pass Layered Rendering
+        // PASS 1: Draw all roadbeds/borders into a continuous dark base
+        for (targetCat in hierarchy) {
+            val borderWidth = when (targetCat) {
                 HighwayCategory.NATIONAL_HIGHWAY -> 16.dp.toPx()
                 HighwayCategory.SCENIC_ROAD -> 14.dp.toPx()
                 HighwayCategory.PREFECTURAL_ROAD -> 12.dp.toPx()
             }
-            val surfaceWidth = when (segment.category) {
+            val borderStroke = Stroke(width = borderWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            val borderColor = Color(0xFF37474F) // Dark slate roadbed
+            for ((segment, roadPath) in highwayPaths) {
+                if (segment.category == targetCat) {
+                    drawPath(path = roadPath, color = borderColor, style = borderStroke)
+                }
+            }
+        }
+
+        // PASS 2: Draw all asphalt surfaces seamlessly OVER all borders
+        for (targetCat in hierarchy) {
+            val surfaceWidth = when (targetCat) {
                 HighwayCategory.NATIONAL_HIGHWAY -> 12.dp.toPx()
                 HighwayCategory.SCENIC_ROAD -> 10.dp.toPx()
                 HighwayCategory.PREFECTURAL_ROAD -> 8.dp.toPx()
             }
+            val surfaceStroke = Stroke(width = surfaceWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            val surfaceColor = Color(0xFFCFD8DC) // Cool grey asphalt
+            for ((segment, roadPath) in highwayPaths) {
+                if (segment.category == targetCat) {
+                    drawPath(path = roadPath, color = surfaceColor, style = surfaceStroke)
+                }
+            }
+        }
 
-            // 1. Road bed / border
-            drawPath(
-                path = roadPath,
-                color = Color(0xFF37474F), // Dark slate roadbed
-                style = Stroke(width = borderWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
-            )
-            // 2. Clean asphalt surface
-            drawPath(
-                path = roadPath,
-                color = Color(0xFFCFD8DC), // Cool grey asphalt
-                style = Stroke(width = surfaceWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
-            )
-            // 3. Center line for National Highways
+        // PASS 3: Dashed centerlines for National Highways
+        val dashStroke = Stroke(
+            width = 1.5.dp.toPx(),
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx())),
+        )
+        val dashColor = Color.White.copy(alpha = 0.85f)
+        for ((segment, roadPath) in highwayPaths) {
             if (segment.category == HighwayCategory.NATIONAL_HIGHWAY) {
-                drawPath(
-                    path = roadPath,
-                    color = Color.White.copy(alpha = 0.85f),
-                    style = Stroke(
-                        width = 1.5.dp.toPx(),
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx())),
-                    ),
-                )
+                drawPath(path = roadPath, color = dashColor, style = dashStroke)
             }
         }
     }
