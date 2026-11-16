@@ -214,21 +214,27 @@ def main():
     main_comp = set(components[0])
     print(f"Main component contains {len(main_comp)} nodes ({len(main_comp)/len(extractor.nodes_coords)*100:.1f}%).")
 
-    # 2. Snap all 448 Act 1 anchors to Main Connected Component
-    main_node_ids = list(main_comp)
-    main_pts = [Point(extractor.nodes_coords[nid][0], extractor.nodes_coords[nid][1]) for nid in main_node_ids]
-    main_tree = STRtree(main_pts)
+    # 2. Snap all 448 Act 1 anchors to Main Connected Component (Surface Roads Only)
+    # Exclude expressways (motorway/motorway_link) and isolated PA parking aisles (service/track)
+    # so anchors snap to public surface roads (trunk, primary, secondary, tertiary, unclassified, residential)
+    public_surface_tags = {'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential'}
+    surface_node_ids = [
+        nid for nid in main_comp
+        if any(h in public_surface_tags for _, h in extractor.graph[nid].values())
+    ]
+    surface_pts = [Point(extractor.nodes_coords[nid][0], extractor.nodes_coords[nid][1]) for nid in surface_node_ids]
+    surface_tree = STRtree(surface_pts)
 
     snapped_anchors = []
     for a in anchors:
         apt = Point(a['lon'], a['lat'])
-        idx = main_tree.nearest(apt)
-        nid = main_node_ids[idx]
+        idx = surface_tree.nearest(apt)
+        nid = surface_node_ids[idx]
         c = extractor.nodes_coords[nid]
         d = haversine((a['lon'], a['lat']), c)
         snapped_anchors.append((a, nid, c, d))
 
-    print(f"Anchors snapped to main road network. Max snap dist: {max(x[3] for x in snapped_anchors):.1f}m, Avg: {sum(x[3] for x in snapped_anchors)/len(snapped_anchors):.1f}m")
+    print(f"Anchors snapped to surface road network. Max snap dist: {max(x[3] for x in snapped_anchors):.1f}m, Avg: {sum(x[3] for x in snapped_anchors)/len(snapped_anchors):.1f}m")
 
     # 3. A* Routing for all 447 legs
     def a_star(start_id, goal_id):
