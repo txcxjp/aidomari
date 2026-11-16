@@ -84,7 +84,8 @@ class HokkaidoRoadExtractor(osmium.SimpleHandler):
         self.mainlines = []
         self.links = []
         self.secondaries = []
-        self.connectors = []
+        self.tertiaries = []
+        self.local_access = []
 
     def way(self, w):
         h = w.tags.get('highway')
@@ -94,13 +95,14 @@ class HokkaidoRoadExtractor(osmium.SimpleHandler):
         is_mainline = h in ('motorway', 'trunk', 'primary')
         is_link = h in ('motorway_link', 'trunk_link', 'primary_link', 'secondary_link')
         is_secondary = h in ('secondary',)
-        is_connector = h in ('tertiary', 'tertiary_link')
+        is_tertiary = h in ('tertiary', 'tertiary_link')
+        is_local = h in ('unclassified',)
 
-        if not (is_mainline or is_link or is_secondary or is_connector):
+        if not (is_mainline or is_link or is_secondary or is_tertiary or is_local):
             return
 
         try:
-            coords = [(n.location.lon, n.location.lat) for n in w.nodes]
+            coords = [(round(n.location.lon, 6), round(n.location.lat, 6)) for n in w.nodes]
             if len(coords) < 2:
                 return
 
@@ -114,9 +116,13 @@ class HokkaidoRoadExtractor(osmium.SimpleHandler):
                 self.links.append((w.id, h, ref, name, ls))
             elif is_secondary:
                 self.secondaries.append((w.id, h, ref, name, ls))
-            elif is_connector:
+            elif is_tertiary:
+                # Include all tertiary roads across Hokkaido without arbitrary distance cuts
+                self.tertiaries.append((w.id, h, ref, name, ls))
+            elif is_local:
+                # Include unclassified local roads near anchors for summit/facility access
                 if len(self.anchor_tree.query(ls)) > 0:
-                    self.connectors.append((w.id, h, ref, name, ls))
+                    self.local_access.append((w.id, h, ref, name, ls))
         except Exception:
             pass
 
@@ -154,7 +160,7 @@ def main():
     t0 = time.time()
     anchors = load_anchors()
     anchor_points = [Point(a['lon'], a['lat']) for a in anchors]
-    anchor_tree = STRtree([p.buffer(0.015) for p in anchor_points]) # ~1.5km buffer around each anchor
+    anchor_tree = STRtree([p.buffer(0.025) for p in anchor_points]) # ~2.5km buffer around each anchor for local access
 
     print(f"Extracting roads from {PBF_PATH}...")
     extractor = HokkaidoRoadExtractor(anchor_tree)
@@ -164,7 +170,8 @@ def main():
     print(f"  Mainlines: {len(extractor.mainlines)}")
     print(f"  Links/Ramps: {len(extractor.links)}")
     print(f"  Secondaries: {len(extractor.secondaries)}")
-    print(f"  Connectors near anchors: {len(extractor.connectors)}")
+    print(f"  Tertiaries (all Hokkaido, including Esanuka): {len(extractor.tertiaries)}")
+    print(f"  Local Access near anchors: {len(extractor.local_access)}")
 
     # 1. Deduplicate & collapse parallel dual carriageways for Mainlines (上下線の一本化)
     print("Normalizing mainline dual carriageways into single canonical centerlines...")
@@ -245,16 +252,27 @@ def main():
         final_links = link_lines
     print(f"Merged connector ramps: {len(final_links)} segments.")
 
-    # 4. Process Anchor Connectors
-    connector_lines = [ls for _, _, _, _, ls in extractor.connectors]
+    # 4. Process Tertiaries across Hokkaido (including full unbroken Esanuka Line)
+    print("Processing tertiary municipal/connector roads across Hokkaido...")
+    tert_lines = [ls for _, _, _, _, ls in extractor.tertiaries]
     try:
-        merged_conns = linemerge(connector_lines)
-        final_connectors = list(merged_conns.geoms) if isinstance(merged_conns, MultiLineString) else [merged_conns]
+        merged_tertiary = linemerge(tert_lines)
+        final_tertiaries = list(merged_tertiary.geoms) if isinstance(merged_tertiary, MultiLineString) else [merged_tertiary]
     except Exception:
-        final_connectors = connector_lines
-    print(f"Merged anchor connectors: {len(final_connectors)} segments.")
+        final_tertiaries = tert_lines
+    print(f"Merged tertiary roads: {len(final_tertiaries)} continuous segments.")
 
-    # 5. Assemble all candidate road features with category assignment:
+    # 5. Process Local Access roads near anchors (unclassified roads for mountain viewpoints/facilities)
+    print("Processing local anchor access roads...")
+    access_lines = [ls for _, _, _, _, ls in extractor.local_access]
+    try:
+        merged_access = linemerge(access_lines)
+        final_access = list(merged_access.geoms) if isinstance(merged_access, MultiLineString) else [merged_access]
+    except Exception:
+        final_access = access_lines
+    print(f"Merged local anchor access roads: {len(final_access)} segments.")
+
+    # 6. Assemble all candidate road features with category assignment:
     # 0 = NATIONAL_HIGHWAY (Crisp single dashed centerline, wide surface)
     # 1 = PREFECTURAL_ROAD / LOCAL / CONNECTOR (Smooth surface, NO dashed centerline)
     # 2 = SCENIC_ROAD (Teal highlight)
@@ -263,7 +281,7 @@ def main():
     # Add mainlines
     for rk, ls in final_mainlines:
         clean_ref = str(rk).replace(' ', '').split(';')[0]
-        if clean_ref in SCENIC_REFS or any(k in str(rk) for k in ('オロロン', '知床', '宗谷サンセット', 'エサヌカ')):
+        if clean_ref in SCENIC_REFS or any(k in str(rk) for k in ('オロロン', '知床', '宗谷サンセット')):
             cat = 2
         else:
             cat = 0
@@ -272,7 +290,7 @@ def main():
     # Add secondaries
     for rk, ls in collapsed_secondaries:
         clean_ref = str(rk).replace(' ', '').split(';')[0]
-        if clean_ref in SCENIC_REFS or any(k in str(rk) for k in ('オロロン', '知床', '宗谷サンセット', 'エサヌカ')):
+        if clean_ref in SCENIC_REFS or any(k in str(rk) for k in ('オロロン', '知床', '宗谷サンセット')):
             cat = 2
         else:
             cat = 1
@@ -282,25 +300,23 @@ def main():
     for i, ls in enumerate(final_links):
         all_roads.append((f"ramp_{i}", "ランプ路", 1, ls))
 
-    # Add connectors as cat 1
-    for i, ls in enumerate(final_connectors):
-        all_roads.append((f"conn_{i}", "連絡道路", 1, ls))
+    # Add tertiaries (detect Esanuka Line and scenic routes from OSM)
+    for i, ls in enumerate(final_tertiaries):
+        coords = list(ls.coords)
+        is_esanuka = (
+            any(142.23 <= c[0] <= 142.36 and 45.14 <= c[1] <= 45.28 for c in coords)
+            and ls.length * 111.0 > 8.0 # Long unbroken coastal scenic line
+        )
+        if is_esanuka:
+            all_roads.append(("esanuka_osm", "村道 エサヌカ線", 2, ls))
+        else:
+            all_roads.append((f"tert_{i}", "一般道", 1, ls))
 
-    # Add Esanuka line
-    esanuka_coords = [
-        (142.3061, 45.1954),
-        (142.2980, 45.2050),
-        (142.2850, 45.2200),
-        (142.2680, 45.2400),
-        (142.2510, 45.2550),
-        (142.2371, 45.2626),
-        (142.2150, 45.2800),
-        (142.1900, 45.2950),
-        (142.1700, 45.3100),
-    ]
-    all_roads.append(("esanuka", "猿払村道浜猿払エサヌカ線", 2, LineString(esanuka_coords)))
+    # Add local access near anchors as cat 1
+    for i, ls in enumerate(final_access):
+        all_roads.append((f"acc_{i}", "地域連絡路", 1, ls))
 
-    # 6. Add Anchor Spurs: direct connection from each anchor to the nearest road network edge
+    # 7. Add Anchor Spurs: direct connection from each anchor to the nearest road network edge
     all_raw_lines = [r[3] for r in all_roads]
     network_tree = STRtree(all_raw_lines)
     spur_count = 0
@@ -311,7 +327,7 @@ def main():
         nearest_line = all_raw_lines[n_idx]
         dist_m = apt.distance(nearest_line) * 111000.0
 
-        if 20.0 < dist_m < 1200.0:
+        if 20.0 < dist_m < 1500.0:
             proj_pt = nearest_line.interpolate(nearest_line.project(apt))
             spur_ls = LineString([(proj_pt.x, proj_pt.y), (apt.x, apt.y)])
             all_roads.append((f"spur_{a['id']}", f"{a['name']}連絡路", 1, spur_ls))
@@ -319,7 +335,7 @@ def main():
 
     print(f"Added {spur_count} spur road connections for spot anchors.")
 
-    # 7. Merge contiguous lines within the same (category, route)
+    # 8. Merge contiguous lines within the same (category, route)
     grouped = {}
     for rid, name, cat, ls in all_roads:
         key = (cat, name)
