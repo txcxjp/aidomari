@@ -73,7 +73,7 @@ fun HokkaidoMiniMap(
             .background(Color(0xFFE8F5E9).copy(alpha = 0.94f))
             .border(1.5.dp, Color(0xFF81C784), RoundedCornerShape(12.dp))
             .then(
-                if (onMiniMapClick != null) Modifier.clickable { onMiniMapClick() } else Modifier
+                if (onMiniMapClick != null) Modifier.clickable { onMiniMapClick() } else Modifier,
             )
             .padding(4.dp)
             .size(width = 114.dp, height = 76.dp), // ~1.50 : 1 aspect ratio matching Hokkaido viewBox
