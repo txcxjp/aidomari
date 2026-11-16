@@ -11,8 +11,9 @@ import java.nio.ByteOrder
  */
 enum class HighwayCategory {
     NATIONAL_HIGHWAY, // 国道（主要幹線）
-    PREFECTURAL_ROAD, // 主要道道
+    PREFECTURAL_ROAD, // 主要道道・一般道道・地域連絡路
     SCENIC_ROAD, // 絶景・観光主要ルート（知床横断道路等）
+    TRAVEL_ROUTE, // すごろく移動ルート（プレイヤー進行路）
 }
 
 /**
@@ -91,7 +92,8 @@ object HokkaidoRoadNetwork {
             val category = when (catByte) {
                 0 -> HighwayCategory.NATIONAL_HIGHWAY
                 1 -> HighwayCategory.PREFECTURAL_ROAD
-                else -> HighwayCategory.SCENIC_ROAD
+                2 -> HighwayCategory.SCENIC_ROAD
+                else -> HighwayCategory.TRAVEL_ROUTE
             }
 
             val numPoints = buffer.int

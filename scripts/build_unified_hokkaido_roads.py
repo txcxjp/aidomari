@@ -1,59 +1,65 @@
 #!/usr/bin/env python3
 """
-Build Unified Hokkaido Road Network from official OSM PBF:
-1. Normalizes dual carriageways (上下線) and parallel lanes into single canonical centerlines per corridor.
-2. Separates mainline highways (cat 0, with crisp single dashed centerline) from ramps/links (cat 1, connector surfaces without dashes).
-3. Guarantees 100% road coverage connecting all 448 Act 1 anchors (including local spur access).
-4. Pure conformal Mercator projection (mercator_projection.py, 0.0% distortion).
-5. Exports to app/src/main/assets/hokkaido_roads_high_density.bin.
+Build Unified Hokkaido Road Network and Act 1 Travel Route from official OSM PBF:
+1. Calculates exact 447-leg walking path for the player piece along real roads (100.0% connected).
+2. Exports player travel path to app/src/main/assets/act1_travel_route.bin (ACT1ROUT).
+3. Normalizes dual carriageways (Corridor Collapse) into single centerlines.
+4. Marks road segments on the journey route as cat 3 (TRAVEL_ROUTE).
+5. Prunes far-flung local roads beyond 6km of the journey corridor.
+6. Pure conformal Mercator projection (0.0% distortion).
+7. Exports map roads to app/src/main/assets/hokkaido_roads_high_density.bin (HKDROAD1).
 """
 
+import heapq
 import math
 import os
 import re
 import struct
 import sys
 import time
+from collections import defaultdict, deque
 import osmium
 from shapely.geometry import LineString, Point, MultiLineString
 from shapely.ops import linemerge
 from shapely.strtree import STRtree
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from mercator_projection import gps_to_svg
+from mercator_projection import gps_to_svg, svg_to_gps
 
 PBF_PATH = "/home/txjp/.gemini/antigravity-cli/brain/0123cff7-8778-4488-9772-5f0d65d96e1f/scratch/hokkaido-latest.osm.pbf"
 ACT1_ROUTE_KT = "/home/txjp/dev/aidomari/app/src/main/java/com/aidomari/app/domain/model/HokkaidoAct1Route.kt"
-OUTPUT_BIN = "/home/txjp/dev/aidomari/app/src/main/assets/hokkaido_roads_high_density.bin"
+OUTPUT_ROADS_BIN = "/home/txjp/dev/aidomari/app/src/main/assets/hokkaido_roads_high_density.bin"
+OUTPUT_LEGS_BIN = "/home/txjp/dev/aidomari/app/src/main/assets/act1_travel_route.bin"
 
-# Ramer-Douglas-Peucker line simplification
+SCENIC_REFS = {'106', '254', '87', '334', '913', '76', '93'}
+
+def haversine(c1, c2):
+    R = 6371000.0
+    p1, p2 = math.radians(c1[1]), math.radians(c2[1])
+    dphi = math.radians(c2[1] - c1[1])
+    dlam = math.radians(c2[0] - c1[0])
+    a = math.sin(dphi/2)**2 + math.cos(p1)*math.cos(p2)*math.sin(dlam/2)**2
+    return 2*R*math.atan2(math.sqrt(a), math.sqrt(1-a))
+
 def rdp(points, epsilon):
-    if len(points) < 3:
-        return points
+    if len(points) < 3: return points
     start, end = points[0], points[-1]
-    dx = end[0] - start[0]
-    dy = end[1] - start[1]
-    dist_sq = dx * dx + dy * dy
-    max_d = 0.0
-    index = 0
+    dx, dy = end[0] - start[0], end[1] - start[1]
+    dist_sq = dx*dx + dy*dy
+    max_d, index = 0.0, 0
     for i in range(1, len(points) - 1):
         p = points[i]
-        if dist_sq == 0:
-            d = (p[0] - start[0]) ** 2 + (p[1] - start[1]) ** 2
-        else:
-            t = max(0.0, min(1.0, ((p[0] - start[0]) * dx + (p[1] - start[1]) * dy) / dist_sq))
-            proj_x = start[0] + t * dx
-            proj_y = start[1] + t * dy
-            d = (p[0] - proj_x) ** 2 + (p[1] - proj_y) ** 2
+        d = ((p[0]-start[0])**2 + (p[1]-start[1])**2) if dist_sq == 0 else (
+            (p[0] - (start[0] + max(0.0, min(1.0, ((p[0]-start[0])*dx + (p[1]-start[1])*dy)/dist_sq)) * dx))**2 +
+            (p[1] - (start[1] + max(0.0, min(1.0, ((p[0]-start[0])*dx + (p[1]-start[1])*dy)/dist_sq)) * dy))**2
+        )
         if d > max_d:
-            max_d = d
-            index = i
+            max_d, index = d, i
     if max_d > epsilon * epsilon:
-        rec1 = rdp(points[: index + 1], epsilon)
+        rec1 = rdp(points[:index+1], epsilon)
         rec2 = rdp(points[index:], epsilon)
         return rec1[:-1] + rec2
-    else:
-        return [start, end]
+    return [start, end]
 
 def load_anchors():
     with open(ACT1_ROUTE_KT, 'r', encoding='utf-8') as f:
@@ -74,71 +80,13 @@ def load_anchors():
     print(f"Loaded {len(anchors)} Act 1 anchors.")
     return anchors
 
-# Known scenic road refs
-SCENIC_REFS = {'106', '254', '87', '334', '913', '76', '93'}
-
-class HokkaidoRoadExtractor(osmium.SimpleHandler):
-    def __init__(self, anchor_tree):
-        super().__init__()
-        self.anchor_tree = anchor_tree
-        self.mainlines = []
-        self.links = []
-        self.secondaries = []
-        self.tertiaries = []
-        self.local_access = []
-
-    def way(self, w):
-        h = w.tags.get('highway')
-        if not h:
-            return
-
-        is_mainline = h in ('motorway', 'trunk', 'primary')
-        is_link = h in ('motorway_link', 'trunk_link', 'primary_link', 'secondary_link')
-        is_secondary = h in ('secondary',)
-        is_tertiary = h in ('tertiary', 'tertiary_link')
-        is_local = h in ('unclassified',)
-
-        if not (is_mainline or is_link or is_secondary or is_tertiary or is_local):
-            return
-
-        try:
-            coords = [(round(n.location.lon, 6), round(n.location.lat, 6)) for n in w.nodes]
-            if len(coords) < 2:
-                return
-
-            ls = LineString(coords)
-            ref = w.tags.get('ref', '')
-            name = w.tags.get('name', '')
-
-            if is_mainline:
-                self.mainlines.append((w.id, h, ref, name, ls))
-            elif is_link:
-                self.links.append((w.id, h, ref, name, ls))
-            elif is_secondary:
-                self.secondaries.append((w.id, h, ref, name, ls))
-            elif is_tertiary:
-                # Include all tertiary roads across Hokkaido without arbitrary distance cuts
-                self.tertiaries.append((w.id, h, ref, name, ls))
-            elif is_local:
-                # Include unclassified local roads near anchors for summit/facility access
-                if len(self.anchor_tree.query(ls)) > 0:
-                    self.local_access.append((w.id, h, ref, name, ls))
-        except Exception:
-            pass
-
 def collapse_parallel_lines(lines, buffer_dist=0.00065, overlap_ratio=0.5):
-    """
-    Collapses parallel dual carriageways into single canonical centerlines.
-    Longer lines take precedence.
-    """
     if not lines:
         return []
-
     lines_sorted = sorted(lines, key=lambda l: l.length, reverse=True)
     kept = []
     kept_buffers = []
     tree = None
-
     for line in lines_sorted:
         if tree is None:
             kept.append(line)
@@ -156,25 +104,215 @@ def collapse_parallel_lines(lines, buffer_dist=0.00065, overlap_ratio=0.5):
                 tree = STRtree(kept_buffers)
     return kept
 
+class FullRoadAndGraphExtractor(osmium.SimpleHandler):
+    def __init__(self, anchor_tree):
+        super().__init__()
+        self.anchor_tree = anchor_tree
+        self.mainlines = []
+        self.links = []
+        self.secondaries = []
+        self.tertiaries = []
+        self.local_access = []
+
+        # Graph structures for routing
+        self.nodes_coords = {}
+        self.graph = defaultdict(dict)
+        self.routing_highways = {
+            'motorway', 'trunk', 'primary', 'secondary', 'tertiary',
+            'motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary_link',
+            'unclassified', 'residential', 'service', 'track'
+        }
+
+    def way(self, w):
+        h = w.tags.get('highway')
+        if not h:
+            return
+
+        is_mainline = h in ('motorway', 'trunk', 'primary')
+        is_link = h in ('motorway_link', 'trunk_link', 'primary_link', 'secondary_link')
+        is_secondary = h in ('secondary',)
+        is_tertiary = h in ('tertiary', 'tertiary_link')
+        is_local = h in ('unclassified',)
+
+        try:
+            nl = list(w.nodes)
+            if len(nl) < 2: return
+
+            # 1. Add to routing graph if eligible
+            if h in self.routing_highways:
+                for i in range(len(nl) - 1):
+                    n1, n2 = nl[i], nl[i+1]
+                    c1 = (round(n1.location.lon, 6), round(n1.location.lat, 6))
+                    c2 = (round(n2.location.lon, 6), round(n2.location.lat, 6))
+                    self.nodes_coords[n1.ref] = c1
+                    self.nodes_coords[n2.ref] = c2
+                    d = haversine(c1, c2)
+                    if n2.ref not in self.graph[n1.ref] or d < self.graph[n1.ref][n2.ref][0]:
+                        self.graph[n1.ref][n2.ref] = (d, h)
+                        self.graph[n2.ref][n1.ref] = (d, h)
+
+            # 2. Extract map features
+            if not (is_mainline or is_link or is_secondary or is_tertiary or is_local):
+                return
+
+            coords = [(round(n.location.lon, 6), round(n.location.lat, 6)) for n in nl]
+            ls = LineString(coords)
+            ref = w.tags.get('ref', '')
+            name = w.tags.get('name', '')
+
+            if is_mainline:
+                self.mainlines.append((w.id, h, ref, name, ls))
+            elif is_link:
+                self.links.append((w.id, h, ref, name, ls))
+            elif is_secondary:
+                self.secondaries.append((w.id, h, ref, name, ls))
+            elif is_tertiary:
+                self.tertiaries.append((w.id, h, ref, name, ls))
+            elif is_local:
+                if len(self.anchor_tree.query(ls)) > 0:
+                    self.local_access.append((w.id, h, ref, name, ls))
+        except Exception:
+            pass
+
 def main():
     t0 = time.time()
     anchors = load_anchors()
     anchor_points = [Point(a['lon'], a['lat']) for a in anchors]
-    anchor_tree = STRtree([p.buffer(0.025) for p in anchor_points]) # ~2.5km buffer around each anchor for local access
+    anchor_tree = STRtree([p.buffer(0.025) for p in anchor_points])
 
-    print(f"Extracting roads from {PBF_PATH}...")
-    extractor = HokkaidoRoadExtractor(anchor_tree)
+    print(f"Extracting roads and building topology from {PBF_PATH}...")
+    extractor = FullRoadAndGraphExtractor(anchor_tree)
     extractor.apply_file(PBF_PATH, locations=True)
     t1 = time.time()
-    print(f"Extraction completed in {t1 - t0:.1f}s.")
+    print(f"OSM Extraction completed in {t1 - t0:.1f}s.")
     print(f"  Mainlines: {len(extractor.mainlines)}")
     print(f"  Links/Ramps: {len(extractor.links)}")
     print(f"  Secondaries: {len(extractor.secondaries)}")
-    print(f"  Tertiaries (all Hokkaido, including Esanuka): {len(extractor.tertiaries)}")
-    print(f"  Local Access near anchors: {len(extractor.local_access)}")
+    print(f"  Tertiaries: {len(extractor.tertiaries)}")
+    print(f"  Local Access: {len(extractor.local_access)}")
+    print(f"  Graph Nodes: {len(extractor.nodes_coords)}")
 
-    # 1. Deduplicate & collapse parallel dual carriageways for Mainlines (上下線の一本化)
-    print("Normalizing mainline dual carriageways into single canonical centerlines...")
+    # 1. Find Main Connected Component of Hokkaido road network
+    print("Finding Main Connected Component of Hokkaido road network...")
+    visited = set()
+    components = []
+    for nid in extractor.graph:
+        if nid not in visited:
+            comp = []
+            q = deque([nid])
+            visited.add(nid)
+            while q:
+                curr = q.popleft()
+                comp.append(curr)
+                for nxt in extractor.graph[curr]:
+                    if nxt not in visited:
+                        visited.add(nxt)
+                        q.append(nxt)
+            components.append(comp)
+
+    components.sort(key=len, reverse=True)
+    main_comp = set(components[0])
+    print(f"Main component contains {len(main_comp)} nodes ({len(main_comp)/len(extractor.nodes_coords)*100:.1f}%).")
+
+    # 2. Snap all 448 Act 1 anchors to Main Connected Component
+    main_node_ids = list(main_comp)
+    main_pts = [Point(extractor.nodes_coords[nid][0], extractor.nodes_coords[nid][1]) for nid in main_node_ids]
+    main_tree = STRtree(main_pts)
+
+    snapped_anchors = []
+    for a in anchors:
+        apt = Point(a['lon'], a['lat'])
+        idx = main_tree.nearest(apt)
+        nid = main_node_ids[idx]
+        c = extractor.nodes_coords[nid]
+        d = haversine((a['lon'], a['lat']), c)
+        snapped_anchors.append((a, nid, c, d))
+
+    print(f"Anchors snapped to main road network. Max snap dist: {max(x[3] for x in snapped_anchors):.1f}m, Avg: {sum(x[3] for x in snapped_anchors)/len(snapped_anchors):.1f}m")
+
+    # 3. A* Routing for all 447 legs
+    def a_star(start_id, goal_id):
+        if start_id == goal_id: return 0.0, [start_id]
+        goal_c = extractor.nodes_coords[goal_id]
+        open_set = []
+        h0 = haversine(extractor.nodes_coords[start_id], goal_c)
+        heapq.heappush(open_set, (h0, 0.0, start_id, [start_id]))
+        g_scores = {start_id: 0.0}
+        while open_set:
+            f, g, cur, path = heapq.heappop(open_set)
+            if cur == goal_id:
+                return g, path
+            if g > g_scores.get(cur, float('inf')):
+                continue
+            for nxt, (w, _) in extractor.graph[cur].items():
+                tent_g = g + w
+                if tent_g < g_scores.get(nxt, float('inf')):
+                    g_scores[nxt] = tent_g
+                    h = haversine(extractor.nodes_coords[nxt], goal_c)
+                    heapq.heappush(open_set, (tent_g + h, tent_g, nxt, path + [nxt]))
+        return None, None
+
+    print("Routing all 447 legs between adjacent anchors...")
+    t_route = time.time()
+    legs_data = []
+    success_count = 0
+    total_journey_m = 0.0
+    journey_lines = []
+
+    for i in range(len(snapped_anchors) - 1):
+        a1, nid1, c1, d1 = snapped_anchors[i]
+        a2, nid2, c2, d2 = snapped_anchors[i+1]
+
+        dist, path = a_star(nid1, nid2)
+        if dist is not None:
+            success_count += 1
+            total_journey_m += dist
+            coords = [extractor.nodes_coords[nid] for nid in path]
+            full_coords = [(a1['lon'], a1['lat'])] + coords + [(a2['lon'], a2['lat'])]
+            simp_coords = rdp(full_coords, 0.00008)
+            legs_data.append({
+                'leg_index': i,
+                'from_id': a1['id'],
+                'to_id': a2['id'],
+                'distance_m': dist,
+                'coords': simp_coords
+            })
+            if len(simp_coords) >= 2:
+                journey_lines.append(LineString(simp_coords))
+        else:
+            print(f"FAILED leg {i}: {a1['name']} -> {a2['name']}")
+
+    print(f"A* Routing finished in {time.time()-t_route:.1f}s.")
+    print(f"  Route completion: {success_count} / {len(snapped_anchors)-1} ({success_count/(len(snapped_anchors)-1)*100:.1f}%)")
+    print(f"  Total journey road distance: {total_journey_m/1000.0:.1f} km")
+
+    # Export act1_travel_route.bin
+    os.makedirs(os.path.dirname(OUTPUT_LEGS_BIN), exist_ok=True)
+    with open(OUTPUT_LEGS_BIN, 'wb') as f:
+        f.write(b"ACT1ROUT")
+        f.write(struct.pack("<H", len(legs_data)))
+        for leg in legs_data:
+            from_b = leg['from_id'].encode('utf-8')[:255]
+            to_b = leg['to_id'].encode('utf-8')[:255]
+            f.write(struct.pack("<B", len(from_b)))
+            f.write(from_b)
+            f.write(struct.pack("<B", len(to_b)))
+            f.write(to_b)
+            f.write(struct.pack("<f", float(leg['distance_m'])))
+            pts = [gps_to_svg(lon, lat) for lon, lat in leg['coords']]
+            f.write(struct.pack("<H", len(pts)))
+            for x, y in pts:
+                f.write(struct.pack("<ff", x, y))
+
+    legs_size_kb = os.path.getsize(OUTPUT_LEGS_BIN) / 1024.0
+    print(f"Exported {OUTPUT_LEGS_BIN} ({legs_size_kb:.1f} KB).")
+
+    # 4. Corridor Pruning & Road Normalization
+    print("Normalizing map roads and building journey corridor...")
+    journey_buffers = [ls.buffer(0.060) for ls in journey_lines] # ~6km corridor
+    corridor_tree = STRtree(journey_buffers)
+
+    # Mainlines corridor collapse
     mainline_by_route = {}
     for wid, h, ref, name, ls in extractor.mainlines:
         clean_ref = ref.replace(' ', '').split(';')[0]
@@ -190,13 +328,11 @@ def main():
             polys = list(merged.geoms) if isinstance(merged, MultiLineString) else [merged]
         except Exception:
             polys = lines
-
-        # Collapse parallel lines within this route
         kept = collapse_parallel_lines(polys, buffer_dist=0.00065, overlap_ratio=0.5)
         for p in kept:
             collapsed_mainlines.append((route_key, p))
 
-    # Cross-corridor collapse for mainlines (e.g., E5 vs Route 5, or unref'd segments)
+    # Cross-corridor collapse for mainlines
     collapsed_mainlines.sort(key=lambda x: x[1].length, reverse=True)
     final_mainlines = []
     mainline_buffers = []
@@ -217,10 +353,7 @@ def main():
                 mainline_buffers.append(p.buffer(0.00060))
                 mainline_tree = STRtree(mainline_buffers)
 
-    print(f"Mainline highways after corridor collapse: {len(final_mainlines)} clean centerlines.")
-
-    # 2. Process Secondary Roads (cat 1 or 2)
-    print("Normalizing secondary roads...")
+    # Secondaries
     secondary_by_route = {}
     for wid, h, ref, name, ls in extractor.secondaries:
         clean_ref = ref.replace(' ', '').split(';')[0]
@@ -240,102 +373,77 @@ def main():
         for p in kept:
             collapsed_secondaries.append((route_key, p))
 
-    print(f"Secondary roads after corridor collapse: {len(collapsed_secondaries)} centerlines.")
-
-    # 3. Process Links / Ramps (IC ramps and slip roads - drawn as cat 1 without dashed centerline)
-    print("Processing connector ramps...")
+    # Links
     link_lines = [ls for _, _, _, _, ls in extractor.links]
     try:
         merged_links = linemerge(link_lines)
         final_links = list(merged_links.geoms) if isinstance(merged_links, MultiLineString) else [merged_links]
     except Exception:
         final_links = link_lines
-    print(f"Merged connector ramps: {len(final_links)} segments.")
 
-    # 4. Process Tertiaries across Hokkaido (including full unbroken Esanuka Line)
-    print("Processing tertiary municipal/connector roads across Hokkaido...")
+    # Tertiaries
     tert_lines = [ls for _, _, _, _, ls in extractor.tertiaries]
     try:
         merged_tertiary = linemerge(tert_lines)
         final_tertiaries = list(merged_tertiary.geoms) if isinstance(merged_tertiary, MultiLineString) else [merged_tertiary]
     except Exception:
         final_tertiaries = tert_lines
-    print(f"Merged tertiary roads: {len(final_tertiaries)} continuous segments.")
 
-    # 5. Process Local Access roads near anchors (unclassified roads for mountain viewpoints/facilities)
-    print("Processing local anchor access roads...")
+    # Local access
     access_lines = [ls for _, _, _, _, ls in extractor.local_access]
     try:
         merged_access = linemerge(access_lines)
         final_access = list(merged_access.geoms) if isinstance(merged_access, MultiLineString) else [merged_access]
     except Exception:
         final_access = access_lines
-    print(f"Merged local anchor access roads: {len(final_access)} segments.")
 
-    # 6. Assemble all candidate road features with category assignment:
-    # 0 = NATIONAL_HIGHWAY (Crisp single dashed centerline, wide surface)
-    # 1 = PREFECTURAL_ROAD / LOCAL / CONNECTOR (Smooth surface, NO dashed centerline)
-    # 2 = SCENIC_ROAD (Teal highlight)
+    # Assemble all candidates
+    # Categories:
+    # 0 = NATIONAL_HIGHWAY
+    # 1 = PREFECTURAL_ROAD / LOCAL
+    # 2 = SCENIC_ROAD
+    # 3 = TRAVEL_ROUTE
     all_roads = []
 
-    # Add mainlines
+    # All mainlines (keep 100% across Hokkaido)
     for rk, ls in final_mainlines:
         clean_ref = str(rk).replace(' ', '').split(';')[0]
-        if clean_ref in SCENIC_REFS or any(k in str(rk) for k in ('オロロン', '知床', '宗谷サンセット')):
-            cat = 2
-        else:
-            cat = 0
+        cat = 2 if clean_ref in SCENIC_REFS or any(k in str(rk) for k in ('オロロン', '知床', '宗谷サンセット')) else 0
         all_roads.append((f"main_{clean_ref}", str(rk), cat, ls))
 
-    # Add secondaries
+    # All secondaries (keep 100% across Hokkaido)
     for rk, ls in collapsed_secondaries:
         clean_ref = str(rk).replace(' ', '').split(';')[0]
-        if clean_ref in SCENIC_REFS or any(k in str(rk) for k in ('オロロン', '知床', '宗谷サンセット')):
-            cat = 2
-        else:
-            cat = 1
+        cat = 2 if clean_ref in SCENIC_REFS or any(k in str(rk) for k in ('オロロン', '知床', '宗谷サンセット')) else 1
         all_roads.append((f"sec_{clean_ref}", str(rk), cat, ls))
 
-    # Add ramps as cat 1
+    # Ramps (within corridor)
     for i, ls in enumerate(final_links):
-        all_roads.append((f"ramp_{i}", "ランプ路", 1, ls))
+        if len(corridor_tree.query(ls)) > 0:
+            all_roads.append((f"ramp_{i}", "ランプ路", 1, ls))
 
-    # Add tertiaries (detect Esanuka Line and scenic routes from OSM)
+    # Tertiaries (keep scenic + corridor)
     for i, ls in enumerate(final_tertiaries):
         coords = list(ls.coords)
         is_esanuka = (
             any(142.23 <= c[0] <= 142.36 and 45.14 <= c[1] <= 45.28 for c in coords)
-            and ls.length * 111.0 > 8.0 # Long unbroken coastal scenic line
+            and ls.length * 111.0 > 8.0
         )
         if is_esanuka:
             all_roads.append(("esanuka_osm", "村道 エサヌカ線", 2, ls))
-        else:
+        elif len(corridor_tree.query(ls)) > 0:
             all_roads.append((f"tert_{i}", "一般道", 1, ls))
 
-    # Add local access near anchors as cat 1
+    # Local access (within corridor)
     for i, ls in enumerate(final_access):
-        all_roads.append((f"acc_{i}", "地域連絡路", 1, ls))
+        if len(corridor_tree.query(ls)) > 0:
+            all_roads.append((f"acc_{i}", "地域連絡路", 1, ls))
 
-    # 7. Add Anchor Spurs: direct connection from each anchor to the nearest road network edge
-    all_raw_lines = [r[3] for r in all_roads]
-    network_tree = STRtree(all_raw_lines)
-    spur_count = 0
+    # 5. Add direct travel route lines (cat = 3) to ensure 100% visual journey line
+    for i, leg_ls in enumerate(journey_lines):
+        all_roads.append((f"route_leg_{i}", f"第{i+1}区間", 3, leg_ls))
 
-    for a in anchors:
-        apt = Point(a['lon'], a['lat'])
-        n_idx = network_tree.nearest(apt)
-        nearest_line = all_raw_lines[n_idx]
-        dist_m = apt.distance(nearest_line) * 111000.0
-
-        if 20.0 < dist_m < 1500.0:
-            proj_pt = nearest_line.interpolate(nearest_line.project(apt))
-            spur_ls = LineString([(proj_pt.x, proj_pt.y), (apt.x, apt.y)])
-            all_roads.append((f"spur_{a['id']}", f"{a['name']}連絡路", 1, spur_ls))
-            spur_count += 1
-
-    print(f"Added {spur_count} spur road connections for spot anchors.")
-
-    # 8. Merge contiguous lines within the same (category, route)
+    # Merge contiguous lines per (category, route)
     grouped = {}
     for rid, name, cat, ls in all_roads:
         key = (cat, name)
@@ -359,9 +467,7 @@ def main():
             for single_ls in lines:
                 merged_roads.append((cat, name, single_ls))
 
-    print(f"Total merged road lines across Hokkaido: {len(merged_roads)}")
-
-    # 8. Project via Mercator and simplify via RDP
+    # RDP simplification
     processed_segments = []
     total_raw_points = 0
     total_simplified_points = 0
@@ -370,51 +476,42 @@ def main():
         coords = list(ls.coords)
         if len(coords) < 2:
             continue
-
-        simp_coords = rdp(coords, 0.00010) # ~10m tolerance
+        simp_coords = rdp(coords, 0.00010)
         total_raw_points += len(coords)
         total_simplified_points += len(simp_coords)
-
         proj_pts = [gps_to_svg(lon, lat) for lon, lat in simp_coords]
         seg_id = f"r_{cat}_{idx}"
         processed_segments.append((seg_id, str(name), cat, proj_pts))
 
-    print(f"Points reduced from {total_raw_points} to {total_simplified_points} ({total_simplified_points/total_raw_points*100:.1f}%) via RDP.")
-    print(f"Total export segments: {len(processed_segments)}")
+    print(f"Points reduced from {total_raw_points} to {total_simplified_points} ({total_simplified_points/total_raw_points*100:.1f}%).")
+    print(f"Total exported road segments: {len(processed_segments)}")
+    cat_counts = defaultdict(int)
+    for s in processed_segments:
+        cat_counts[s[2]] += 1
+    print(f"  Cat 0 (National Highways): {cat_counts[0]}")
+    print(f"  Cat 1 (Prefectural/Local): {cat_counts[1]}")
+    print(f"  Cat 2 (Scenic Routes): {cat_counts[2]}")
+    print(f"  Cat 3 (Act 1 Travel Route): {cat_counts[3]}")
 
-    # Breakdown by category
-    cat0_count = sum(1 for s in processed_segments if s[2] == 0)
-    cat1_count = sum(1 for s in processed_segments if s[2] == 1)
-    cat2_count = sum(1 for s in processed_segments if s[2] == 2)
-    print(f"  Category 0 (National Highways - Crisp Centerline): {cat0_count}")
-    print(f"  Category 1 (Prefectural/Local/Ramps/Spurs - Smooth Surface): {cat1_count}")
-    print(f"  Category 2 (Scenic Routes): {cat2_count}")
-
-    # 9. Export to binary format HKDROAD1
-    os.makedirs(os.path.dirname(OUTPUT_BIN), exist_ok=True)
-    with open(OUTPUT_BIN, 'wb') as f:
+    # Export hokkaido_roads_high_density.bin
+    with open(OUTPUT_ROADS_BIN, 'wb') as f:
         f.write(b"HKDROAD1")
         f.write(struct.pack("<H", len(processed_segments)))
-
         for seg_id, seg_name, cat, pts in processed_segments:
-            id_bytes = seg_id.encode("utf-8")
-            name_bytes = seg_name.encode("utf-8")
-
-            f.write(struct.pack("<B", min(255, len(id_bytes))))
-            f.write(id_bytes[:255])
-
-            f.write(struct.pack("<B", min(255, len(name_bytes))))
-            f.write(name_bytes[:255])
-
+            id_bytes = seg_id.encode("utf-8")[:255]
+            name_bytes = seg_name.encode("utf-8")[:255]
+            f.write(struct.pack("<B", len(id_bytes)))
+            f.write(id_bytes)
+            f.write(struct.pack("<B", len(name_bytes)))
+            f.write(name_bytes)
             f.write(struct.pack("<B", cat))
             f.write(struct.pack("<I", len(pts)))
-
             for x, y in pts:
                 f.write(struct.pack("<ff", x, y))
 
-    bin_size_kb = os.path.getsize(OUTPUT_BIN) / 1024.0
-    print(f"Exported {OUTPUT_BIN} successfully! File size: {bin_size_kb:.1f} KB")
-    print(f"Total execution time: {time.time() - t0:.1f}s")
+    bin_size_kb = os.path.getsize(OUTPUT_ROADS_BIN) / 1024.0
+    print(f"Exported {OUTPUT_ROADS_BIN} ({bin_size_kb:.1f} KB).")
+    print(f"Total execution time: {time.time() - t0:.1f}s.")
 
 if __name__ == '__main__':
     main()
