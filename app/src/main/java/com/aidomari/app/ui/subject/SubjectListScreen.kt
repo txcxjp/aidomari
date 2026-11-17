@@ -96,6 +96,7 @@ fun SubjectListScreen(
     onSubjectClick: (subjectId: String, subjectName: String) -> Unit,
     modifier: Modifier = Modifier,
     onCalendarClick: () -> Unit = {},
+    onSugorokuMapClick: () -> Unit = {},
     themePreferences: ThemePreferences? = null,
     lockScreenPreferences: LockScreenPreferences? = null,
 ) {
@@ -180,6 +181,7 @@ fun SubjectListScreen(
         onExportClick = { exportFileLauncher.launch("aidomari_backup.json") },
         onThemeClick = { showThemeDialog = true },
         onCalendarClick = onCalendarClick,
+        onSugorokuMapClick = onSugorokuMapClick,
         onLockScreenClick = { showLockScreenDialog = true },
         onArchiveSubject = { subject ->
             viewModel.archiveSubject(subject.id)
@@ -576,6 +578,7 @@ fun SubjectListContent(
     onEditSubject: (Subject) -> Unit = {},
     onLockScreenClick: () -> Unit = {},
     onCalendarClick: () -> Unit = {},
+    onSugorokuMapClick: () -> Unit = {},
 ) {
     var showTopBarMenu by remember { mutableStateOf(false) }
 
@@ -616,6 +619,15 @@ fun SubjectListContent(
                         }
                     },
                     actions = {
+                        IconButton(
+                            onClick = onSugorokuMapClick,
+                            modifier = Modifier.testTag("SugorokuMapButton"),
+                        ) {
+                            Text(
+                                text = "🗺️",
+                                fontSize = 20.sp,
+                            )
+                        }
                         IconButton(
                             onClick = onCalendarClick,
                             modifier = Modifier.testTag("CalendarButton"),

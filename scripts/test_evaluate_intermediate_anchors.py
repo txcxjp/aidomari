@@ -1,0 +1,346 @@
+#!/usr/bin/env python3
+"""
+scripts/test_evaluate_intermediate_anchors.py
+
+是正版中間アンカー選定プログラム（evaluate_intermediate_anchors.py）の網羅的妥当性検証テストスイート
+"""
+
+import math
+import os
+import sys
+import unittest
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from evaluate_intermediate_anchors import (
+    evaluate_intervals,
+    haversine,
+    is_authorized_landmark,
+    is_pocket_park,
+    is_signpost_or_marker,
+    load_authoritative_candidates,
+    load_route_anchors,
+    project_to_segment,
+)
+from fast_polygon import load_gsi_polygon
+
+
+class TestGeometryMath(unittest.TestCase):
+    """幾何学・測地計算の妥当性テスト"""
+
+    def test_haversine_accuracy(self):
+        # 札幌駅 (43.0686, 141.3508) 〜 函館駅 (41.7738, 140.7264)
+        # 国土地理院測地線長はおよそ 151.8km
+        dist = haversine(43.0686, 141.3508, 41.7738, 140.7264)
+        self.assertTrue(
+            150.0 < dist < 155.0, f"Expected ~152km between Sapporo and Hakodate, got {dist:.2f}km"
+        )
+
+    def test_project_to_segment_midpoint(self):
+        # 経度差 1.0度の東西線分の中点
+        lat_a, lon_a = 44.0, 142.0
+        lat_b, lon_b = 44.0, 143.0
+        lat_c, lon_c = 44.0, 142.5
+        t, perp = project_to_segment(lat_a, lon_a, lat_b, lon_b, lat_c, lon_c)
+        self.assertAlmostEqual(t, 0.5, places=3)
+        self.assertAlmostEqual(perp, 0.0, places=2)
+
+    def test_project_to_segment_backward_reversal(self):
+        # 点Cが始点Aより手前にある（逆走）
+        lat_a, lon_a = 44.0, 142.0
+        lat_b, lon_b = 44.0, 143.0
+        lat_c, lon_c = 44.0, 141.8
+        t, perp = project_to_segment(lat_a, lon_a, lat_b, lon_b, lat_c, lon_c)
+        self.assertLess(t, 0.0, f"Expected t < 0 for backward point, got {t}")
+
+    def test_project_to_segment_forward_overshoot(self):
+        # 点Cが終点Bより先にある（行き過ぎ）
+        lat_a, lon_a = 44.0, 142.0
+        lat_b, lon_b = 44.0, 143.0
+        lat_c, lon_c = 44.0, 143.2
+        t, perp = project_to_segment(lat_a, lon_a, lat_b, lon_b, lat_c, lon_c)
+        self.assertGreater(t, 1.0, f"Expected t > 1 for overshot point, got {t}")
+
+    def test_project_to_segment_perpendicular_distance(self):
+        # 線分から北へ緯度0.05度（約5.5km）オフセット
+        lat_a, lon_a = 44.0, 142.0
+        lat_b, lon_b = 44.0, 143.0
+        lat_c, lon_c = 44.05, 142.5
+        t, perp = project_to_segment(lat_a, lon_a, lat_b, lon_b, lat_c, lon_c)
+        self.assertAlmostEqual(t, 0.5, places=3)
+        self.assertTrue(
+            5.0 < perp < 6.0, f"Expected perpendicular distance ~5.5km, got {perp:.2f}km"
+        )
+
+
+class TestLandmarkFilter(unittest.TestCase):
+    """認可ランドマーク種別判定の妥当性テスト"""
+
+    def test_authorized_landmarks(self):
+        valid_landmarks = [
+            "道の駅 てしお",
+            "藻琴駅",
+            "旧大椴駅跡",
+            "宗谷岬",
+            "稚内灯台",
+            "小平町望洋台キャンプ場",
+            "羅臼温泉野営場",
+            "黒松内温泉ぶなの森",
+            "昭和公園",
+            "小清水原生花園",
+            "セタカムイ岩",
+            "オシンコシンの滝",
+            "マッカウス洞窟",
+        ]
+        for name in valid_landmarks:
+            self.assertTrue(
+                is_authorized_landmark(name), f"Should be accepted: {name}"
+            )
+
+    def test_unauthorized_and_bogus_names(self):
+        invalid_names = [
+            "大字更岸",
+            "字美岬",
+            "海岸町",
+            "展望台",
+            "展望所",
+            "駐車場",
+            "トイレ",
+            "案内板",
+            "ベンチ",
+            "国道229号",
+            "道道106号",
+            "ab",
+        ]
+        for name in invalid_names:
+            self.assertFalse(
+                is_authorized_landmark(name), f"Should be rejected: {name}"
+            )
+
+    def test_schools_and_kindergartens_rejected(self):
+        """小学校・中学校・高校・幼稚園・保育園等の教育・保育施設が除外されることの検証"""
+        school_names = [
+            "稚内市立大岬小学校",
+            "地球岬小学校",
+            "旧絵鞆小学校校舎",
+            "枝幸小学校グランド",
+            "室蘭中学校記念碑",
+            "江差高等学校跡の碑",
+            "なかよし幼稚園",
+            "ひまわり保育園",
+            "認定こども園すまいる",
+        ]
+        for name in school_names:
+            self.assertFalse(
+                is_authorized_landmark(name),
+                f"School/kindergarten should be rejected: {name}",
+            )
+
+    def test_signpost_or_marker_identification(self):
+        """案内看板・標識・標柱の識別テスト（除外せず weight=1 として許可）"""
+        signpost_names = [
+            "山頂展望台まで1.5km",
+            "登別温泉園地案内図",
+            "遊歩道入口の看板",
+            "幸福町案内図",
+            "止別海岸治山の森遊歩道の案内図",
+            "ペーパンの未来を育てる会　案内看板",
+        ]
+        for name in signpost_names:
+            self.assertTrue(
+                is_signpost_or_marker(name),
+                f"Should be identified as signpost/marker: {name}",
+            )
+            self.assertTrue(
+                is_authorized_landmark(name),
+                f"Should be accepted as authorized landmark: {name}",
+            )
+
+        # 観光案内所（センター）は看板ではなく通常の観光施設
+        self.assertFalse(
+            is_signpost_or_marker("大通公園 インフォメーションセンター")
+        )
+
+    def test_pocket_park_identification(self):
+        """住宅街のポケットパーク・小規模児童公園と大規模公園の識別テスト"""
+        pocket_names = [
+            "日乃出児童遊園地",
+            "入船児童公園",
+            "青葉町なかよし公園",
+            "もみじ台ちびっこ公園",
+            "農本第一公園",
+            "上篠路あゆみ第2公園",
+        ]
+        for name in pocket_names:
+            self.assertTrue(
+                is_pocket_park(name), f"Should be identified as pocket park: {name}"
+            )
+
+        major_names = [
+            "滝野すずらん丘陵公園",
+            "大通公園",
+            "モエレ沼公園",
+            "三ツ橋公園",
+            "稚内森林公園キャンプ場",
+            "野幌森林公園",
+        ]
+        for name in major_names:
+            self.assertFalse(
+                is_pocket_park(name), f"Should NOT be identified as pocket park: {name}"
+            )
+
+
+class TestHistoricalBugRegressions(unittest.TestCase):
+    """過去にバグとして混入した誤座標・逆走ケースの回帰防止テスト"""
+
+    def test_yamubetsu_station_rejected_for_koshimizu_segment(self):
+        """止別駅が小清水原生花園〜はなやか小清水間に誤挿入されないことの検証"""
+        # 原生花園 -> はなやか小清水
+        lat_a, lon_a = 43.9419, 144.4134
+        lat_b, lon_b = 43.9339, 144.4533
+        # 実在の止別駅 (浜小清水より東に位置)
+        lat_c, lon_c = 43.9106, 144.5312
+        t, perp = project_to_segment(lat_a, lon_a, lat_b, lon_b, lat_c, lon_c)
+        # t > 1.0 のため、区間 (A, B) の中間として絶対に選ばれない
+        self.assertGreater(t, 1.0)
+
+    def test_bogus_rikiru_port_rejected(self):
+        """力昼港（山奥8.1km誤座標）が過大な側方偏位および t < 0 により排除されることの検証"""
+        lat_a, lon_a = 44.3090, 141.6568  # とままえ温泉
+        lat_b, lon_b = 44.3680, 141.7010  # 羽幌港
+        lat_c, lon_c = 44.1500, 141.7800  # 旧・山奥誤座標
+        t, perp = project_to_segment(lat_a, lon_a, lat_b, lon_b, lat_c, lon_c)
+        d_inter = haversine(lat_a, lon_a, lat_b, lon_b)
+        max_allowed_perp = min(5.0, 0.35 * d_inter)
+        self.assertGreater(
+            perp,
+            max_allowed_perp,
+            f"Perp {perp}km should exceed limit {max_allowed_perp}km",
+        )
+
+    def test_bogus_onishika_port_rejected(self):
+        """鬼鹿港（山奥7.1km誤座標）が過大な側方偏位により排除されることの検証"""
+        lat_a, lon_a = 44.0535, 141.6668  # 旧大椴駅跡
+        lat_b, lon_b = 44.1578, 141.6600  # 旧鬼鹿駅跡
+        lat_c, lon_c = 44.0800, 141.7500  # 旧・山奥誤座標
+        t, perp = project_to_segment(lat_a, lon_a, lat_b, lon_b, lat_c, lon_c)
+        d_inter = haversine(lat_a, lon_a, lat_b, lon_b)
+        max_allowed_perp = min(5.0, 0.35 * d_inter)
+        self.assertGreater(
+            perp,
+            max_allowed_perp,
+            f"Perp {perp}km should exceed limit {max_allowed_perp}km",
+        )
+
+
+class TestOverallSelectionIntegrity(unittest.TestCase):
+    """現行 319 アンカーに対する選定処理全体の妥当性・整合性テスト"""
+
+    def setUp(self):
+        base_dir = "/home/txjp/dev/aidomari"
+        self.route_kt = os.path.join(
+            base_dir,
+            "app/src/main/java/com/aidomari/app/domain/model/HokkaidoAct1Route.kt",
+        )
+        self.notes_dir = os.path.join(base_dir, "notes")
+        self.anchors = load_route_anchors(self.route_kt)
+        self.candidates = load_authoritative_candidates(self.notes_dir)
+        self.poly = load_gsi_polygon()
+
+    def test_candidates_source_is_authentic(self):
+        self.assertGreater(len(self.candidates), 1000)
+
+    def test_evaluation_produces_zero_distance_violations(self):
+        assigned, summaries = evaluate_intervals(
+            self.anchors, self.candidates, self.poly
+        )
+
+        # 1区間最大1件であること
+        self.assertTrue(len(assigned) <= len(self.anchors) - 1)
+
+        # 仮想挿入した全区間の離隔をチェック
+        simulated_anchors = []
+        for i, a in enumerate(self.anchors):
+            simulated_anchors.append(a)
+            if i in assigned:
+                c = assigned[i]["candidate"]
+                simulated_anchors.append(c)
+
+        for i in range(len(simulated_anchors) - 1):
+            a1 = simulated_anchors[i]
+            a2 = simulated_anchors[i + 1]
+            dist = haversine(a1["lat"], a1["lon"], a2["lat"], a2["lon"])
+            self.assertGreaterEqual(
+                dist,
+                0.25,
+                f"Distance violation between {a1['name']} and {a2['name']}: {dist:.2f}km < 0.25km",
+            )
+
+    def test_selected_candidates_authentic_and_non_empty(self):
+        # ギャップのある区間で選定された候補が公的ランドマークであることを検証
+        sample_anchors = [self.anchors[0], self.anchors[10]]
+        assigned, _ = evaluate_intervals(
+            sample_anchors, self.candidates, self.poly
+        )
+        self.assertGreater(len(assigned), 0)
+        # ポリゴン判定は撤廃（実在の沿岸・岬スポットがSVG簡略化ポリゴン外れで除外されるのを防ぐため）
+        for i, entry in assigned.items():
+            c = entry["candidate"]
+            self.assertTrue(is_authorized_landmark(c["name"]))
+
+    def test_pocket_parks_assigned_weight_one(self):
+        # 住宅街のポケットパークが除外されず weight=1 で登録されていることを検証
+        pocket_cands = [c for c in self.candidates if is_pocket_park(c["name"])]
+        self.assertGreater(len(pocket_cands), 0)
+        for c in pocket_cands:
+            self.assertEqual(c["weight"], 1)
+
+    def test_signposts_assigned_weight_one(self):
+        # 案内看板・標識が除外されず weight=1, category='案内看板・標識' で登録されていることを検証
+        signpost_cands = [
+            c for c in self.candidates if is_signpost_or_marker(c["name"])
+        ]
+        self.assertGreater(len(signpost_cands), 0)
+        for c in signpost_cands:
+            self.assertEqual(c["weight"], 1)
+            self.assertEqual(c["category"], "案内看板・標識")
+
+    def test_deduplication_between_kokudo_and_osm(self):
+        # 国土数値情報の道の駅・駅・観光資源がOSM側で二重登録されていないことを検証
+        # 例: 道の駅 なないろ・ななえ、道の駅 みなとま〜れ寿都
+        names_in_candidates = [c["name"] for c in self.candidates]
+        # 各名称の出現頻度（同一名称・同一座標の多重登録がないこと）
+        for target in ["道の駅 なないろ・ななえ", "道の駅 みなとま〜れ寿都"]:
+            count = sum(1 for n in names_in_candidates if n == target)
+            self.assertEqual(
+                count, 1, f"'{target}' should exist exactly once, found {count}"
+            )
+
+        # 1.0km以内の同一道の駅重複が存在しないこと
+        rs_cands = [c for c in self.candidates if "道の駅" in c["name"]]
+        for i in range(len(rs_cands)):
+            for j in range(i + 1, len(rs_cands)):
+                r1, r2 = rs_cands[i], rs_cands[j]
+                d = haversine(r1["lat"], r1["lon"], r2["lat"], r2["lon"])
+                if d < 1.0 and (
+                    r1["name"] == r2["name"]
+                    or r1["name"] in r2["name"]
+                    or r2["name"] in r1["name"]
+                ):
+                    self.fail(
+                        f"Duplicate roadside station found within {d*1000:.0f}m: '{r1['name']}' vs '{r2['name']}'"
+                    )
+
+    def test_convergence_reached_for_authoritative_dataset(self):
+        """公的ハイブリッドデータセット（hokkaido_landmarks.geojson + 国土数値情報）基準で完全収束（新規追加候補0）していることの検証"""
+        if len(self.anchors) < 300:
+            self.skipTest(
+                f"Convergence test requires fully expanded route (>=300 anchors), current is {len(self.anchors)}"
+            )
+        assigned, _ = evaluate_intervals(
+            self.anchors, self.candidates, self.poly
+        )
+        self.assertEqual(len(assigned), 0)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

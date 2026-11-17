@@ -4,11 +4,12 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.roborazzi)
 }
 
 val ciRunNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
-val buildVersionCode = ciRunNumber ?: 1
-val buildVersionName = if (ciRunNumber != null) "2.0.0.$ciRunNumber" else "2.0.0-dev"
+val buildVersionCode = ciRunNumber ?: 9000
+val buildVersionName = if (ciRunNumber != null) "2.0.0.$ciRunNumber" else "2.0.0-local"
 
 android {
     namespace = "com.aidomari.app"
@@ -77,6 +78,9 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            all {
+                it.systemProperties["robolectric.pixelCopyRenderMode"] = "hardware"
+            }
         }
     }
 }
@@ -116,6 +120,9 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
 
     // Android Testing
     androidTestImplementation(libs.androidx.junit)

@@ -268,6 +268,22 @@ class SubjectListScreenTest {
         composeTestRule.onNodeWithContentDescription("標準テーマ").assertIsDisplayed()
         composeTestRule.onNodeWithTag("ColorThemeOption_INDIGO").assertIsDisplayed()
     }
+
+    @Test
+    fun topAppBar_hasSugorokuMapButton_triggersCallback() {
+        var mapClicked = false
+        composeTestRule.setContent {
+            SubjectListScreen(
+                viewModel = viewModel,
+                onSubjectClick = { _, _ -> },
+                onSugorokuMapClick = { mapClicked = true },
+            )
+        }
+
+        composeTestRule.onNodeWithTag("SugorokuMapButton").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("SugorokuMapButton").performClick()
+        org.junit.Assert.assertTrue(mapClicked)
+    }
 }
 
 private class FakeSubjectScreenRepository : WordsRepository {

@@ -15,4 +15,12 @@ build/
 .cxx
 local.properties
 /release
+__pycache__/
+*.pyc
+scripts/osm_hokkaido_raw_roads.json
+
+
+
+# Secret development notes & conversation logs (not for repository tracking)
+notes/
 
