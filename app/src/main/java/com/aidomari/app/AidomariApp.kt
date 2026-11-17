@@ -3,6 +3,7 @@ package com.aidomari.app
 import android.app.Application
 import com.aidomari.app.core.database.AidomariDatabase
 import com.aidomari.app.core.database.WordsRepositoryImpl
+import com.aidomari.app.core.debug.SugorokuDebugPreferences
 import com.aidomari.app.core.lockscreen.LockScreenPreferences
 import com.aidomari.app.domain.repository.WordsRepository
 import com.aidomari.app.ui.theme.ThemePreferences
@@ -14,7 +15,7 @@ class AidomariApp : Application() {
     }
 
     val repository: WordsRepository by lazy {
-        WordsRepositoryImpl(database.aidomariDao())
+        WordsRepositoryImpl(database.aidomariDao(), this)
     }
 
     val themePreferences: ThemePreferences by lazy {
@@ -23,6 +24,10 @@ class AidomariApp : Application() {
 
     val lockScreenPreferences: LockScreenPreferences by lazy {
         LockScreenPreferences(this)
+    }
+
+    val sugorokuDebugPreferences: SugorokuDebugPreferences by lazy {
+        SugorokuDebugPreferences(this)
     }
 
     override fun onCreate() {

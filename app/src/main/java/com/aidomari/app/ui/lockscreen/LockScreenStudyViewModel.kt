@@ -31,6 +31,8 @@ class LockScreenStudyViewModel(
     private val _uiState = MutableStateFlow(LockScreenUiState())
     val uiState: StateFlow<LockScreenUiState> = _uiState.asStateFlow()
 
+    private var cardShownAt: Long = System.currentTimeMillis()
+
     init {
         loadRandomCard()
     }
@@ -73,6 +75,7 @@ class LockScreenStudyViewModel(
                     ttsLanguage = lang,
                 )
             }
+            cardShownAt = System.currentTimeMillis()
         }
     }
 
@@ -81,19 +84,23 @@ class LockScreenStudyViewModel(
     }
 
     fun markDone(onFinish: () -> Unit) {
+        val durationSeconds = ((System.currentTimeMillis() - cardShownAt) / 1000f).coerceAtLeast(0f)
         viewModelScope.launch {
             uiState.value.card?.let { card ->
                 repository.recordStudyLog(card.id, isCorrect = true)
+                repository.recordStudyWalkingProgress(durationSeconds)
             }
             onFinish()
         }
     }
 
     fun markRetry(onFinish: () -> Unit) {
+        val durationSeconds = ((System.currentTimeMillis() - cardShownAt) / 1000f).coerceAtLeast(0f)
         viewModelScope.launch {
             uiState.value.card?.let { card ->
                 repository.recordStudyLog(card.id, isCorrect = false)
                 repository.setBookmark(card.id, true)
+                repository.recordStudyWalkingProgress(durationSeconds)
             }
             onFinish()
         }

@@ -2,6 +2,7 @@ package com.aidomari.app.ui.study
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aidomari.app.core.debug.SugorokuDebugPreferences
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.DeckPart
@@ -18,10 +19,13 @@ import kotlinx.coroutines.launch
 
 class StudyViewModel(
     private val repository: WordsRepository,
+    private val sugorokuDebugPreferences: SugorokuDebugPreferences? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StudyUiState())
     val uiState: StateFlow<StudyUiState> = _uiState.asStateFlow()
+
+    private var cardShownAt: Long = System.currentTimeMillis()
 
     private var currentDeck: Deck? = null
     private var allCards: List<Card> = emptyList()
@@ -277,6 +281,7 @@ class StudyViewModel(
                     isRandomMode = isAnyRandomMode,
                 )
             }
+            cardShownAt = System.currentTimeMillis()
         }
     }
 
@@ -291,11 +296,18 @@ class StudyViewModel(
         val currentCard = state.currentCard ?: return
         if (state.isPartCompleted) return
 
+        val durationSeconds = ((System.currentTimeMillis() - cardShownAt) / 1000f).coerceAtLeast(0f)
+        val speedMultiplier = sugorokuDebugPreferences?.speedMultiplier?.value ?: 1.0f
+
         queueCardIds.remove(currentCard.id)
         completedCount++
 
         viewModelScope.launch {
             repository.recordStudyLog(currentCard.id, isCorrect = true)
+            repository.recordStudyWalkingProgress(
+                durationSeconds = durationSeconds,
+                speedMultiplier = speedMultiplier,
+            )
         }
 
         advanceToNextCard()
@@ -306,11 +318,18 @@ class StudyViewModel(
         val currentCard = state.currentCard ?: return
         if (state.isPartCompleted) return
 
+        val durationSeconds = ((System.currentTimeMillis() - cardShownAt) / 1000f).coerceAtLeast(0f)
+        val speedMultiplier = sugorokuDebugPreferences?.speedMultiplier?.value ?: 1.0f
+
         queueCardIds.remove(currentCard.id)
         retryCardIds.add(currentCard.id)
 
         viewModelScope.launch {
             repository.recordStudyLog(currentCard.id, isCorrect = false)
+            repository.recordStudyWalkingProgress(
+                durationSeconds = durationSeconds,
+                speedMultiplier = speedMultiplier,
+            )
         }
 
         advanceToNextCard()
@@ -634,6 +653,7 @@ class StudyViewModel(
                 isPartCompleted = isFinished,
             )
         }
+        cardShownAt = System.currentTimeMillis()
 
         saveCurrentSession(isCompleted = isFinished)
     }

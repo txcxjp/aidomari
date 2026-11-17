@@ -72,4 +72,25 @@ class WordsRepositoryImplTest {
         assertEquals(0, flowValue.currentProgressInStep)
         assertEquals(3, flowValue.totalQuestionsAnswered)
     }
+
+    @Test
+    fun recordStudyWalkingProgress_advancesMetersAndUpdatesAnchor() = runBlocking {
+        // 10 seconds @ 1x => ~13.33m
+        val p1 = repository.recordStudyWalkingProgress(durationSeconds = 10f, speedMultiplier = 1f)
+        assertEquals(13.333f, p1.totalDistanceMeters, 0.01f)
+        assertEquals(0, p1.currentStepIndex)
+        assertEquals(1, p1.totalQuestionsAnswered)
+
+        // Advance 550m more to surpass leg 0 (558m)
+        val p2 = repository.recordSugorokuDistance(550f)
+        assertTrue(p2.totalDistanceMeters >= 558f)
+        assertEquals(1, p2.currentStepIndex)
+        assertTrue(p2.visitedNodeIds.contains("monument_of_yanagawa_kumakichi"))
+
+        // Reset
+        val pReset = repository.resetSugorokuProgress()
+        assertEquals(0f, pReset.totalDistanceMeters, 0.001f)
+        assertEquals(0, pReset.currentStepIndex)
+        assertEquals(setOf("hakodateyama"), pReset.visitedNodeIds)
+    }
 }

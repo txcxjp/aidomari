@@ -1,5 +1,6 @@
 package com.aidomari.app.ui.sugoroku
 
+import androidx.compose.ui.geometry.Offset
 import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.SugorokuNode
 import com.aidomari.app.domain.model.SugorokuProgress
@@ -10,5 +11,9 @@ data class SugorokuMapUiState(
     val selectedNode: SugorokuNode? = null,
     val totalNodes: Int = HokkaidoAct1Route.totalNodes,
     val remainingSteps: Int = (HokkaidoAct1Route.totalNodes - 1).coerceAtLeast(0),
+    val totalDistanceMeters: Float = 0.0f,
+    val playerWorldOffset: Offset = Offset(HokkaidoAct1Route.startNode.x, HokkaidoAct1Route.startNode.y),
+    val speedMultiplier: Float = 1.0f,
+    val isAct1Finished: Boolean = false,
     val isLoading: Boolean = false,
 )

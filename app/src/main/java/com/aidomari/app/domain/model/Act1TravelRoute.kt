@@ -34,6 +34,8 @@ object Act1TravelRoute {
             context?.assets?.open("act1_travel_route.bin")
                 ?: javaClass.classLoader?.getResourceAsStream("assets/act1_travel_route.bin")
                 ?: javaClass.classLoader?.getResourceAsStream("act1_travel_route.bin")
+                ?: java.io.File("src/main/assets/act1_travel_route.bin").takeIf { it.exists() }?.inputStream()
+                ?: java.io.File("app/src/main/assets/act1_travel_route.bin").takeIf { it.exists() }?.inputStream()
         } catch (_: Exception) {
             null
         }

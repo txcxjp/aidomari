@@ -1,11 +1,13 @@
 package com.aidomari.app.ui.sugoroku
 
+import com.aidomari.app.domain.model.Act1TravelRoute
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.model.SugorokuProgress
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.domain.util.SugorokuWalkingCalculator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -21,6 +23,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -52,6 +55,8 @@ class SugorokuMapViewModelTest {
         assertEquals("函館山", state.currentNode.name)
         assertEquals(HokkaidoAct1Route.totalNodes, state.totalNodes)
         assertEquals(HokkaidoAct1Route.maxStepIndex, state.remainingSteps)
+        assertEquals(0f, state.totalDistanceMeters, 0.001f)
+        assertNotNull(state.playerWorldOffset)
         assertNull(state.selectedNode)
     }
 
@@ -70,17 +75,46 @@ class SugorokuMapViewModelTest {
     }
 
     @Test
-    fun advanceProgress_advancesStepsAndUpdatesCurrentNode() = runTest {
+    fun addDistance_advancesDistanceAndContinuousOffset() = runTest {
         advanceUntilIdle()
 
-        // Advance by 5 steps
-        viewModel.advanceProgress(5)
+        viewModel.addDistance(300f)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(5, state.progress.currentStepIndex)
-        assertEquals(5, state.currentNode.stepIndex)
-        assertEquals(HokkaidoAct1Route.maxStepIndex - 5, state.remainingSteps)
+        assertEquals(300f, state.totalDistanceMeters, 0.001f)
+        assertEquals(0, state.progress.currentStepIndex) // Still on leg 0 (558m)
+        assertTrue(state.playerWorldOffset.x > 0f)
+    }
+
+    @Test
+    fun advanceToNextAnchor_jumpsToNextAnchor() = runTest {
+        advanceUntilIdle()
+
+        viewModel.advanceToNextAnchor()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(1, state.progress.currentStepIndex)
+        assertEquals("柳川熊吉翁の碑", state.currentNode.name)
+        assertTrue(state.totalDistanceMeters >= 558f)
+    }
+
+    @Test
+    fun resetProgress_clearsProgressToZero() = runTest {
+        advanceUntilIdle()
+
+        viewModel.addDistance(1000f)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.totalDistanceMeters > 0f)
+
+        viewModel.resetProgress()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(0f, state.totalDistanceMeters, 0.001f)
+        assertEquals(0, state.progress.currentStepIndex)
+        assertEquals("函館山", state.currentNode.name)
     }
 
     private class FakeSugorokuWordsRepository : WordsRepository {
@@ -98,6 +132,44 @@ class SugorokuMapViewModelTest {
             val updated = progressFlow.value.advanceByQuestions(questionsDelta)
             progressFlow.value = updated
             return updated
+        }
+
+        override suspend fun recordStudyWalkingProgress(
+            durationSeconds: Float,
+            speedMultiplier: Float,
+        ): SugorokuProgress {
+            val dist = SugorokuWalkingCalculator.calculateDistanceMeters(durationSeconds, speedMultiplier)
+            return recordSugorokuDistance(dist)
+        }
+
+        override suspend fun recordSugorokuDistance(distanceMetersDelta: Float): SugorokuProgress {
+            val legs = Act1TravelRoute.getLegs()
+            val updated = progressFlow.value.advanceByDistance(
+                distanceMetersDelta = distanceMetersDelta,
+                legs = legs,
+                anchors = HokkaidoAct1Route.anchors,
+                questionsAnsweredDelta = 1,
+            )
+            progressFlow.value = updated
+            return updated
+        }
+
+        override suspend fun advanceToNextAnchor(): SugorokuProgress {
+            val legs = Act1TravelRoute.getLegs()
+            val current = progressFlow.value
+            val nextStepIndex = (current.currentStepIndex + 1).coerceAtMost(legs.size)
+            var targetDistance = 0f
+            for (i in 0 until nextStepIndex.coerceAtMost(legs.size)) {
+                targetDistance += legs[i].distanceMeters
+            }
+            val neededDelta = (targetDistance - current.totalDistanceMeters).coerceAtLeast(1f)
+            return recordSugorokuDistance(neededDelta)
+        }
+
+        override suspend fun resetSugorokuProgress(): SugorokuProgress {
+            val reset = progressFlow.value.resetProgress()
+            progressFlow.value = reset
+            return reset
         }
 
         override fun getAllSubjects(): Flow<List<Subject>> = emptyFlow()

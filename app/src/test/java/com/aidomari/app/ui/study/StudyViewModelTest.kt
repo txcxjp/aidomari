@@ -354,6 +354,18 @@ class StudyViewModelTest {
     }
 
     @Test
+    fun markDone_recordsStudyWalkingProgress() = runTest {
+        viewModel.loadDeckAndPart("deck-1", 0)
+        advanceUntilIdle()
+
+        viewModel.markDone()
+        advanceUntilIdle()
+
+        assertEquals(1, fakeRepository.studyWalkingProgressCallCount)
+        assertTrue(fakeRepository.lastWalkingDurationSeconds >= 0f)
+    }
+
+    @Test
     fun deleteCurrentCard_lastCardInPart_marksPartCompleted() = runTest {
         viewModel.loadDeckAndPart("deck-1", 0)
         advanceUntilIdle()
@@ -824,6 +836,19 @@ class StudyViewModelTest {
             return newDeck
         }
         val pastDayCards = mutableMapOf<PastDayDeckType, List<Card>>()
+        var studyWalkingProgressCallCount = 0
+        var lastWalkingDurationSeconds = 0f
+        var lastWalkingSpeedMultiplier = 1.0f
+
+        override suspend fun recordStudyWalkingProgress(
+            durationSeconds: Float,
+            speedMultiplier: Float,
+        ): com.aidomari.app.domain.model.SugorokuProgress {
+            studyWalkingProgressCallCount++
+            lastWalkingDurationSeconds = durationSeconds
+            lastWalkingSpeedMultiplier = speedMultiplier
+            return com.aidomari.app.domain.model.SugorokuProgress()
+        }
         override suspend fun getOrCreatePastDayDeck(subjectId: String, type: PastDayDeckType): Deck {
             val id = "${type.idPrefix}$subjectId"
             val existing = decks.find { it.id == id }
