@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Generates official Hokkaido major lake polygons from Ministry of Land, Infrastructure,
-Transport and Tourism (MLIT 国土数値情報 湖沼データ W09) and adds LAKES_D to HokkaidoSvgPaths.kt.
+Generates comprehensive Hokkaido lake polygons from Ministry of Land, Infrastructure,
+Transport and Tourism (MLIT 国土数値情報 湖沼データ W09) and updates HokkaidoSvgPaths.kt.
+Extracts all 107 official lake records in Hokkaido (276 polygon rings including islands and multi-basin lakes).
 """
 
 import math
@@ -60,6 +61,7 @@ def main():
         target_zip = zip_path
     else:
         import urllib.request
+
         url = "https://nlftp.mlit.go.jp/ksj/gml/data/W09/W09-05/W09-05_GML.zip"
         print(f"Downloading MLIT lake dataset from {url}...")
         urllib.request.urlretrieve(url, zip_path)
@@ -81,28 +83,16 @@ def main():
         muni = rec_data[29:130].decode("cp932", errors="ignore").strip()
         names.append((name, muni))
 
-    major_lakes = [
-        "サロマ湖",
-        "屈斜路湖",
-        "支笏湖",
-        "洞爺湖",
-        "能取湖",
-        "網走湖",
-        "涛沸湖",
-        "摩周湖",
-        "阿寒湖",
-        "クッチャロ湖（大沼）",
-        "大沼",
-        "風蓮湖",
-    ]
-
     offset = 100
     record_idx = 0
-    all_subpaths = []
+    subpaths = []
     total_pts = 0
+    lake_names = set()
 
     while offset < len(shp_bytes):
-        rec_num, content_len = struct.unpack(">II", shp_bytes[offset : offset + 8])
+        rec_num, content_len = struct.unpack(
+            ">II", shp_bytes[offset : offset + 8]
+        )
         offset += 8
         rec_content = shp_bytes[offset : offset + content_len * 2]
         offset += content_len * 2
@@ -111,14 +101,11 @@ def main():
         record_idx += 1
         if not muni.startswith("01"):
             continue
-        if name not in major_lakes:
-            continue
 
         shape_type = struct.unpack("<I", rec_content[:4])[0]
         if shape_type != 5:
             continue
 
-        min_x, min_y, max_x, max_y = struct.unpack("<dddd", rec_content[4:36])
         num_parts, num_points = struct.unpack("<II", rec_content[36:44])
         parts = struct.unpack(
             f"<{num_parts}I", rec_content[44 : 44 + num_parts * 4]
@@ -139,50 +126,99 @@ def main():
             start = parts[p_i]
             end = parts[p_i + 1] if p_i + 1 < num_parts else num_points
             raw_part = pts[start:end]
-            if len(raw_part) >= 15:
+            if len(raw_part) >= 4:
                 simp = rdp(raw_part, 0.0003)
-                svg_coords = [gps_to_svg(lon, lat) for lon, lat in simp]
-                all_subpaths.append(
-                    "M "
-                    + " L ".join(f"{x:.2f},{y:.2f}" for x, y in svg_coords)
-                    + " Z"
-                )
-                total_pts += len(simp)
+                if len(simp) >= 3:
+                    svg_coords = [gps_to_svg(lon, lat) for lon, lat in simp]
+                    subpaths.append(
+                        (
+                            name,
+                            "M "
+                            + " L ".join(
+                                f"{x:.2f},{y:.2f}" for x, y in svg_coords
+                            )
+                            + " Z",
+                        )
+                    )
+                    total_pts += len(simp)
+                    lake_names.add(name)
 
-    combined_d = " ".join(all_subpaths)
     print(
-        f"Generated {len(all_subpaths)} subpaths, {total_pts} points, {len(combined_d)} characters"
+        f"Extracted {len(subpaths)} subpaths from {len(lake_names)} Hokkaido lakes, total {total_pts} points."
     )
+
+    # Balance into 3 parts so each string literal is safely ~42KB (well under JVM 65,535-byte limit)
+    part1, part2, part3 = [], [], []
+    len1, len2, len3 = 0, 0, 0
+    for name, sp in subpaths:
+        slen = len(sp) + 1
+        if len1 <= len2 and len1 <= len3:
+            part1.append(sp)
+            len1 += slen
+        elif len2 <= len3:
+            part2.append(sp)
+            len2 += slen
+        else:
+            part3.append(sp)
+            len3 += slen
+
+    p1_str = " ".join(part1)
+    p2_str = " ".join(part2)
+    p3_str = " ".join(part3)
+
+    print(f"  Part 1: {len(part1)} rings, {len(p1_str)} chars")
+    print(f"  Part 2: {len(part2)} rings, {len(p2_str)} chars")
+    print(f"  Part 3: {len(part3)} rings, {len(p3_str)} chars")
 
     kt_path = "/home/txjp/dev/aidomari/app/src/main/java/com/aidomari/app/ui/sugoroku/HokkaidoSvgPaths.kt"
     with open(kt_path) as f:
         kt_code = f.read()
 
-    # Append LAKES_D before closing brace
-    lake_const = f"""
+    # Find where LAKES_D starts
+    idx = kt_code.find("const val LAKES_D =")
+    if idx == -1:
+        idx = kt_code.find("val LAKES_D")
+    if idx == -1:
+        idx = kt_code.find("const val LAKES_PART1_D =")
+
+    if idx != -1:
+        # Search backward for the comment of LAKES_D
+        comment_idx = kt_code.rfind("/**", 0, idx)
+        if comment_idx != -1:
+            code_prefix = kt_code[:comment_idx].rstrip()
+        else:
+            code_prefix = kt_code[:idx].rstrip()
+    else:
+        last_brace = kt_code.rfind("}")
+        code_prefix = kt_code[:last_brace].rstrip()
+
+    lake_code = f"""
     /**
-     * Major Hokkaido inland lakes (サロマ湖, 屈斜路湖, 支笏湖, 洞爺湖, 網走湖, 能取湖, 摩周湖, クッチャロ湖, 阿寒湖, 大沼, 涛沸湖, 風蓮湖).
+     * Comprehensive Hokkaido lakes, ponds, and marshes (107 lakes, {len(subpaths)} polygon rings).
      * Derived directly from Ministry of Land, Infrastructure, Transport and Tourism (国土交通省 国土数値情報 湖沼データ W09).
      * Projected via pure conformal Mercator projection (0.0% deformation).
+     * Split across 3 constants to respect JVM 65,535-byte constant pool limit.
      */
-    const val LAKES_D = "{combined_d}"
-"""
-    if "const val LAKES_D =" in kt_code:
-        # Replace existing
-        import re
+    const val LAKES_PART1_D = "{p1_str}"
+    const val LAKES_PART2_D = "{p2_str}"
+    const val LAKES_PART3_D = "{p3_str}"
 
-        kt_code = re.sub(
-            r'const val LAKES_D = "[^"]+"',
-            f'const val LAKES_D = "{combined_d}"',
-            kt_code,
-        )
-    else:
-        # Insert before closing brace
-        last_brace = kt_code.rfind("}")
-        kt_code = kt_code[:last_brace] + lake_const + kt_code[last_brace:]
+    val LAKES_D: String by lazy {{
+        StringBuilder(131072)
+            .append(LAKES_PART1_D)
+            .append(' ')
+            .append(LAKES_PART2_D)
+            .append(' ')
+            .append(LAKES_PART3_D)
+            .toString()
+    }}
+}}
+"""
+
+    new_kt_code = code_prefix + "\n" + lake_code
 
     with open(kt_path, "w") as f:
-        f.write(kt_code)
+        f.write(new_kt_code)
     print(f"Updated {kt_path} successfully!")
 
 
