@@ -364,14 +364,6 @@ fun SugorokuMapContent(
                         zoomScale = zoomScale,
                     )
 
-                    // 3. Connected Travel Road along the verified travel route
-                    drawConnectingRoads(
-                        tileCentersDp = tileCentersDp,
-                        visibleStepCount = visibleTrackStep + 1,
-                        density = density,
-                        zoomScale = zoomScale,
-                    )
-
                     // 3. Equidistant Square Sugoroku Tiles
                     drawSugorokuTiles(
                         nodes = allNodes,
@@ -782,68 +774,6 @@ private fun DrawScope.drawHokkaidoRoadNetwork(
                 drawPath(path = roadPath, color = travelDashColor, style = travelDashStroke)
             }
         }
-    }
-}
-
-/**
- * Draws connected travel road connecting consecutive Sugoroku step centers.
- */
-private fun DrawScope.drawConnectingRoads(
-    tileCentersDp: List<Offset>,
-    visibleStepCount: Int,
-    density: Float,
-    zoomScale: Float,
-) {
-    val count = visibleStepCount.coerceAtMost(tileCentersDp.size)
-    if (count < 2) return
-
-    val roadWidth = 14.dp.toPx()
-    val roadBorderColor = Color(0xFF8D6E63)
-    val roadSurfaceColor = Color(0xFFD7CCC8)
-
-    // When zoomed out deeply to see all Hokkaido, draw a crisp solid route path
-    if (zoomScale < 0.05f) {
-        val routePath = Path()
-        val first = tileCentersDp[0]
-        routePath.moveTo(first.x * density, first.y * density)
-        for (i in 1 until count) {
-            val pt = tileCentersDp[i]
-            routePath.lineTo(pt.x * density, pt.y * density)
-        }
-        // In world coordinates, divide screen thickness by zoomScale so it appears at fixed screen thickness!
-        val polylineStrokeWorld = 4.dp.toPx() / zoomScale
-        drawPath(
-            path = routePath,
-            color = Color(0xFFE65100),
-            style = Stroke(width = polylineStrokeWorld, cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
-        return
-    }
-
-    for (i in 0 until count - 1) {
-        val p1 = tileCentersDp[i]
-        val p2 = tileCentersDp[i + 1]
-        val sx1 = p1.x * density
-        val sy1 = p1.y * density
-        val sx2 = p2.x * density
-        val sy2 = p2.y * density
-
-        // Border
-        drawLine(
-            color = roadBorderColor,
-            start = Offset(sx1, sy1),
-            end = Offset(sx2, sy2),
-            strokeWidth = roadWidth + 2.dp.toPx(),
-            cap = StrokeCap.Round,
-        )
-        // Surface
-        drawLine(
-            color = roadSurfaceColor,
-            start = Offset(sx1, sy1),
-            end = Offset(sx2, sy2),
-            strokeWidth = roadWidth,
-            cap = StrokeCap.Round,
-        )
     }
 }
 
