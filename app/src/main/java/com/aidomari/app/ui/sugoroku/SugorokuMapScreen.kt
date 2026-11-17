@@ -383,17 +383,50 @@ fun SugorokuMapContent(
                         viewportWorld = viewportWorld,
                     )
 
-                    // 4. Cute Traveler Avatar Piece at current step (rendered when zoomed in)
-                    if (zoomScale >= 0.05f && currentStep in tileCentersDp.indices) {
+                    // 4. Player Marker / Avatar Piece at current step
+                    if (currentStep in tileCentersDp.indices) {
                         val curPtDp = tileCentersDp[currentStep]
                         val curX = curPtDp.x * density
                         val curY = curPtDp.y * density
 
-                        drawTravelerPiece(
-                            x = curX,
-                            y = curY + 10.dp.toPx() + playerFloatY * 1.5f,
-                            shadowY = curY + 24.dp.toPx(),
-                        )
+                        if (zoomScale < 0.05f) {
+                            // Wide view: draw a single prominent player position beacon at current step
+                            val beaconRadius = 7.dp.toPx() / zoomScale
+                            val ringWidth = 2.dp.toPx() / zoomScale
+                            val haloRadius = 12.dp.toPx() / zoomScale
+
+                            // Outer soft halo
+                            drawCircle(
+                                color = Color(0xFFFF9800).copy(alpha = 0.35f),
+                                radius = haloRadius,
+                                center = Offset(curX, curY),
+                            )
+                            // Outer white ring
+                            drawCircle(
+                                color = Color.White,
+                                radius = beaconRadius + ringWidth,
+                                center = Offset(curX, curY),
+                            )
+                            // Primary player marker (vibrant warm orange matching traveler theme)
+                            drawCircle(
+                                color = Color(0xFFE65100),
+                                radius = beaconRadius,
+                                center = Offset(curX, curY),
+                            )
+                            // Center crisp ivory core
+                            drawCircle(
+                                color = Color(0xFFFFF3E0),
+                                radius = beaconRadius * 0.45f,
+                                center = Offset(curX, curY),
+                            )
+                        } else {
+                            // Detailed view: Cute Traveler Avatar Piece
+                            drawTravelerPiece(
+                                x = curX,
+                                y = curY + 10.dp.toPx() + playerFloatY * 1.5f,
+                                shadowY = curY + 24.dp.toPx(),
+                            )
+                        }
                     }
                 }
             }
@@ -830,41 +863,8 @@ private fun DrawScope.drawSugorokuTiles(
 ) {
     val count = visibleStepCount.coerceAtMost(tileCentersDp.size)
 
-    // If zoomed out to whole prefecture overview, draw key landmark pins
+    // If zoomed out to whole prefecture overview, skip individual tile rendering
     if (zoomScale < 0.05f) {
-        val pinKeySteps = listOfNotNull(
-            nodes.firstOrNull { it.type == SugorokuNodeType.START_HAKODATE }?.let { it.stepIndex to "函館駅" },
-            nodes.firstOrNull { it.name.contains("小樽") }?.let { it.stepIndex to "小樽" },
-            nodes.firstOrNull { it.name.contains("初山別") || it.name.contains("金比羅岬") }?.let { it.stepIndex to "初山別" },
-            nodes.firstOrNull { it.name.contains("宗谷岬") }?.let { it.stepIndex to "宗谷岬" },
-            nodes.firstOrNull { it.name.contains("網走") }?.let { it.stepIndex to "網走" },
-            nodes.firstOrNull { it.type == SugorokuNodeType.GOAL_AIDOMARI }?.let { it.stepIndex to "相泊" },
-        )
-        val pinRadiusWorld = 7.dp.toPx() / zoomScale
-        val ringWidthWorld = 2.dp.toPx() / zoomScale
-
-        for ((stepIdx, _) in pinKeySteps) {
-            if (stepIdx < count) {
-                val pt = tileCentersDp[stepIdx]
-                val cx = pt.x * density
-                val cy = pt.y * density
-                drawCircle(
-                    color = Color.White,
-                    radius = pinRadiusWorld + ringWidthWorld,
-                    center = Offset(cx, cy),
-                )
-                drawCircle(
-                    color = Color(0xFFD32F2F),
-                    radius = pinRadiusWorld,
-                    center = Offset(cx, cy),
-                )
-                drawCircle(
-                    color = Color.White,
-                    radius = pinRadiusWorld * 0.4f,
-                    center = Offset(cx, cy),
-                )
-            }
-        }
         return
     }
 
