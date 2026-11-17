@@ -660,12 +660,13 @@ private fun DrawScope.drawHokkaidoRoadNetwork(
 
     if (zoomScale < 0.05f) {
         // Wide view: draw minor roads first, major highways on top for clean hierarchy
+        // Non-orange roads are scaled down to ~1/3 width to keep the map sleek and highlight the travel route
         for (targetCat in hierarchy) {
             val strokeWidth = when (targetCat) {
                 HighwayCategory.TRAVEL_ROUTE -> 3.5.dp.toPx() / zoomScale
-                HighwayCategory.NATIONAL_HIGHWAY -> 2.5.dp.toPx() / zoomScale
-                HighwayCategory.SCENIC_ROAD -> 2.0.dp.toPx() / zoomScale
-                HighwayCategory.PREFECTURAL_ROAD -> 1.5.dp.toPx() / zoomScale
+                HighwayCategory.NATIONAL_HIGHWAY -> 0.8.dp.toPx() / zoomScale
+                HighwayCategory.SCENIC_ROAD -> 0.7.dp.toPx() / zoomScale
+                HighwayCategory.PREFECTURAL_ROAD -> 0.5.dp.toPx() / zoomScale
             }
             val roadColor = when (targetCat) {
                 HighwayCategory.TRAVEL_ROUTE -> Color(0xFFFF9800) // Vibrant orange travel route
@@ -686,9 +687,9 @@ private fun DrawScope.drawHokkaidoRoadNetwork(
         for (targetCat in hierarchy) {
             val borderWidth = when (targetCat) {
                 HighwayCategory.TRAVEL_ROUTE -> 18.dp.toPx()
-                HighwayCategory.NATIONAL_HIGHWAY -> 16.dp.toPx()
-                HighwayCategory.SCENIC_ROAD -> 14.dp.toPx()
-                HighwayCategory.PREFECTURAL_ROAD -> 12.dp.toPx()
+                HighwayCategory.NATIONAL_HIGHWAY -> 5.5.dp.toPx()
+                HighwayCategory.SCENIC_ROAD -> 4.8.dp.toPx()
+                HighwayCategory.PREFECTURAL_ROAD -> 4.0.dp.toPx()
             }
             val borderStroke = Stroke(width = borderWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
             val borderColor = when (targetCat) {
@@ -706,9 +707,9 @@ private fun DrawScope.drawHokkaidoRoadNetwork(
         for (targetCat in hierarchy) {
             val surfaceWidth = when (targetCat) {
                 HighwayCategory.TRAVEL_ROUTE -> 14.dp.toPx()
-                HighwayCategory.NATIONAL_HIGHWAY -> 12.dp.toPx()
-                HighwayCategory.SCENIC_ROAD -> 10.dp.toPx()
-                HighwayCategory.PREFECTURAL_ROAD -> 8.dp.toPx()
+                HighwayCategory.NATIONAL_HIGHWAY -> 4.0.dp.toPx()
+                HighwayCategory.SCENIC_ROAD -> 3.3.dp.toPx()
+                HighwayCategory.PREFECTURAL_ROAD -> 2.7.dp.toPx()
             }
             val surfaceStroke = Stroke(width = surfaceWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
             val surfaceColor = when (targetCat) {
@@ -724,10 +725,10 @@ private fun DrawScope.drawHokkaidoRoadNetwork(
 
         // PASS 3: Dashed centerlines for National Highways and Travel Route
         val dashStroke = Stroke(
-            width = 1.5.dp.toPx(),
+            width = 0.6.dp.toPx(),
             cap = StrokeCap.Round,
             join = StrokeJoin.Round,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx())),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
         )
         val dashColor = Color.White.copy(alpha = 0.85f)
         for ((segment, roadPath) in highwayPaths) {
