@@ -222,7 +222,7 @@ fun SugorokuMapContent(
                                 modifier = Modifier.testTag("DebugSpeedMultiplierButton"),
                             ) {
                                 Text(
-                                    text = "⚡${uiState.speedMultiplier.toInt()}x",
+                                    text = "${uiState.speedMultiplier.toInt()}倍速",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                 )
@@ -259,7 +259,7 @@ fun SugorokuMapContent(
                             modifier = Modifier.testTag("DebugNextAnchorButton"),
                         ) {
                             Text(
-                                text = "📍次",
+                                text = "次へ",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -270,8 +270,9 @@ fun SugorokuMapContent(
                             modifier = Modifier.testTag("DebugResetButton"),
                         ) {
                             Text(
-                                text = "🔄",
-                                fontSize = 12.sp,
+                                text = "初期化",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
                             )
                         }
 
@@ -280,18 +281,13 @@ fun SugorokuMapContent(
                             modifier = Modifier.testTag("DebugScrollLockButton"),
                         ) {
                             Text(
-                                text = if (isDebugScrollUnlocked) "🔓全域" else "🔒制限",
+                                text = if (isDebugScrollUnlocked) "全域" else "制限",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isDebugScrollUnlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                             )
                         }
                     }
-                    Text(
-                        text = "🗾",
-                        fontSize = 22.sp,
-                        modifier = Modifier.padding(end = 12.dp),
-                    )
                 },
             )
         },
@@ -583,10 +579,13 @@ fun SugorokuMapContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "📍",
-                                fontSize = 16.sp,
-                                modifier = Modifier.padding(end = 4.dp),
+                            Icon(
+                                imageVector = Icons.Default.MyLocation,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .padding(end = 4.dp),
+                                tint = MaterialTheme.colorScheme.primary,
                             )
                             Text(
                                 text = currentNode.name,
@@ -708,18 +707,23 @@ fun SugorokuMapContent(
             onDismissRequest = onDismissDialog,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = when {
-                            node.type == SugorokuNodeType.START_HAKODATE -> "🎌 "
-                            node.type == SugorokuNodeType.GOAL_AIDOMARI -> "🏁 "
-                            node.isAnchor -> "⚓ [アンカー] "
-                            node.type == SugorokuNodeType.SCENIC_SPOT -> "✨ "
-                            node.type == SugorokuNodeType.TOWN_CENTER -> "🏘️ "
-                            node.type == SugorokuNodeType.REST_AREA -> "☕ "
-                            node.type == SugorokuNodeType.NORMAL -> "👣 "
-                            else -> "・ "
-                        },
-                    )
+                    val badge = when {
+                        node.type == SugorokuNodeType.START_HAKODATE -> "[出発] "
+                        node.type == SugorokuNodeType.GOAL_AIDOMARI -> "[終着] "
+                        node.isAnchor -> "[アンカー] "
+                        node.type == SugorokuNodeType.SCENIC_SPOT -> "[名所] "
+                        node.type == SugorokuNodeType.TOWN_CENTER -> "[街] "
+                        node.type == SugorokuNodeType.REST_AREA -> "[休憩] "
+                        else -> ""
+                    }
+                    if (badge.isNotEmpty()) {
+                        Text(
+                            text = badge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontSize = 13.sp,
+                        )
+                    }
                     Text(
                         text = node.name,
                         fontWeight = FontWeight.Bold,
@@ -739,7 +743,7 @@ fun SugorokuMapContent(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = if (isReached) "✅ 到達済み（足跡が刻まれています）" else "🌱 未踏の地（これから進む道）",
+                        text = if (isReached) "到達済み（足跡が刻まれています）" else "未踏の地（これから進む道）",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isReached) Color(0xFF2E7D32) else Color(0xFF757575),
                     )
@@ -941,12 +945,6 @@ private fun DrawScope.drawSugorokuTiles(
         textAlign = Paint.Align.CENTER
     }
 
-    val iconPaint = Paint().apply {
-        textSize = 13.dp.toPx()
-        isAntiAlias = true
-        textAlign = Paint.Align.CENTER
-    }
-
     val badgePaint = Paint().apply {
         color = android.graphics.Color.rgb(33, 33, 33)
         textSize = 10.dp.toPx()
@@ -1057,33 +1055,24 @@ private fun DrawScope.drawSugorokuTiles(
                 badgePaint,
             )
         } else {
-            // Normal tile: name in center
+            // Normal tile: name cleanly centered vertically
             drawTileLabel(
                 text = node.name,
                 cx = cx,
-                cy = top + 27.dp.toPx(),
+                cy = top + 29.dp.toPx(),
                 maxTextWidthPx = 48.dp.toPx(),
                 baseTextSizePx = 10.dp.toPx(),
                 paint = labelPaint,
             )
 
-            // Tile Contents: Icon on bottom
-            val iconStr = when {
-                node.type == SugorokuNodeType.START_HAKODATE -> "🎌"
-                node.type == SugorokuNodeType.GOAL_AIDOMARI -> "🏁"
-                node.isAnchor -> "⚓"
-                node.type == SugorokuNodeType.SCENIC_SPOT -> "⭐"
-                node.type == SugorokuNodeType.TOWN_CENTER -> "🏘️"
-                node.type == SugorokuNodeType.REST_AREA -> "♨️"
-                node.type == SugorokuNodeType.NORMAL -> if (isVisited) "👣" else "・"
-                else -> "・"
+            // Subtle anchor indicator (elegant diamond/dot without preset emojis)
+            if (node.isAnchor) {
+                drawCircle(
+                    color = if (isVisited) Color(0xFF8E24AA) else Color(0xFFAB47BC),
+                    radius = 2.2.dp.toPx(),
+                    center = Offset(cx, top + 41.5.dp.toPx()),
+                )
             }
-            drawContext.canvas.nativeCanvas.drawText(
-                iconStr,
-                cx,
-                top + 45.dp.toPx(),
-                iconPaint,
-            )
         }
     }
 }
