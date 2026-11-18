@@ -109,7 +109,7 @@ class SugorokuMapScreenshotTest {
                 uiState = SugorokuMapUiState(
                     progress = SugorokuProgress(currentStepIndex = nanaeNode.stepIndex),
                     currentNode = nanaeNode,
-                    playerWorldOffset = androidx.compose.ui.geometry.Offset(cowLandmark.x, cowLandmark.y),
+                    playerWorldOffset = androidx.compose.ui.geometry.Offset(cowLandmark.x + 0.28f, cowLandmark.y + 0.14f),
                     nearbyLandmark = cowLandmark,
                 ),
                 onBack = {},

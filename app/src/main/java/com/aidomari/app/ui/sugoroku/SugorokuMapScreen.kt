@@ -467,7 +467,7 @@ fun SugorokuMapContent(
                         theme = theme,
                     )
 
-                    // 3. Roadside Storybook Landmarks
+                    // 3. Roadside Storybook Landmarks (wide panoramic watercolor vignettes)
                     drawRoadsideLandmarks(
                         landmarks = uiState.roadsideLandmarks,
                         landmarkBitmaps = landmarkBitmaps,
@@ -1158,8 +1158,8 @@ private fun splitJapaneseTileName(text: String): Pair<String, String> {
 }
 
 /**
- * Draws rich roadside scenery vignettes along the route.
- * Renders purely as storybook scenery without artificial text labels.
+ * Draws rich roadside scenery panoramas and vignettes along the route.
+ * Renders purely as storybook scenery without artificial text labels or token oval shadows.
  * Applies Y-sorting (painter's algorithm) so foreground scenery naturally overlaps background scenery.
  */
 private fun DrawScope.drawRoadsideLandmarks(
@@ -1171,7 +1171,7 @@ private fun DrawScope.drawRoadsideLandmarks(
 ) {
     if (landmarks.isEmpty()) return
 
-    val pad = 48.dp.toPx()
+    val pad = 200.dp.toPx()
     val vLeft = viewportWorld.left - pad
     val vTop = viewportWorld.top - pad
     val vRight = viewportWorld.right + pad
@@ -1192,22 +1192,21 @@ private fun DrawScope.drawRoadsideLandmarks(
         val wPx = landmark.type.baseDisplayWidthDp.dp.toPx() * landmark.scale
         val hPx = landmark.type.baseDisplayHeightDp.dp.toPx() * landmark.scale
 
-        // 1. Soft organic ground shadow
-        drawOval(
-            color = Color(0x2B000000),
-            topLeft = Offset(cx - wPx * 0.42f, cy + hPx * 0.34f),
-            size = Size(wPx * 0.84f, hPx * 0.28f),
-        )
-
-        // 2. Storybook scenery sprite (zero text labels)
-        drawImage(
-            image = bitmap,
-            dstOffset = IntOffset(
-                x = (cx - wPx / 2f).roundToInt(),
-                y = (cy - hPx / 2f).roundToInt(),
-            ),
-            dstSize = IntSize(wPx.roundToInt(), hPx.roundToInt()),
-        )
+        // Storybook scenery panorama/vignette (directly grounded in terrain, zero oval token shadow)
+        withTransform({
+            if (landmark.flipX) {
+                scale(scaleX = -1f, scaleY = 1f, pivot = Offset(cx, cy))
+            }
+        }) {
+            drawImage(
+                image = bitmap,
+                dstOffset = IntOffset(
+                    x = (cx - wPx / 2f).roundToInt(),
+                    y = (cy - hPx / 2f).roundToInt(),
+                ),
+                dstSize = IntSize(wPx.roundToInt(), hPx.roundToInt()),
+            )
+        }
     }
 }
 

@@ -14,7 +14,7 @@ data class SugorokuMapUiState(
     val totalNodes: Int = HokkaidoAct1Route.totalNodes,
     val remainingSteps: Int = (HokkaidoAct1Route.totalNodes - 1).coerceAtLeast(0),
     val totalDistanceMeters: Float = 0.0f,
-    val playerWorldOffset: Offset = Offset(HokkaidoAct1Route.startNode.x, HokkaidoAct1Route.startNode.y),
+    val playerWorldOffset: Offset = Offset(currentNode.x, currentNode.y),
     val speedMultiplier: Float = 1.0f,
     val isAct1Finished: Boolean = false,
     val isLoading: Boolean = false,
