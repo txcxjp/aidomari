@@ -101,6 +101,27 @@ class SugorokuMapScreenshotTest {
     }
 
     @Test
+    fun captureSugorokuMap_roadsideLandmark_cow_and_reaction() {
+        val nanaeNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "nanae_station" } ?: HokkaidoAct1Route.startNode
+        val cowLandmark = com.aidomari.app.domain.model.RoadsideLandmark.ACT1_LANDMARKS.first { it.id == "nanae_ranch_cow" }
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = nanaeNode.stepIndex),
+                    currentNode = nanaeNode,
+                    playerWorldOffset = androidx.compose.ui.geometry.Offset(cowLandmark.x, cowLandmark.y),
+                    nearbyLandmark = cowLandmark,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_cow_reaction.png")
+    }
+
+    @Test
     fun captureSugorokuMap_step250_suttsu_area() {
         val suttsuNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("寿都") } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {

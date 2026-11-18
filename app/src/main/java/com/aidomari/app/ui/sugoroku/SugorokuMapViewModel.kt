@@ -42,6 +42,11 @@ class SugorokuMapViewModel(
                 val node = HokkaidoAct1Route.getNodeByStepIndex(routeProgress.currentAnchorIndex)
                     ?: HokkaidoAct1Route.startNode
                 val remaining = (HokkaidoAct1Route.totalNodes - 1 - routeProgress.currentAnchorIndex).coerceAtLeast(0)
+                val nearby = com.aidomari.app.domain.model.RoadsideLandmark.ACT1_LANDMARKS.firstOrNull { landmark ->
+                    val dx = routeProgress.currentWorldOffset.x - landmark.x
+                    val dy = routeProgress.currentWorldOffset.y - landmark.y
+                    dx * dx + dy * dy <= 2.25f
+                }
                 _uiState.update { current ->
                     current.copy(
                         progress = progress,
@@ -51,6 +56,7 @@ class SugorokuMapViewModel(
                         playerWorldOffset = routeProgress.currentWorldOffset,
                         isAct1Finished = routeProgress.isAct1Finished,
                         speedMultiplier = sugorokuDebugPreferences?.speedMultiplier?.value ?: 1.0f,
+                        nearbyLandmark = nearby,
                         isLoading = false,
                     )
                 }

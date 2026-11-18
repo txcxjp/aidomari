@@ -1,5 +1,6 @@
 package com.aidomari.app.ui.sugoroku
 
+import android.graphics.BitmapFactory
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.animation.core.RepeatMode
@@ -59,11 +60,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
@@ -75,6 +78,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.core.debug.SugorokuDebugPreferences
@@ -82,9 +87,13 @@ import com.aidomari.app.domain.model.HighwayCategory
 import com.aidomari.app.domain.model.HighwaySegment
 import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.HokkaidoRoadNetwork
+import com.aidomari.app.domain.model.RoadsideLandmark
+import com.aidomari.app.domain.model.RoadsideLandmarkType
 import com.aidomari.app.domain.model.SugorokuNode
 import com.aidomari.app.domain.model.SugorokuNodeType
+import com.aidomari.app.domain.model.TravelerCompanion
 import com.aidomari.app.domain.util.SugorokuWalkingCalculator
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,12 +127,23 @@ fun SugorokuMapContent(
     onAdvanceToNextAnchor: () -> Unit = {},
     onResetProgress: () -> Unit = {},
     onSetSpeedMultiplier: (Float) -> Unit = {},
+    theme: SugorokuMapTheme = SugorokuMapTheme.Default,
     modifier: Modifier = Modifier,
 ) {
     val allNodes = HokkaidoAct1Route.nodes
     val tileCentersDp = HokkaidoBoardTrack.tileCenters
     val density = LocalDensity.current.density
     val context = LocalContext.current
+
+    // Pre-load companion sprite and roadside landmark vignettes
+    val companionBitmap = remember(uiState.companion.drawableResId) {
+        BitmapFactory.decodeResource(context.resources, uiState.companion.drawableResId)?.asImageBitmap()
+    }
+    val landmarkBitmaps = remember(context) {
+        RoadsideLandmarkType.values().associateWith { type ->
+            BitmapFactory.decodeResource(context.resources, type.drawableResId)?.asImageBitmap()
+        }
+    }
 
     // Pre-parse official GSI Hokkaido coastline paths
     val mainlandPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.MAINLAND_D).toPath() }
@@ -280,7 +300,7 @@ fun SugorokuMapContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFF81D4FA)), // Calm blue ocean as base backdrop
+                .background(theme.oceanColor), // Calm blue ocean as base backdrop
         ) {
             val containerWidth = constraints.maxWidth.toFloat()
             val containerHeight = constraints.maxHeight.toFloat()
@@ -441,12 +461,23 @@ fun SugorokuMapContent(
                         lakesPath = lakesPath,
                         worldScale = HokkaidoBoardTrack.WORLD_SCALE,
                         density = density,
+                        theme = theme,
                     )
 
                     // 2. Real Highway Network: actual national and prefectural roads drawn directly onto land
                     drawHokkaidoRoadNetwork(
                         highwayPaths = cachedHighwayPaths,
                         zoomScale = zoomScale,
+                        theme = theme,
+                    )
+
+                    // 3. Roadside Storybook Landmarks
+                    drawRoadsideLandmarks(
+                        landmarks = uiState.roadsideLandmarks,
+                        landmarkBitmaps = landmarkBitmaps,
+                        worldScaleFactor = worldScaleFactor,
+                        viewportWorld = viewportWorld,
+                        density = density,
                     )
 
                     // 3. Equidistant Square Sugoroku Tiles
@@ -509,12 +540,23 @@ fun SugorokuMapContent(
                             center = Offset(curX, curY),
                         )
                     } else {
-                        // Detailed view: Cute Traveler Avatar Piece
-                        drawTravelerPiece(
+                        // Detailed view: Cute Traveler Companion Piece (Shima-enaga etc.)
+                        drawCompanionPiece(
                             x = curX,
-                            y = curY + 10.dp.toPx() + playerFloatY * 1.5f,
-                            shadowY = curY + 24.dp.toPx(),
+                            y = curY + 12.dp.toPx() + playerFloatY * 1.5f,
+                            shadowY = curY + 14.dp.toPx(),
+                            companionBitmap = companionBitmap,
+                            companion = uiState.companion,
                         )
+
+                        // Speech bubble for nearby roadside landmark reaction
+                        uiState.nearbyLandmark?.let { landmark ->
+                            drawSpeechBubble(
+                                text = landmark.reactionDialogue,
+                                x = curX,
+                                bubbleY = curY - 26.dp.toPx() + playerFloatY * 1.5f,
+                            )
+                        }
                     }
                 }
             }
@@ -727,36 +769,31 @@ private fun DrawScope.drawHokkaidoRealLandscape(
     lakesPath: Path,
     worldScale: Float,
     density: Float,
+    theme: SugorokuMapTheme = SugorokuMapTheme.Default,
 ) {
-    val landColor = Color(0xFFA5D6A7) // Natural Hokkaido grass green
-    val beachColor = Color(0xFFFFE082) // Sandy beach
-    val waveColor = Color(0xFFE1F5FE) // Shoreline surf
-    val borderColor = Color(0xFF66BB6A) // Coastline contour
-    val lakeWaterColor = Color(0xFF81D4FA) // Calm blue ocean & lake water
-
     val scaleFactor = worldScale * density
     scale(scaleFactor, scaleFactor, pivot = Offset.Zero) {
         // 1. Hokkaido landmasses
         paths.forEach { path ->
             // 1. Solid land polygon
-            drawPath(path = path, color = landColor)
+            drawPath(path = path, color = theme.landColor)
             // 2. Sand beach perimeter
-            drawPath(path = path, color = beachColor, style = Stroke(width = 3.5.dp.toPx() / scaleFactor))
+            drawPath(path = path, color = theme.beachColor, style = Stroke(width = 3.5.dp.toPx() / scaleFactor))
             // 3. Shoreline ocean wave foam
-            drawPath(path = path, color = waveColor, style = Stroke(width = 1.5.dp.toPx() / scaleFactor))
+            drawPath(path = path, color = theme.waveColor, style = Stroke(width = 1.5.dp.toPx() / scaleFactor))
             // 4. Clean coastline border
-            drawPath(path = path, color = borderColor, style = Stroke(width = 0.8.dp.toPx() / scaleFactor))
+            drawPath(path = path, color = theme.borderColor, style = Stroke(width = 0.8.dp.toPx() / scaleFactor))
         }
 
         // 2. Major inland lakes
         // Solid lake water polygon (carving out land)
-        drawPath(path = lakesPath, color = lakeWaterColor)
+        drawPath(path = lakesPath, color = theme.lakeWaterColor)
         // Sand beach perimeter around lake shorelines
-        drawPath(path = lakesPath, color = beachColor, style = Stroke(width = 2.0.dp.toPx() / scaleFactor))
+        drawPath(path = lakesPath, color = theme.beachColor, style = Stroke(width = 2.0.dp.toPx() / scaleFactor))
         // Shoreline wave foam along lake shores
-        drawPath(path = lakesPath, color = waveColor, style = Stroke(width = 1.0.dp.toPx() / scaleFactor))
+        drawPath(path = lakesPath, color = theme.waveColor, style = Stroke(width = 1.0.dp.toPx() / scaleFactor))
         // Lake perimeter contour border
-        drawPath(path = lakesPath, color = borderColor, style = Stroke(width = 0.6.dp.toPx() / scaleFactor))
+        drawPath(path = lakesPath, color = theme.borderColor, style = Stroke(width = 0.6.dp.toPx() / scaleFactor))
     }
 }
 
@@ -769,6 +806,7 @@ private fun DrawScope.drawHokkaidoRealLandscape(
 private fun DrawScope.drawHokkaidoRoadNetwork(
     highwayPaths: List<Pair<HighwaySegment, Path>>,
     zoomScale: Float,
+    theme: SugorokuMapTheme = SugorokuMapTheme.Default,
 ) {
     if (highwayPaths.isEmpty()) return
 
@@ -789,12 +827,7 @@ private fun DrawScope.drawHokkaidoRoadNetwork(
                 HighwayCategory.SCENIC_ROAD -> 0.7.dp.toPx() / zoomScale
                 HighwayCategory.PREFECTURAL_ROAD -> 0.5.dp.toPx() / zoomScale
             }
-            val roadColor = when (targetCat) {
-                HighwayCategory.TRAVEL_ROUTE -> Color(0xFFFF9800) // Vibrant orange travel route
-                HighwayCategory.NATIONAL_HIGHWAY -> Color(0xFF1565C0) // Crisp blue highway
-                HighwayCategory.SCENIC_ROAD -> Color(0xFF00897B) // Scenic teal
-                HighwayCategory.PREFECTURAL_ROAD -> Color(0xFF546E7A) // Slate grey
-            }
+            val roadColor = theme.roadColor(targetCat)
             val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
             for ((segment, roadPath) in highwayPaths) {
                 if (segment.category == targetCat) {
@@ -813,10 +846,7 @@ private fun DrawScope.drawHokkaidoRoadNetwork(
                 HighwayCategory.PREFECTURAL_ROAD -> 4.0.dp.toPx()
             }
             val borderStroke = Stroke(width = borderWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
-            val borderColor = when (targetCat) {
-                HighwayCategory.TRAVEL_ROUTE -> Color(0xFFE65100) // Deep warm orange border
-                else -> Color(0xFF37474F) // Dark slate roadbed
-            }
+            val borderColor = theme.roadBorderColor(targetCat)
             for ((segment, roadPath) in highwayPaths) {
                 if (segment.category == targetCat) {
                     drawPath(path = roadPath, color = borderColor, style = borderStroke)
@@ -833,10 +863,7 @@ private fun DrawScope.drawHokkaidoRoadNetwork(
                 HighwayCategory.PREFECTURAL_ROAD -> 2.7.dp.toPx()
             }
             val surfaceStroke = Stroke(width = surfaceWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
-            val surfaceColor = when (targetCat) {
-                HighwayCategory.TRAVEL_ROUTE -> Color(0xFFFFF3E0) // Warm ivory travel route
-                else -> Color(0xFFCFD8DC) // Cool grey asphalt
-            }
+            val surfaceColor = theme.roadBedColor(targetCat)
             for ((segment, roadPath) in highwayPaths) {
                 if (segment.category == targetCat) {
                     drawPath(path = roadPath, color = surfaceColor, style = surfaceStroke)
@@ -1142,74 +1169,191 @@ private fun splitJapaneseTileName(text: String): Pair<String, String> {
 }
 
 /**
- * Draws the cute traveler avatar piece with backpack and soft shadow.
+ * Draws roadside storybook landmarks along the route.
  */
-private fun DrawScope.drawTravelerPiece(
+private fun DrawScope.drawRoadsideLandmarks(
+    landmarks: List<RoadsideLandmark>,
+    landmarkBitmaps: Map<RoadsideLandmarkType, ImageBitmap?>,
+    worldScaleFactor: Float,
+    viewportWorld: Rect,
+    density: Float,
+) {
+    if (landmarks.isEmpty()) return
+
+    val labelPaint = Paint().apply {
+        color = android.graphics.Color.rgb(55, 71, 79)
+        textSize = 9.dp.toPx()
+        isAntiAlias = true
+        typeface = Typeface.DEFAULT_BOLD
+        textAlign = Paint.Align.CENTER
+    }
+
+    val labelBgPaint = Paint().apply {
+        color = android.graphics.Color.argb(220, 255, 255, 255)
+        isAntiAlias = true
+        style = Paint.Style.FILL
+    }
+
+    val pad = 40.dp.toPx()
+    val vLeft = viewportWorld.left - pad
+    val vTop = viewportWorld.top - pad
+    val vRight = viewportWorld.right + pad
+    val vBottom = viewportWorld.bottom + pad
+
+    for (landmark in landmarks) {
+        val cx = landmark.x * worldScaleFactor
+        val cy = landmark.y * worldScaleFactor
+
+        // Frustum Culling
+        if (cx < vLeft || cx > vRight || cy < vTop || cy > vBottom) {
+            continue
+        }
+
+        val bitmap = landmarkBitmaps[landmark.type]
+        val wPx = landmark.type.baseDisplayWidthDp.dp.toPx()
+        val hPx = landmark.type.baseDisplayHeightDp.dp.toPx()
+
+        // 1. Soft ground shadow
+        drawOval(
+            color = Color(0x30000000),
+            topLeft = Offset(cx - wPx * 0.42f, cy + hPx * 0.32f),
+            size = Size(wPx * 0.84f, hPx * 0.28f),
+        )
+
+        // 2. Storybook sprite image
+        if (bitmap != null) {
+            drawImage(
+                image = bitmap,
+                dstOffset = IntOffset(
+                    x = (cx - wPx / 2f).roundToInt(),
+                    y = (cy - hPx / 2f).roundToInt(),
+                ),
+                dstSize = IntSize(wPx.roundToInt(), hPx.roundToInt()),
+            )
+        }
+
+        // 3. Subtle cute name plate below landmark
+        val text = landmark.name
+        val textBounds = android.graphics.Rect()
+        labelPaint.getTextBounds(text, 0, text.length, textBounds)
+        val textWidth = textBounds.width().toFloat()
+        val textHeight = textBounds.height().toFloat()
+        val pillPaddingH = 5.dp.toPx()
+        val pillPaddingV = 2.dp.toPx()
+        val pillY = cy + hPx * 0.52f
+
+        val pillRect = android.graphics.RectF(
+            cx - textWidth / 2f - pillPaddingH,
+            pillY - pillPaddingV,
+            cx + textWidth / 2f + pillPaddingH,
+            pillY + textHeight + pillPaddingV,
+        )
+        drawContext.canvas.nativeCanvas.drawRoundRect(pillRect, 4.dp.toPx(), 4.dp.toPx(), labelBgPaint)
+        drawContext.canvas.nativeCanvas.drawText(text, cx, pillY + textHeight, labelPaint)
+    }
+}
+
+/**
+ * Draws the cute traveler companion piece (Shima-enaga etc.) with soft shadow.
+ */
+private fun DrawScope.drawCompanionPiece(
     x: Float,
     y: Float,
     shadowY: Float,
+    companionBitmap: ImageBitmap?,
+    companion: TravelerCompanion,
 ) {
-    // 1. Soft oval shadow on the ground
+    val sizeDp = 34.dp.toPx() * companion.defaultScale
+
+    // 1. Soft oval shadow on the road
     drawOval(
         color = Color(0x38000000),
-        topLeft = Offset(x - 14.dp.toPx(), shadowY - 5.dp.toPx()),
-        size = Size(28.dp.toPx(), 10.dp.toPx()),
+        topLeft = Offset(x - sizeDp * 0.42f, shadowY - 4.dp.toPx()),
+        size = Size(sizeDp * 0.84f, 8.dp.toPx()),
     )
 
-    // 2. Backpack (Red)
-    drawRoundRect(
-        color = Color(0xFFD32F2F),
-        topLeft = Offset(x - 13.dp.toPx(), y - 10.dp.toPx()),
-        size = Size(10.dp.toPx(), 16.dp.toPx()),
-        cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx()),
-    )
-
-    // 3. Body (Blue Shirt)
-    drawRoundRect(
-        color = Color(0xFF1976D2),
-        topLeft = Offset(x - 8.dp.toPx(), y - 6.dp.toPx()),
-        size = Size(16.dp.toPx(), 17.dp.toPx()),
-        cornerRadius = CornerRadius(5.dp.toPx(), 5.dp.toPx()),
-    )
-
-    // 4. Head / Face (Warm skin tone)
-    val headRadius = 9.dp.toPx()
-    val headCenter = Offset(x, y - 14.dp.toPx())
-    drawCircle(
-        color = Color(0xFFFFCC80),
-        radius = headRadius,
-        center = headCenter,
-    )
-
-    // 5. Yellow Travel Hat
-    val hatColor = Color(0xFFFFB300)
-    drawCircle(
-        color = hatColor,
-        radius = headRadius * 0.9f,
-        center = Offset(headCenter.x, headCenter.y - 4.dp.toPx()),
-    )
-    // Hat brim
-    drawOval(
-        color = hatColor,
-        topLeft = Offset(headCenter.x - 12.dp.toPx(), headCenter.y - 8.dp.toPx()),
-        size = Size(24.dp.toPx(), 7.dp.toPx()),
-    )
-
-    // 6. Eyes (Happy traveler)
-    val eyePaint = Paint().apply {
-        color = android.graphics.Color.DKGRAY
-        isAntiAlias = true
+    // 2. Storybook companion sprite
+    if (companionBitmap != null) {
+        val wPx = (sizeDp * 0.88f).roundToInt()
+        val hPx = sizeDp.roundToInt()
+        drawImage(
+            image = companionBitmap,
+            dstOffset = IntOffset(
+                x = (x - wPx / 2f).roundToInt(),
+                y = (y - hPx).roundToInt(),
+            ),
+            dstSize = IntSize(wPx, hPx),
+        )
+    } else {
+        // Fallback placeholder
+        drawCircle(
+            color = Color(0xFFFFF9C4),
+            radius = sizeDp * 0.35f,
+            center = Offset(x, y - sizeDp * 0.4f),
+        )
     }
-    drawContext.canvas.nativeCanvas.drawCircle(
-        headCenter.x - 3.5f.dp.toPx(),
-        headCenter.y + 1f.dp.toPx(),
-        1.5f.dp.toPx(),
-        eyePaint,
-    )
-    drawContext.canvas.nativeCanvas.drawCircle(
-        headCenter.x + 3.5f.dp.toPx(),
-        headCenter.y + 1f.dp.toPx(),
-        1.5f.dp.toPx(),
-        eyePaint,
-    )
+}
+
+/**
+ * Draws a charming storybook speech bubble above the companion's head when near a landmark.
+ */
+private fun DrawScope.drawSpeechBubble(
+    text: String,
+    x: Float,
+    bubbleY: Float,
+) {
+    val textPaint = Paint().apply {
+        color = android.graphics.Color.rgb(33, 33, 33)
+        textSize = 9.5.dp.toPx()
+        isAntiAlias = true
+        typeface = Typeface.DEFAULT_BOLD
+        textAlign = Paint.Align.CENTER
+    }
+
+    val bubblePaint = Paint().apply {
+        color = android.graphics.Color.rgb(255, 255, 255)
+        isAntiAlias = true
+        style = Paint.Style.FILL
+    }
+
+    val borderPaint = Paint().apply {
+        color = android.graphics.Color.rgb(255, 183, 77)
+        isAntiAlias = true
+        style = Paint.Style.STROKE
+        strokeWidth = 1.2.dp.toPx()
+    }
+
+    val textBounds = android.graphics.Rect()
+    textPaint.getTextBounds(text, 0, text.length, textBounds)
+    val textWidth = textBounds.width().toFloat()
+    val textHeight = textBounds.height().toFloat()
+
+    val padH = 8.dp.toPx()
+    val padV = 5.dp.toPx()
+    val bubbleWidth = textWidth + padH * 2
+    val bubbleHeight = textHeight + padV * 2
+
+    val left = x - bubbleWidth / 2f
+    val top = bubbleY - bubbleHeight
+    val right = x + bubbleWidth / 2f
+    val bottom = bubbleY
+
+    // Rounded rectangle bubble body
+    val bubbleRect = android.graphics.RectF(left, top, right, bottom)
+    drawContext.canvas.nativeCanvas.drawRoundRect(bubbleRect, 8.dp.toPx(), 8.dp.toPx(), bubblePaint)
+    drawContext.canvas.nativeCanvas.drawRoundRect(bubbleRect, 8.dp.toPx(), 8.dp.toPx(), borderPaint)
+
+    // Tail pointer
+    val tailPath = android.graphics.Path().apply {
+        moveTo(x - 3.dp.toPx(), bottom)
+        lineTo(x, bottom + 4.dp.toPx())
+        lineTo(x + 3.dp.toPx(), bottom)
+        close()
+    }
+    drawContext.canvas.nativeCanvas.drawPath(tailPath, bubblePaint)
+    drawContext.canvas.nativeCanvas.drawPath(tailPath, borderPaint)
+
+    // Text inside bubble
+    val textY = top + padV + textHeight
+    drawContext.canvas.nativeCanvas.drawText(text, x, textY, textPaint)
 }
