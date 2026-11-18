@@ -41,8 +41,6 @@ data class TravelerCompanion(
 
         val DEFAULT: TravelerCompanion = SHIMA_ENAGA
 
-        fun fromId(id: String?): TravelerCompanion {
-            return ALL_COMPANIONS.firstOrNull { it.id.serialName == id } ?: DEFAULT
-        }
+        fun fromId(id: String?): TravelerCompanion = ALL_COMPANIONS.firstOrNull { it.id.serialName == id } ?: DEFAULT
     }
 }
