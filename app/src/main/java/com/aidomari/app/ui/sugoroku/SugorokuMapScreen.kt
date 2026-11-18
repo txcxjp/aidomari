@@ -1158,7 +1158,9 @@ private fun splitJapaneseTileName(text: String): Pair<String, String> {
 }
 
 /**
- * Draws roadside storybook landmarks along the route.
+ * Draws rich roadside scenery vignettes along the route.
+ * Renders purely as storybook scenery without artificial text labels.
+ * Applies Y-sorting (painter's algorithm) so foreground scenery naturally overlaps background scenery.
  */
 private fun DrawScope.drawRoadsideLandmarks(
     landmarks: List<RoadsideLandmark>,
@@ -1169,76 +1171,43 @@ private fun DrawScope.drawRoadsideLandmarks(
 ) {
     if (landmarks.isEmpty()) return
 
-    val labelPaint = Paint().apply {
-        color = android.graphics.Color.rgb(55, 71, 79)
-        textSize = 9.dp.toPx()
-        isAntiAlias = true
-        typeface = Typeface.DEFAULT_BOLD
-        textAlign = Paint.Align.CENTER
-    }
-
-    val labelBgPaint = Paint().apply {
-        color = android.graphics.Color.argb(220, 255, 255, 255)
-        isAntiAlias = true
-        style = Paint.Style.FILL
-    }
-
-    val pad = 40.dp.toPx()
+    val pad = 48.dp.toPx()
     val vLeft = viewportWorld.left - pad
     val vTop = viewportWorld.top - pad
     val vRight = viewportWorld.right + pad
     val vBottom = viewportWorld.bottom + pad
 
-    for (landmark in landmarks) {
+    // Frustum culling followed by Y-sorting for correct perspective layering
+    val visible = landmarks.filter { lm ->
+        val cx = lm.x * worldScaleFactor
+        val cy = lm.y * worldScaleFactor
+        cx in vLeft..vRight && cy in vTop..vBottom
+    }.sortedBy { it.y }
+
+    for (landmark in visible) {
         val cx = landmark.x * worldScaleFactor
         val cy = landmark.y * worldScaleFactor
 
-        // Frustum Culling
-        if (cx < vLeft || cx > vRight || cy < vTop || cy > vBottom) {
-            continue
-        }
+        val bitmap = landmarkBitmaps[landmark.type] ?: continue
+        val wPx = landmark.type.baseDisplayWidthDp.dp.toPx() * landmark.scale
+        val hPx = landmark.type.baseDisplayHeightDp.dp.toPx() * landmark.scale
 
-        val bitmap = landmarkBitmaps[landmark.type]
-        val wPx = landmark.type.baseDisplayWidthDp.dp.toPx()
-        val hPx = landmark.type.baseDisplayHeightDp.dp.toPx()
-
-        // 1. Soft ground shadow
+        // 1. Soft organic ground shadow
         drawOval(
-            color = Color(0x30000000),
-            topLeft = Offset(cx - wPx * 0.42f, cy + hPx * 0.32f),
+            color = Color(0x2B000000),
+            topLeft = Offset(cx - wPx * 0.42f, cy + hPx * 0.34f),
             size = Size(wPx * 0.84f, hPx * 0.28f),
         )
 
-        // 2. Storybook sprite image
-        if (bitmap != null) {
-            drawImage(
-                image = bitmap,
-                dstOffset = IntOffset(
-                    x = (cx - wPx / 2f).roundToInt(),
-                    y = (cy - hPx / 2f).roundToInt(),
-                ),
-                dstSize = IntSize(wPx.roundToInt(), hPx.roundToInt()),
-            )
-        }
-
-        // 3. Subtle cute name plate below landmark
-        val text = landmark.name
-        val textBounds = android.graphics.Rect()
-        labelPaint.getTextBounds(text, 0, text.length, textBounds)
-        val textWidth = textBounds.width().toFloat()
-        val textHeight = textBounds.height().toFloat()
-        val pillPaddingH = 5.dp.toPx()
-        val pillPaddingV = 2.dp.toPx()
-        val pillY = cy + hPx * 0.52f
-
-        val pillRect = android.graphics.RectF(
-            cx - textWidth / 2f - pillPaddingH,
-            pillY - pillPaddingV,
-            cx + textWidth / 2f + pillPaddingH,
-            pillY + textHeight + pillPaddingV,
+        // 2. Storybook scenery sprite (zero text labels)
+        drawImage(
+            image = bitmap,
+            dstOffset = IntOffset(
+                x = (cx - wPx / 2f).roundToInt(),
+                y = (cy - hPx / 2f).roundToInt(),
+            ),
+            dstSize = IntSize(wPx.roundToInt(), hPx.roundToInt()),
         )
-        drawContext.canvas.nativeCanvas.drawRoundRect(pillRect, 4.dp.toPx(), 4.dp.toPx(), labelBgPaint)
-        drawContext.canvas.nativeCanvas.drawText(text, cx, pillY + textHeight, labelPaint)
     }
 }
 

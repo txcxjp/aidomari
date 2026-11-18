@@ -103,7 +103,7 @@ class SugorokuMapScreenshotTest {
     @Test
     fun captureSugorokuMap_roadsideLandmark_cow_and_reaction() {
         val nanaeNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "nanae_station" } ?: HokkaidoAct1Route.startNode
-        val cowLandmark = com.aidomari.app.domain.model.RoadsideLandmark.ACT1_LANDMARKS.first { it.id == "nanae_ranch_cow" }
+        val cowLandmark = com.aidomari.app.domain.model.RoadsideLandmark.ACT1_LANDMARKS.first { it.id == "nanae_cow_herd_1" }
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
