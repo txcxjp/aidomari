@@ -9,20 +9,20 @@ import com.aidomari.app.domain.model.HighwayCategory
  * and allows clean switching for future day/night or seasonal variations.
  */
 data class SugorokuMapTheme(
-    val landColor: Color = Color(0xFFA8D5A2), // Soft watercolor meadow green
-    val beachColor: Color = Color(0xFFFFF0B2), // Gentle sandy shore
-    val waveColor: Color = Color(0xFFE0F7FA), // Soft shoreline foam
-    val borderColor: Color = Color(0xFF81C784), // Natural coastline contour
-    val lakeWaterColor: Color = Color(0xFF81D4FA), // Calm blue lake water
-    val oceanColor: Color = Color(0xFF81D4FA), // Calm blue ocean backdrop
+    val landColor: Color = Color(0xFFF7F2E4), // Warm watercolor paper / cream ivory
+    val beachColor: Color = Color(0xFFF2E2C4), // Warm sandy shore
+    val waveColor: Color = Color(0xFFEAF7FA), // Soft shoreline foam
+    val borderColor: Color = Color(0xFFB8A68E), // Warm ink-taupe coastline contour
+    val lakeWaterColor: Color = Color(0xFF98D4EC), // Soft watercolor lake blue
+    val oceanColor: Color = Color(0xFF98D4EC), // Soft watercolor ocean blue
     val travelRouteColor: Color = Color(0xFFFF9800), // Vibrant orange walking route
     val travelRouteBorderColor: Color = Color(0xFFE65100), // Deep warm orange route border
     val travelRouteBedColor: Color = Color(0xFFFFF3E0), // Warm ivory inner route bed
-    val nationalHighwayColor: Color = Color(0xFF1565C0), // Crisp blue highway
-    val scenicRoadColor: Color = Color(0xFF00897B), // Scenic teal road
-    val prefecturalRoadColor: Color = Color(0xFF546E7A), // Slate grey prefectural road
-    val standardRoadBedColor: Color = Color(0xFFCFD8DC), // Cool grey asphalt
-    val standardRoadBorderColor: Color = Color(0xFF37474F), // Slate roadbed border
+    val nationalHighwayColor: Color = Color(0xFFD4A373), // Warm ochre highway
+    val scenicRoadColor: Color = Color(0xFFA3B18A), // Soft sage scenic road
+    val prefecturalRoadColor: Color = Color(0xFFD6C7B2), // Warm sand-taupe road
+    val standardRoadBedColor: Color = Color(0xFFE6D8C0), // Warm sand-beige street fill
+    val standardRoadBorderColor: Color = Color(0xFFCBB99E), // Soft warm tan road border
 ) {
     fun roadColor(category: HighwayCategory): Color = when (category) {
         HighwayCategory.TRAVEL_ROUTE -> travelRouteColor

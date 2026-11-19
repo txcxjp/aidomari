@@ -776,28 +776,54 @@ private fun DrawScope.drawHokkaidoRealLandscape(
     theme: SugorokuMapTheme = SugorokuMapTheme.Default,
 ) {
     val scaleFactor = worldScale * density
+    val cornerRadiusWorld = 3.5.dp.toPx() / scaleFactor
+    val coastCornerEffect = PathEffect.cornerPathEffect(cornerRadiusWorld)
     scale(scaleFactor, scaleFactor, pivot = Offset.Zero) {
         // 1. Hokkaido landmasses
         paths.forEach { path ->
             // 1. Solid land polygon
             drawPath(path = path, color = theme.landColor)
-            // 2. Sand beach perimeter
-            drawPath(path = path, color = theme.beachColor, style = Stroke(width = 3.5.dp.toPx() / scaleFactor))
+            // 2. Sand beach perimeter (smoothed corners)
+            drawPath(
+                path = path,
+                color = theme.beachColor,
+                style = Stroke(width = 3.5.dp.toPx() / scaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect),
+            )
             // 3. Shoreline ocean wave foam
-            drawPath(path = path, color = theme.waveColor, style = Stroke(width = 1.5.dp.toPx() / scaleFactor))
+            drawPath(
+                path = path,
+                color = theme.waveColor,
+                style = Stroke(width = 1.5.dp.toPx() / scaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect),
+            )
             // 4. Clean coastline border
-            drawPath(path = path, color = theme.borderColor, style = Stroke(width = 0.8.dp.toPx() / scaleFactor))
+            drawPath(
+                path = path,
+                color = theme.borderColor,
+                style = Stroke(width = 0.8.dp.toPx() / scaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect),
+            )
         }
 
         // 2. Major inland lakes
         // Solid lake water polygon (carving out land)
         drawPath(path = lakesPath, color = theme.lakeWaterColor)
         // Sand beach perimeter around lake shorelines
-        drawPath(path = lakesPath, color = theme.beachColor, style = Stroke(width = 2.0.dp.toPx() / scaleFactor))
+        drawPath(
+            path = lakesPath,
+            color = theme.beachColor,
+            style = Stroke(width = 2.0.dp.toPx() / scaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect),
+        )
         // Shoreline wave foam along lake shores
-        drawPath(path = lakesPath, color = theme.waveColor, style = Stroke(width = 1.0.dp.toPx() / scaleFactor))
+        drawPath(
+            path = lakesPath,
+            color = theme.waveColor,
+            style = Stroke(width = 1.0.dp.toPx() / scaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect),
+        )
         // Lake perimeter contour border
-        drawPath(path = lakesPath, color = theme.borderColor, style = Stroke(width = 0.6.dp.toPx() / scaleFactor))
+        drawPath(
+            path = lakesPath,
+            color = theme.borderColor,
+            style = Stroke(width = 0.6.dp.toPx() / scaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect),
+        )
     }
 }
 
