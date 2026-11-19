@@ -83,6 +83,26 @@ class SugorokuMapScreenshotTest {
     }
 
     @Test
+    fun captureSugorokuMap_hakodateZoomedOut() {
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = 0),
+                    currentNode = HokkaidoAct1Route.startNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        repeat(5) {
+            composeTestRule.onNodeWithContentDescription("縮小").performClick()
+            composeTestRule.waitForIdle()
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_hakodate_zoomed_out.png")
+    }
+
+    @Test
     fun captureSugorokuMap_step10_goryokaku() {
         val goryokakuNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("五稜郭") } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {

@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
@@ -93,6 +94,8 @@ import com.aidomari.app.domain.model.SugorokuNode
 import com.aidomari.app.domain.model.SugorokuNodeType
 import com.aidomari.app.domain.model.TravelerCompanion
 import com.aidomari.app.domain.util.SugorokuWalkingCalculator
+import kotlin.math.hypot
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -457,6 +460,7 @@ fun SugorokuMapContent(
                         lakesPath = lakesPath,
                         worldScale = HokkaidoBoardTrack.WORLD_SCALE,
                         density = density,
+                        zoomScale = zoomScale,
                         theme = theme,
                     )
 
@@ -467,13 +471,13 @@ fun SugorokuMapContent(
                         theme = theme,
                     )
 
-                    // 3. Roadside Storybook Landmarks (wide panoramic watercolor vignettes)
+                    // 3. Roadside Storybook Landmarks (zoom-compensated & consolidated at wide zooms)
                     drawRoadsideLandmarks(
                         landmarks = uiState.roadsideLandmarks,
                         landmarkBitmaps = landmarkBitmaps,
                         worldScaleFactor = worldScaleFactor,
                         viewportWorld = viewportWorld,
-                        density = density,
+                        zoomScale = zoomScale,
                     )
 
                     // 3. Equidistant Square Sugoroku Tiles
@@ -773,6 +777,7 @@ private fun DrawScope.drawHokkaidoRealLandscape(
     lakesPath: Path,
     worldScale: Float,
     density: Float,
+    zoomScale: Float,
     theme: SugorokuMapTheme = SugorokuMapTheme.Default,
 ) {
     val scaleFactor = worldScale * density
@@ -783,6 +788,17 @@ private fun DrawScope.drawHokkaidoRealLandscape(
         paths.forEach { path ->
             // 1. Solid land polygon
             drawPath(path = path, color = theme.landColor)
+        }
+
+        // 1b. Regional watercolor terrain washes clipped strictly inside Hokkaido mainland
+        paths.firstOrNull()?.let { mainland ->
+            clipPath(mainland) {
+                drawRegionalTerrainWashes(scaleFactor = scaleFactor, zoomScale = zoomScale)
+            }
+        }
+
+        // 1c. Coastline beach, wave foam, and ink contour border
+        paths.forEach { path ->
             // 2. Sand beach perimeter (smoothed corners)
             drawPath(
                 path = path,
@@ -824,6 +840,86 @@ private fun DrawScope.drawHokkaidoRealLandscape(
             color = theme.borderColor,
             style = Stroke(width = 0.6.dp.toPx() / scaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect),
         )
+    }
+}
+
+/**
+ * Paints soft watercolor woodland and pastoral washes plus hand-drawn brush-pen mountain ridges
+ * across Hokkaido's real geographic zones so zoomed-out maps keep rich picture-book texture.
+ */
+private fun DrawScope.drawRegionalTerrainWashes(
+    scaleFactor: Float,
+    zoomScale: Float,
+) {
+    val woodlandWash = Color(0xFFDCE6C4).copy(alpha = 0.44f)
+    val pastureWash = Color(0xFFEFE3B8).copy(alpha = 0.40f)
+    val ridgeInk = Color(0xFF7A8262).copy(alpha = 0.35f)
+
+    // Woodland & mountain zones (cx, cy, rx, ry in Hokkaido SVG space 0..612 x 0..387)
+    val woodlandZones = listOf(
+        // Local corridor hills & parks
+        floatArrayOf(184.0f, 344.6f, 1.3f, 1.4f), // Mt. Hakodate
+        floatArrayOf(187.1f, 341.1f, 1.2f, 1.1f), // Goryokaku Park
+        floatArrayOf(180.5f, 323.5f, 6.5f, 5.5f), // Onuma / Komagatake woods
+        // Broad regional mountain & forest belts
+        floatArrayOf(155.0f, 322.0f, 17.0f, 24.0f), // Oshima Peninsula interior hills
+        floatArrayOf(161.0f, 266.0f, 12.0f, 14.0f), // Kuromatsunai beech forest
+        floatArrayOf(172.0f, 219.0f, 14.0f, 12.0f), // Shakotan Mountains
+        floatArrayOf(190.0f, 250.0f, 20.0f, 17.0f), // Niseko / Mt. Yotei range
+        floatArrayOf(212.0f, 240.0f, 16.0f, 14.0f), // Sapporo / Shikotsu massif
+        floatArrayOf(316.0f, 178.0f, 36.0f, 30.0f), // Daisetsuzan central highlands
+        floatArrayOf(318.0f, 266.0f, 20.0f, 38.0f), // Hidaka mountain spine
+        floatArrayOf(302.0f, 94.0f, 26.0f, 32.0f), // Kitami Mountains
+        floatArrayOf(412.0f, 186.0f, 24.0f, 20.0f), // Akan / Mashu highlands
+        floatArrayOf(465.0f, 141.0f, 18.0f, 14.0f), // Shiretoko range
+    )
+    for (z in woodlandZones) {
+        drawOval(
+            color = woodlandWash,
+            topLeft = Offset(z[0] - z[2], z[1] - z[3]),
+            size = Size(z[2] * 2f, z[3] * 2f),
+        )
+    }
+
+    // Pastoral & meadow plains
+    val pastureZones = listOf(
+        floatArrayOf(182.5f, 331.4f, 2.4f, 2.0f), // Nanae Dairy Ranch
+        floatArrayOf(251.0f, 217.0f, 20.0f, 22.0f), // Ishikari Plain
+        floatArrayOf(254.0f, 58.0f, 14.0f, 24.0f), // Teshio / Sarobetsu Plain
+        floatArrayOf(348.0f, 245.0f, 30.0f, 24.0f), // Tokachi Plain
+        floatArrayOf(440.0f, 214.0f, 30.0f, 22.0f), // Konsen Plateau
+    )
+    for (z in pastureZones) {
+        drawOval(
+            color = pastureWash,
+            topLeft = Offset(z[0] - z[2], z[1] - z[3]),
+            size = Size(z[2] * 2f, z[3] * 2f),
+        )
+    }
+
+    // Subtle hand-drawn brush-pen mountain peak arcs on major highlands
+    val ridgeStrokeWidth = (1.6.dp.toPx() / zoomScale.coerceIn(0.05f, 1.2f)) / scaleFactor
+    val ridgeStroke = Stroke(width = ridgeStrokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
+    val ridgePeaks = listOf(
+        floatArrayOf(154f, 324f, 6.0f),
+        floatArrayOf(189f, 251f, 7.0f), // Yotei
+        floatArrayOf(312f, 174f, 10.0f), // Asahidake
+        floatArrayOf(325f, 185f, 8.5f),
+        floatArrayOf(318f, 256f, 8.0f), // Hidaka north
+        floatArrayOf(322f, 276f, 7.5f), // Hidaka south
+        floatArrayOf(301f, 92f, 8.0f), // Kitami
+        floatArrayOf(414f, 185f, 7.5f), // Akan
+        floatArrayOf(464f, 141f, 6.0f), // Rausudake
+    )
+    val ridgePath = Path()
+    for (pk in ridgePeaks) {
+        val px = pk[0]
+        val py = pk[1]
+        val s = pk[2]
+        ridgePath.reset()
+        ridgePath.moveTo(px - s, py + s * 0.35f)
+        ridgePath.quadraticTo(px, py - s * 0.55f, px + s, py + s * 0.35f)
+        drawPath(path = ridgePath, color = ridgeInk, style = ridgeStroke)
     }
 }
 
@@ -1185,40 +1281,81 @@ private fun splitJapaneseTileName(text: String): Pair<String, String> {
 
 /**
  * Draws rich roadside scenery panoramas and vignettes along the route.
- * Renders purely as storybook scenery without artificial text labels or token oval shadows.
- * Applies Y-sorting (painter's algorithm) so foreground scenery naturally overlaps background scenery.
+ * Renders purely as hand-drawn scenery without artificial text labels or token oval shadows.
+ * Combines zoom-compensated sizing and priority screen-space consolidation when zoomed out
+ * so illustrations never shrink into tiny emoji-like dots or collide with neighbors.
  */
 private fun DrawScope.drawRoadsideLandmarks(
     landmarks: List<RoadsideLandmark>,
     landmarkBitmaps: Map<RoadsideLandmarkType, ImageBitmap?>,
     worldScaleFactor: Float,
     viewportWorld: Rect,
-    density: Float,
+    zoomScale: Float,
 ) {
-    if (landmarks.isEmpty()) return
+    if (landmarks.isEmpty() || zoomScale < 0.06f) return
 
-    val pad = 200.dp.toPx()
+    val zoomCompensation = if (zoomScale < 1.0f) {
+        zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
+    } else {
+        1.0f
+    }
+
+    val pad = 220.dp.toPx() * zoomCompensation
     val vLeft = viewportWorld.left - pad
     val vTop = viewportWorld.top - pad
     val vRight = viewportWorld.right + pad
     val vBottom = viewportWorld.bottom + pad
 
-    // Frustum culling followed by Y-sorting for correct perspective layering
-    val visible = landmarks.filter { lm ->
+    val inViewport = landmarks.filter { lm ->
         val cx = lm.x * worldScaleFactor
         val cy = lm.y * worldScaleFactor
         cx in vLeft..vRight && cy in vTop..vBottom
-    }.sortedBy { it.y }
+    }
+
+    // Priority screen-space consolidation when zoomed out to prevent emoji-size crowding
+    val visible = if (zoomScale < 0.82f) {
+        val minScreenSepPx = if (zoomScale < 0.65f) 108.dp.toPx() else 88.dp.toPx()
+        val prioritized = inViewport.sortedWith(
+            compareByDescending<RoadsideLandmark> { it.isMajorRegional }
+                .thenByDescending { it.scale },
+        )
+        val accepted = mutableListOf<RoadsideLandmark>()
+        for (candidate in prioritized) {
+            val cx = candidate.x * worldScaleFactor
+            val cy = candidate.y * worldScaleFactor
+            val tooClose = accepted.any { existing ->
+                val ex = existing.x * worldScaleFactor
+                val ey = existing.y * worldScaleFactor
+                hypot((cx - ex) * zoomScale, (cy - ey) * zoomScale) < minScreenSepPx
+            }
+            if (!tooClose) {
+                accepted.add(candidate)
+            }
+        }
+        accepted.sortedBy { it.y }
+    } else {
+        inViewport.sortedBy { it.y }
+    }
 
     for (landmark in visible) {
         val cx = landmark.x * worldScaleFactor
         val cy = landmark.y * worldScaleFactor
 
         val bitmap = landmarkBitmaps[landmark.type] ?: continue
-        val wPx = landmark.type.baseDisplayWidthDp.dp.toPx() * landmark.scale
-        val hPx = landmark.type.baseDisplayHeightDp.dp.toPx() * landmark.scale
+        val wPx = landmark.type.baseDisplayWidthDp.dp.toPx() * landmark.scale * zoomCompensation
+        val hPx = landmark.type.baseDisplayHeightDp.dp.toPx() * landmark.scale * zoomCompensation
 
-        // Storybook scenery panorama/vignette (directly grounded in terrain, zero oval token shadow)
+        // Soft watercolor ground wash beneath terrestrial scenes so they blend gently into paper
+        val isWatercraft = landmark.type == RoadsideLandmarkType.FISHING_BOAT ||
+            landmark.type == RoadsideLandmarkType.FERRY_SHIP
+        if (!isWatercraft) {
+            drawOval(
+                color = Color(0xFFE4DCC5).copy(alpha = 0.42f),
+                topLeft = Offset(cx - wPx * 0.46f, cy + hPx * 0.14f),
+                size = Size(wPx * 0.92f, hPx * 0.34f),
+            )
+        }
+
         withTransform({
             if (landmark.flipX) {
                 scale(scaleX = -1f, scaleY = 1f, pivot = Offset(cx, cy))
