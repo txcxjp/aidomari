@@ -122,15 +122,15 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_roadsideLandmark_cow_and_reaction() {
-        val nanaeNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "nanae_station" } ?: HokkaidoAct1Route.startNode
-        val cowLandmark = com.aidomari.app.domain.model.RoadsideLandmark.ACT1_LANDMARKS.first { it.id == "nanae_cow_herd_1" }
+        val startNode = HokkaidoAct1Route.startNode
+        val warehouseLandmark = com.aidomari.app.domain.model.RoadsideLandmark.ACT1_LANDMARKS.first { it.id == "kanemori_warehouse_row" }
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
-                    progress = SugorokuProgress(currentStepIndex = nanaeNode.stepIndex),
-                    currentNode = nanaeNode,
-                    playerWorldOffset = androidx.compose.ui.geometry.Offset(cowLandmark.x + 0.28f, cowLandmark.y + 0.14f),
-                    nearbyLandmark = cowLandmark,
+                    progress = SugorokuProgress(currentStepIndex = startNode.stepIndex),
+                    currentNode = startNode,
+                    playerWorldOffset = androidx.compose.ui.geometry.Offset(warehouseLandmark.x + 0.25f, warehouseLandmark.y + 0.14f),
+                    nearbyLandmark = warehouseLandmark,
                 ),
                 onBack = {},
                 onSelectNode = {},

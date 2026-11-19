@@ -94,7 +94,6 @@ import com.aidomari.app.domain.model.SugorokuNode
 import com.aidomari.app.domain.model.SugorokuNodeType
 import com.aidomari.app.domain.model.TravelerCompanion
 import com.aidomari.app.domain.util.SugorokuWalkingCalculator
-import kotlin.math.hypot
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
@@ -1280,10 +1279,9 @@ private fun splitJapaneseTileName(text: String): Pair<String, String> {
 }
 
 /**
- * Draws rich roadside scenery panoramas and vignettes along the route.
- * Renders purely as hand-drawn scenery without artificial text labels or token oval shadows.
- * Combines zoom-compensated sizing and priority screen-space consolidation when zoomed out
- * so illustrations never shrink into tiny emoji-like dots or collide with neighbors.
+ * Draws jam-packed pop-collage scenery clusters along the route.
+ * Keeps non-linear zoom compensation without culling so overlapping transparent illustrations
+ * stay rich and playful even when zoomed out.
  */
 private fun DrawScope.drawRoadsideLandmarks(
     landmarks: List<RoadsideLandmark>,
@@ -1306,36 +1304,11 @@ private fun DrawScope.drawRoadsideLandmarks(
     val vRight = viewportWorld.right + pad
     val vBottom = viewportWorld.bottom + pad
 
-    val inViewport = landmarks.filter { lm ->
+    val visible = landmarks.filter { lm ->
         val cx = lm.x * worldScaleFactor
         val cy = lm.y * worldScaleFactor
         cx in vLeft..vRight && cy in vTop..vBottom
-    }
-
-    // Priority screen-space consolidation when zoomed out to prevent emoji-size crowding
-    val visible = if (zoomScale < 0.82f) {
-        val minScreenSepPx = if (zoomScale < 0.65f) 108.dp.toPx() else 88.dp.toPx()
-        val prioritized = inViewport.sortedWith(
-            compareByDescending<RoadsideLandmark> { it.isMajorRegional }
-                .thenByDescending { it.scale },
-        )
-        val accepted = mutableListOf<RoadsideLandmark>()
-        for (candidate in prioritized) {
-            val cx = candidate.x * worldScaleFactor
-            val cy = candidate.y * worldScaleFactor
-            val tooClose = accepted.any { existing ->
-                val ex = existing.x * worldScaleFactor
-                val ey = existing.y * worldScaleFactor
-                hypot((cx - ex) * zoomScale, (cy - ey) * zoomScale) < minScreenSepPx
-            }
-            if (!tooClose) {
-                accepted.add(candidate)
-            }
-        }
-        accepted.sortedBy { it.y }
-    } else {
-        inViewport.sortedBy { it.y }
-    }
+    }.sortedBy { it.y }
 
     for (landmark in visible) {
         val cx = landmark.x * worldScaleFactor
@@ -1344,17 +1317,6 @@ private fun DrawScope.drawRoadsideLandmarks(
         val bitmap = landmarkBitmaps[landmark.type] ?: continue
         val wPx = landmark.type.baseDisplayWidthDp.dp.toPx() * landmark.scale * zoomCompensation
         val hPx = landmark.type.baseDisplayHeightDp.dp.toPx() * landmark.scale * zoomCompensation
-
-        // Soft watercolor ground wash beneath terrestrial scenes so they blend gently into paper
-        val isWatercraft = landmark.type == RoadsideLandmarkType.FISHING_BOAT ||
-            landmark.type == RoadsideLandmarkType.FERRY_SHIP
-        if (!isWatercraft) {
-            drawOval(
-                color = Color(0xFFE4DCC5).copy(alpha = 0.42f),
-                topLeft = Offset(cx - wPx * 0.46f, cy + hPx * 0.14f),
-                size = Size(wPx * 0.92f, hPx * 0.34f),
-            )
-        }
 
         withTransform({
             if (landmark.flipX) {
