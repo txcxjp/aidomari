@@ -850,14 +850,14 @@ private fun DrawScope.drawRegionalTerrainWashes(
     scaleFactor: Float,
     zoomScale: Float,
 ) {
-    val woodlandWash = Color(0xFFDCE6C4).copy(alpha = 0.44f)
-    val pastureWash = Color(0xFFEFE3B8).copy(alpha = 0.40f)
-    val ridgeInk = Color(0xFF7A8262).copy(alpha = 0.35f)
+    val woodlandWash = Color(0xFFCDE6C3).copy(alpha = 0.45f)
+    val pastureWash = Color(0xFFDFEECE).copy(alpha = 0.42f)
+    val ridgeInk = Color(0xFF6B9974).copy(alpha = 0.30f)
 
     // Woodland & mountain zones (cx, cy, rx, ry in Hokkaido SVG space 0..612 x 0..387)
     val woodlandZones = listOf(
         // Local corridor hills & parks
-        floatArrayOf(184.0f, 344.6f, 1.3f, 1.4f), // Mt. Hakodate
+        floatArrayOf(184.0f, 345.3f, 1.3f, 1.4f), // Mt. Hakodate
         floatArrayOf(187.1f, 341.1f, 1.2f, 1.1f), // Goryokaku Park
         floatArrayOf(180.5f, 323.5f, 6.5f, 5.5f), // Onuma / Komagatake woods
         // Broad regional mountain & forest belts

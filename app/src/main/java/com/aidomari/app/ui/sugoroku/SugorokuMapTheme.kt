@@ -9,20 +9,20 @@ import com.aidomari.app.domain.model.HighwayCategory
  * and allows clean switching for future day/night or seasonal variations.
  */
 data class SugorokuMapTheme(
-    val landColor: Color = Color(0xFFF7F2E4), // Warm watercolor paper / cream ivory
-    val beachColor: Color = Color(0xFFF2E2C4), // Warm sandy shore
-    val waveColor: Color = Color(0xFFEAF7FA), // Soft shoreline foam
-    val borderColor: Color = Color(0xFFB8A68E), // Warm ink-taupe coastline contour
-    val lakeWaterColor: Color = Color(0xFF98D4EC), // Soft watercolor lake blue
-    val oceanColor: Color = Color(0xFF98D4EC), // Soft watercolor ocean blue
+    val landColor: Color = Color(0xFFEDF4E8), // Crisp pale meadow-ivory matching flat-vector landscape
+    val beachColor: Color = Color(0xFFF3EAD3), // Clean pale sand shore
+    val waveColor: Color = Color(0xFFE8F7FD), // Crisp shoreline surf foam
+    val borderColor: Color = Color(0xFFA7C2AD), // Soft sage-teal coastline contour
+    val lakeWaterColor: Color = Color(0xFF8FD3F4), // Crisp Hokkaido azure lake
+    val oceanColor: Color = Color(0xFF8FD3F4), // Crisp Hokkaido azure sea
     val travelRouteColor: Color = Color(0xFFFF9800), // Vibrant orange walking route
     val travelRouteBorderColor: Color = Color(0xFFE65100), // Deep warm orange route border
     val travelRouteBedColor: Color = Color(0xFFFFF3E0), // Warm ivory inner route bed
     val nationalHighwayColor: Color = Color(0xFFD4A373), // Warm ochre highway
     val scenicRoadColor: Color = Color(0xFFA3B18A), // Soft sage scenic road
     val prefecturalRoadColor: Color = Color(0xFFD6C7B2), // Warm sand-taupe road
-    val standardRoadBedColor: Color = Color(0xFFE6D8C0), // Warm sand-beige street fill
-    val standardRoadBorderColor: Color = Color(0xFFCBB99E), // Soft warm tan road border
+    val standardRoadBedColor: Color = Color(0xFFFFFFFF), // Clean flat white street fill
+    val standardRoadBorderColor: Color = Color(0xFFCCDACA), // Soft clean sage road outline
 ) {
     fun roadColor(category: HighwayCategory): Color = when (category) {
         HighwayCategory.TRAVEL_ROUTE -> travelRouteColor
