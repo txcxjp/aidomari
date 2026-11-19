@@ -850,9 +850,9 @@ private fun DrawScope.drawRegionalTerrainWashes(
     scaleFactor: Float,
     zoomScale: Float,
 ) {
-    val woodlandWash = Color(0xFFCDE6C3).copy(alpha = 0.45f)
-    val pastureWash = Color(0xFFDFEECE).copy(alpha = 0.42f)
-    val ridgeInk = Color(0xFF6B9974).copy(alpha = 0.30f)
+    val woodlandWash = Color(0xFFD2E2C2).copy(alpha = 0.44f)
+    val pastureWash = Color(0xFFE3EBD3).copy(alpha = 0.42f)
+    val ridgeInk = Color(0xFF6B7F66).copy(alpha = 0.30f)
 
     // Woodland & mountain zones (cx, cy, rx, ry in Hokkaido SVG space 0..612 x 0..387)
     val woodlandZones = listOf(
@@ -1279,7 +1279,7 @@ private fun splitJapaneseTileName(text: String): Pair<String, String> {
 }
 
 /**
- * Draws jam-packed pop-collage scenery clusters along the route.
+ * Draws warm hand-drawn travel-journal landmarks along the route.
  * Keeps non-linear zoom compensation without culling so overlapping transparent illustrations
  * stay rich and playful even when zoomed out.
  */

@@ -11,79 +11,79 @@ enum class RoadsideLandmarkType(
     CAPE_LIGHTHOUSE(
         defaultDialogue = "「青い海と白い灯台が見える！」",
         drawableResId = R.drawable.landmark_cape_lighthouse,
-        baseDisplayWidthDp = 158f,
-        baseDisplayHeightDp = 87f,
+        baseDisplayWidthDp = 132f,
+        baseDisplayHeightDp = 97f,
     ),
     RED_BRICK_WAREHOUSE(
         defaultDialogue = "「歴史ある赤レンガ倉庫だ！」",
         drawableResId = R.drawable.landmark_red_brick_warehouse,
-        baseDisplayWidthDp = 192f,
-        baseDisplayHeightDp = 77f,
+        baseDisplayWidthDp = 158f,
+        baseDisplayHeightDp = 96f,
     ),
     WESTERN_HOUSE(
         defaultDialogue = "「旧函館区公会堂とハリストス正教会が見える！」",
         drawableResId = R.drawable.landmark_western_house,
-        baseDisplayWidthDp = 184f,
-        baseDisplayHeightDp = 99f,
+        baseDisplayWidthDp = 166f,
+        baseDisplayHeightDp = 89f,
     ),
     CITY_TRAM(
         defaultDialogue = "「レトロな函館市電が走ってる！」",
         drawableResId = R.drawable.landmark_city_tram,
-        baseDisplayWidthDp = 166f,
+        baseDisplayWidthDp = 144f,
         baseDisplayHeightDp = 71f,
     ),
     GORYOKAKU_CHERRY(
         defaultDialogue = "「五稜郭の星形と五稜郭タワーだ！」",
         drawableResId = R.drawable.landmark_goryokaku_cherry,
-        baseDisplayWidthDp = 195f,
-        baseDisplayHeightDp = 109f,
+        baseDisplayWidthDp = 164f,
+        baseDisplayHeightDp = 103f,
     ),
     ROTENBURO_ONSEN(
         defaultDialogue = "「湯けむり立つ露天風呂、気持ちよさそう〜！」",
         drawableResId = R.drawable.landmark_rotenburo_onsen,
-        baseDisplayWidthDp = 166f,
-        baseDisplayHeightDp = 69f,
+        baseDisplayWidthDp = 140f,
+        baseDisplayHeightDp = 94f,
     ),
     MORNING_MARKET(
         defaultDialogue = "「朝市に新鮮なカニやお魚が並んでる！」",
         drawableResId = R.drawable.landmark_morning_market,
-        baseDisplayWidthDp = 170f,
-        baseDisplayHeightDp = 75f,
+        baseDisplayWidthDp = 146f,
+        baseDisplayHeightDp = 84f,
     ),
     TOWN_SHOPS(
         defaultDialogue = "「素敵なお店が並ぶ街並みだね！」",
         drawableResId = R.drawable.landmark_town_shops,
-        baseDisplayWidthDp = 176f,
-        baseDisplayHeightDp = 80f,
+        baseDisplayWidthDp = 146f,
+        baseDisplayHeightDp = 84f,
     ),
     RED_BRIDGE_RIVER(
         defaultDialogue = "「赤い橋の下にきれいな川が流れてる！」",
         drawableResId = R.drawable.landmark_red_bridge_river,
-        baseDisplayWidthDp = 172f,
-        baseDisplayHeightDp = 57f,
+        baseDisplayWidthDp = 142f,
+        baseDisplayHeightDp = 79f,
     ),
     FERRY_SHIP(
         defaultDialogue = "「青函連絡船・摩周丸が停まってる！」",
         drawableResId = R.drawable.landmark_ferry_ship,
-        baseDisplayWidthDp = 176f,
-        baseDisplayHeightDp = 86f,
+        baseDisplayWidthDp = 156f,
+        baseDisplayHeightDp = 84f,
     ),
     MOUNTAIN_ROPEWAY(
         defaultDialogue = "「函館山山頂の展望台とロープウェイだ！」",
         drawableResId = R.drawable.landmark_mountain_ropeway,
-        baseDisplayWidthDp = 186f,
-        baseDisplayHeightDp = 104f,
+        baseDisplayWidthDp = 160f,
+        baseDisplayHeightDp = 105f,
     ),
     CHERRY_ROW(
         defaultDialogue = "「公園の桜並木がきれいだね！」",
         drawableResId = R.drawable.landmark_cherry_row,
-        baseDisplayWidthDp = 178f,
-        baseDisplayHeightDp = 88f,
+        baseDisplayWidthDp = 142f,
+        baseDisplayHeightDp = 91f,
     ),
 }
 
 /**
- * Roadside lineless flat-vector scenery landmark placed along the Hokkaido Sugoroku route.
+ * Warm hand-drawn travel-journal scenery landmark placed along the Hokkaido Sugoroku route.
  * Positioned close to each corresponding anchor without text labels or oval shadows.
  */
 data class RoadsideLandmark(
@@ -143,8 +143,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "kanemori_warehouse_row",
                 name = "金森赤レンガ倉庫",
-                x = 184.48f,
-                y = 343.40f,
+                x = 184.45f,
+                y = 343.45f,
                 type = RoadsideLandmarkType.RED_BRICK_WAREHOUSE,
                 scale = 1.04f,
                 reactionDialogue = "「運河沿いに赤レンガ倉庫が並んでる！」",
@@ -153,10 +153,10 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "hakodate_morning_market",
                 name = "函館朝市",
-                x = 184.92f,
-                y = 343.12f,
+                x = 184.78f,
+                y = 342.94f,
                 type = RoadsideLandmarkType.MORNING_MARKET,
-                scale = 0.98f,
+                scale = 0.96f,
                 reactionDialogue = "「カニにお魚にメロン！朝市は賑やかだなあ！」",
                 isMajorRegional = false,
             ),
@@ -177,8 +177,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "onari_rotenburo_onsen",
                 name = "湯けむり露天風呂",
-                x = 186.10f,
-                y = 342.18f,
+                x = 185.95f,
+                y = 342.02f,
                 type = RoadsideLandmarkType.ROTENBURO_ONSEN,
                 scale = 1.02f,
                 isMajorRegional = true,
@@ -204,7 +204,7 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "goryokaku_star_moat_cherry",
                 name = "五稜郭タワーと星形の堀",
-                x = 187.05f,
+                x = 186.88f,
                 y = 341.05f,
                 type = RoadsideLandmarkType.GORYOKAKU_CHERRY,
                 scale = 1.12f,
@@ -214,16 +214,16 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "goryokaku_west_cherry_row",
                 name = "五稜郭公園の桜並木",
-                x = 186.22f,
-                y = 341.18f,
+                x = 186.02f,
+                y = 341.22f,
                 type = RoadsideLandmarkType.CHERRY_ROW,
-                scale = 1.02f,
+                scale = 1.00f,
                 isMajorRegional = false,
             ),
         )
 
         /**
-         * Complete Act 1 scenery list: 12 unique Aidomari lineless flat-vector landmarks.
+         * Complete Act 1 scenery list: 12 unique warm hand-drawn travel-journal landmarks.
          */
         val ACT1_LANDMARKS: List<RoadsideLandmark> = CURATED_LANDMARKS
     }
