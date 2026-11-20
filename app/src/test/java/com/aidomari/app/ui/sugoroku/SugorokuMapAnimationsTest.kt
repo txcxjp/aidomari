@@ -1,8 +1,11 @@
 package com.aidomari.app.ui.sugoroku
 
+import androidx.compose.ui.geometry.Offset
 import com.aidomari.app.domain.model.LandmarkMotionStyle
+import com.aidomari.app.domain.model.RoadsideLandmark
 import com.aidomari.app.domain.model.RoadsideLandmarkType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.abs
@@ -22,45 +25,55 @@ class SugorokuMapAnimationsTest {
                 assertEquals("sx wrap failed for $style", m0.scaleX, m1.scaleX, tol)
                 assertEquals("sy wrap failed for $style", m0.scaleY, m1.scaleY, tol)
                 assertEquals("frame wrap failed for $style", m0.useSecondFrame, m1.useSecondFrame)
+                assertEquals("flip wrap failed for $style", m0.flipHorizontal, m1.flipHorizontal)
             }
         }
     }
 
     @Test
     fun `grounded landmarks stay still at rest and pop on tap`() {
-        val resting = computeLandmarkMotion(
-            style = LandmarkMotionStyle.NONE,
-            phase = 0.37f,
-            seedPhase = 0.42f,
-            tapPopProgress = 0f,
-        )
-        assertEquals(0f, resting.translateXDp, 1e-5f)
-        assertEquals(0f, resting.translateYDp, 1e-5f)
-        assertEquals(0f, resting.rotationDeg, 1e-5f)
-        assertEquals(1f, resting.scaleX, 1e-5f)
-        assertEquals(1f, resting.scaleY, 1e-5f)
+        for (style in listOf(LandmarkMotionStyle.NONE, LandmarkMotionStyle.SAKURA_PETALS)) {
+            val resting = computeLandmarkMotion(
+                style = style,
+                phase = 0.37f,
+                seedPhase = 0.42f,
+                tapPopProgress = 0f,
+            )
+            assertEquals(0f, resting.translateXDp, 1e-5f)
+            assertEquals(0f, resting.translateYDp, 1e-5f)
+            assertEquals(0f, resting.rotationDeg, 1e-5f)
+            assertEquals(1f, resting.scaleX, 1e-5f)
+            assertEquals(1f, resting.scaleY, 1e-5f)
 
-        val popped = computeLandmarkMotion(
-            style = LandmarkMotionStyle.NONE,
-            phase = 0.37f,
-            seedPhase = 0.42f,
-            tapPopProgress = 0.5f,
-        )
-        assertTrue(popped.translateYDp < -5f)
-        assertTrue(popped.scaleX > 1.08f)
-        assertTrue(popped.scaleY > 1.08f)
+            val popped = computeLandmarkMotion(
+                style = style,
+                phase = 0.37f,
+                seedPhase = 0.42f,
+                tapPopProgress = 0.5f,
+            )
+            assertTrue(popped.translateYDp < -5f)
+            assertTrue(popped.scaleX > 1.08f)
+            assertTrue(popped.scaleY > 1.08f)
+        }
     }
 
     @Test
-    fun `static scenic and market landmarks use NONE motion while active ones stay animated`() {
+    fun `landmark styles match user directions across Goryokaku and Chapter 2 scenery`() {
         assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.GORYOKAKU_CHERRY.motionStyle)
-        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.CHERRY_ROW.motionStyle)
+        assertEquals(LandmarkMotionStyle.SAKURA_PETALS, RoadsideLandmarkType.CHERRY_ROW.motionStyle)
         assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.MORNING_MARKET.motionStyle)
 
+        assertEquals(LandmarkMotionStyle.WILDLIFE_WALK_2FRAME, RoadsideLandmarkType.WALKING_FOX.motionStyle)
+        assertEquals(LandmarkMotionStyle.SHINKANSEN_GLIDE, RoadsideLandmarkType.HOKKAIDO_SHINKANSEN.motionStyle)
+        assertEquals(LandmarkMotionStyle.BOAT_BOB, RoadsideLandmarkType.ONUMA_SWAN_BOAT.motionStyle)
         assertEquals(LandmarkMotionStyle.BOAT_BOB, RoadsideLandmarkType.FERRY_SHIP.motionStyle)
         assertEquals(LandmarkMotionStyle.LIGHTHOUSE_BEAM, RoadsideLandmarkType.CAPE_LIGHTHOUSE.motionStyle)
         assertEquals(LandmarkMotionStyle.ONSEN_STEAM, RoadsideLandmarkType.ROTENBURO_ONSEN.motionStyle)
         assertEquals(LandmarkMotionStyle.ROPEWAY_SPARKLE, RoadsideLandmarkType.MOUNTAIN_ROPEWAY.motionStyle)
+
+        // Fox must appear on mountain trails, not in urban Goryokaku Park
+        assertFalse(RoadsideLandmark.ACT1_LANDMARKS.any { it.id == "goryokaku_waving_fox" })
+        assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.WALKING_FOX })
     }
 
     @Test
@@ -74,6 +87,23 @@ class SugorokuMapAnimationsTest {
         }
         assertTrue(samples.any { it })
         assertTrue(samples.any { !it })
+    }
+
+    @Test
+    fun `wildlife walk toggles stride frame and turns horizontally back and forth`() {
+        val samples = (0 until 48).map { i ->
+            computeLandmarkMotion(
+                style = LandmarkMotionStyle.WILDLIFE_WALK_2FRAME,
+                phase = i / 48f,
+                seedPhase = 0f,
+            )
+        }
+        assertTrue("Expected alternating walk frame true", samples.any { it.useSecondFrame })
+        assertTrue("Expected alternating walk frame false", samples.any { !it.useSecondFrame })
+        assertTrue("Expected rightward turn (flipHorizontal=false)", samples.any { !it.flipHorizontal })
+        assertTrue("Expected leftward return (flipHorizontal=true)", samples.any { it.flipHorizontal })
+        assertTrue("Expected horizontal patrol motion", samples.maxOf { it.translateXDp } > 10f)
+        assertTrue("Expected horizontal return motion", samples.minOf { it.translateXDp } < -10f)
     }
 
     @Test
@@ -125,5 +155,26 @@ class SugorokuMapAnimationsTest {
         }
         assertTrue("Expected eastward headings", headings.any { abs(it) < 90f })
         assertTrue("Expected westward headings", headings.any { abs(it) > 90f })
+    }
+
+    @Test
+    fun `computeParallaxBirdScreenPosition scales offset from screen center for 2_5D altitude depth`() {
+        val screenCenter = Offset(500f, 1000f)
+
+        val centered = computeParallaxBirdScreenPosition(
+            groundScreenPos = screenCenter,
+            screenCenter = screenCenter,
+        )
+        assertEquals(500f, centered.x, 1e-4f)
+        assertEquals(1000f, centered.y, 1e-4f)
+
+        val shiftedGround = Offset(600f, 800f) // +100x, -200y relative to center
+        val shiftedBird = computeParallaxBirdScreenPosition(
+            groundScreenPos = shiftedGround,
+            screenCenter = screenCenter,
+        )
+        assertEquals(500f + 100f * UMIGARASU_ALTITUDE_PARALLAX, shiftedBird.x, 1e-3f)
+        assertEquals(1000f - 200f * UMIGARASU_ALTITUDE_PARALLAX, shiftedBird.y, 1e-3f)
+        assertTrue(UMIGARASU_ALTITUDE_PARALLAX > 1.0f)
     }
 }

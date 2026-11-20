@@ -406,10 +406,18 @@ fun SugorokuMapContent(
                 panOffset = clampPan(targetPan, newScale)
             }
 
+            var birdPatrolCenter by remember { mutableStateOf(Offset.Unspecified) }
+
             // Centering on initial load
             LaunchedEffect(currentStep, containerWidth, containerHeight) {
                 if (!hasCenteredInitially && containerWidth > 0 && containerHeight > 0) {
                     centerOnPlayer()
+                    val centeredWorldX = (-panOffset.x + containerWidth / 2f) / zoomScale
+                    val centeredWorldY = (-panOffset.y + containerHeight / 2f) / zoomScale
+                    birdPatrolCenter = Offset(
+                        x = centeredWorldX - 10f * density,
+                        y = centeredWorldY - 95f * density,
+                    )
                     hasCenteredInitially = true
                 }
             }
@@ -470,38 +478,33 @@ fun SugorokuMapContent(
             val viewBottom = (containerHeight - panOffset.y) / zoomScale
             val viewportWorld = Rect(viewLeft, viewTop, viewRight, viewBottom)
 
-            var birdPatrolCenter by remember { mutableStateOf(Offset.Unspecified) }
-            val defaultBirdPatrolCenter = Offset(
-                x = uiState.playerWorldOffset.x * worldScaleFactor - 53f * density,
-                y = uiState.playerWorldOffset.y * worldScaleFactor - 118f * density,
-            )
             val activeBirdPatrolCenter = if (birdPatrolCenter == Offset.Unspecified) {
-                defaultBirdPatrolCenter
+                Offset(
+                    x = viewportWorld.center.x - 10f * density,
+                    y = viewportWorld.center.y - 95f * density,
+                )
             } else {
                 birdPatrolCenter
             }
 
             LaunchedEffect(viewportWorld, hasCenteredInitially, containerWidth, containerHeight) {
                 if (hasCenteredInitially && containerWidth > 0f && containerHeight > 0f) {
-                    if (birdPatrolCenter == Offset.Unspecified) {
-                        birdPatrolCenter = defaultBirdPatrolCenter
+                    val zoomComp = if (zoomScale < 1.0f) {
+                        zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
                     } else {
-                        val zoomComp = if (zoomScale < 1.0f) {
-                            zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
-                        } else {
-                            1.0f
-                        }
-                        val offscreenPad = 210f * density * zoomComp
-                        val isFarOffscreen = birdPatrolCenter.x < viewportWorld.left - offscreenPad ||
-                            birdPatrolCenter.x > viewportWorld.right + offscreenPad ||
-                            birdPatrolCenter.y < viewportWorld.top - offscreenPad ||
-                            birdPatrolCenter.y > viewportWorld.bottom + offscreenPad
-                        if (isFarOffscreen) {
-                            birdPatrolCenter = Offset(
-                                x = viewportWorld.center.x,
-                                y = viewportWorld.center.y - 60f * density,
-                            )
-                        }
+                        1.0f
+                    }
+                    val offscreenPad = 210f * density * zoomComp
+                    val isFarOffscreen = birdPatrolCenter == Offset.Unspecified ||
+                        birdPatrolCenter.x < viewportWorld.left - offscreenPad ||
+                        birdPatrolCenter.x > viewportWorld.right + offscreenPad ||
+                        birdPatrolCenter.y < viewportWorld.top - offscreenPad ||
+                        birdPatrolCenter.y > viewportWorld.bottom + offscreenPad
+                    if (isFarOffscreen) {
+                        birdPatrolCenter = Offset(
+                            x = viewportWorld.center.x - 10f * density,
+                            y = viewportWorld.center.y - 95f * density,
+                        )
                     }
                 }
             }
@@ -714,14 +717,22 @@ fun SugorokuMapContent(
                             }
                         }
 
-                        // Single world-space Umigarasu gliding in geographic airspace above roads & tiles
-                        drawWorldSpaceUmigarasu(
-                            birdFrames = umigarasuFrames,
+                        // Ground-anchored aerial shadow locked 1:1 to Hokkaido map terrain
+                        drawWorldSpaceUmigarasuShadow(
                             patrolCenterWorld = activeBirdPatrolCenter,
                             phase = animPhase,
                             zoomScale = zoomScale,
                         )
                     }
+
+                    // High-altitude Umigarasu gliding with 2.5D parallax across sky above tiles
+                    drawParallaxUmigarasuBody(
+                        birdFrames = umigarasuFrames,
+                        patrolCenterWorld = activeBirdPatrolCenter,
+                        panOffset = panOffset,
+                        zoomScale = zoomScale,
+                        phase = animPhase,
+                    )
                 }
             }
 

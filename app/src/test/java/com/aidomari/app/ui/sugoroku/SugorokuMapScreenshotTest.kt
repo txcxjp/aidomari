@@ -121,6 +121,63 @@ class SugorokuMapScreenshotTest {
     }
 
     @Test
+    fun captureSugorokuMap_step31_shin_hakodate_hokuto() {
+        val shinkansenNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "shin_hakodate_hokuto_station" }
+            ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = shinkansenNode.stepIndex),
+                    currentNode = shinkansenNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step31_shin_hakodate_hokuto.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step36_onuma_komagatake() {
+        val higureNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "mt_higure" }
+            ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = higureNode.stepIndex),
+                    currentNode = higureNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step36_onuma_komagatake.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step50_funkawan_yakumo() {
+        val yakumoNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "funkawan_panorama_park" }
+            ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = yakumoNode.stepIndex),
+                    currentNode = yakumoNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step50_funkawan_yakumo.png")
+    }
+
+    @Test
     fun captureSugorokuMap_roadsideLandmark_cow_and_reaction() {
         val startNode = HokkaidoAct1Route.startNode
         val warehouseLandmark = com.aidomari.app.domain.model.RoadsideLandmark.ACT1_LANDMARKS.first { it.id == "kanemori_warehouse_row" }

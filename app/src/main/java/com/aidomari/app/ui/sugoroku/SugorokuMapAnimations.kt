@@ -29,6 +29,12 @@ import kotlin.math.sin
 
 private const val TWO_PI: Float = (Math.PI * 2.0).toFloat()
 
+/**
+ * Apparent altitude parallax multiplier applied to the overhead Umigarasu relative to the
+ * 1.0x ground map layer, creating a 2.5D high-sky depth illusion when panning.
+ */
+const val UMIGARASU_ALTITUDE_PARALLAX: Float = 1.28f
+
 // Normalized Mt. Hakodate ropeway cable endpoints & pulley attachment ratios
 private const val ROPEWAY_CABLE_START_X = 0.7233f
 private const val ROPEWAY_CABLE_START_Y = 0.3269f
@@ -49,6 +55,7 @@ data class LandmarkMotionOffset(
     val scaleX: Float = 1f,
     val scaleY: Float = 1f,
     val useSecondFrame: Boolean = false,
+    val flipHorizontal: Boolean = false,
 )
 
 /**
@@ -90,13 +97,16 @@ fun computeLandmarkMotion(
     var sx = 1f
     var sy = 1f
     var secondFrame = false
+    var flipHoriz = false
 
     when (style) {
         LandmarkMotionStyle.NONE,
+        LandmarkMotionStyle.SAKURA_PETALS,
         LandmarkMotionStyle.ONSEN_STEAM,
         LandmarkMotionStyle.LIGHTHOUSE_BEAM,
         LandmarkMotionStyle.ROPEWAY_SPARKLE,
         LandmarkMotionStyle.RIVER_SHIMMER,
+        LandmarkMotionStyle.CAMPFIRE_SMOKE,
         -> Unit
 
         LandmarkMotionStyle.WAVE_DANCE_2FRAME -> {
@@ -108,6 +118,16 @@ fun computeLandmarkMotion(
             val squash = cos(danceAngle) * 0.03f
             sx = 1f - squash
             sy = 1f + squash
+        }
+
+        LandmarkMotionStyle.WILDLIFE_WALK_2FRAME -> {
+            val patrolAngle = TWO_PI * 1f * pNorm + seedRad
+            tx = sin(patrolAngle) * 16f
+            val stepAngle = TWO_PI * 12f * pNorm + seedRad
+            ty = -abs(sin(stepAngle)) * 2.2f
+            rot = sin(stepAngle) * 1.8f
+            secondFrame = (pNorm * 24f + seedPhase * 2f).mod(2f) >= 1f
+            flipHoriz = cos(patrolAngle) < 0f
         }
 
         LandmarkMotionStyle.DANCE_BOUNCE -> {
@@ -137,6 +157,11 @@ fun computeLandmarkMotion(
             tx = sin(glideAngle) * 2.8f
             ty = -abs(sin(chugAngle)) * 1.2f
         }
+
+        LandmarkMotionStyle.SHINKANSEN_GLIDE -> {
+            val glideAngle = TWO_PI * 2f * pNorm + seedRad
+            tx = sin(glideAngle) * 4.5f
+        }
     }
 
     if (tapPopProgress > 0f) {
@@ -155,6 +180,7 @@ fun computeLandmarkMotion(
         scaleX = sx,
         scaleY = sy,
         useSecondFrame = secondFrame,
+        flipHorizontal = flipHoriz,
     )
 }
 
@@ -286,12 +312,13 @@ internal fun DrawScope.drawAnimatedRoadsideLandmarks(
         val txPx = motion.translateXDp.dp.toPx() * unitScale
         val tyPx = motion.translateYDp.dp.toPx() * unitScale
         val pivot = Offset(cx, cy + hPx * 0.45f)
+        val effectiveFlipX = if (landmark.flipX xor motion.flipHorizontal) -1f else 1f
 
         withTransform({
             translate(txPx, tyPx)
             rotate(degrees = motion.rotationDeg * motionDamp, pivot = pivot)
             scale(
-                scaleX = (if (landmark.flipX) -1f else 1f) * (1f + (motion.scaleX - 1f) * motionDamp.coerceAtLeast(if (isTapped) 1f else 0f)),
+                scaleX = effectiveFlipX * (1f + (motion.scaleX - 1f) * motionDamp.coerceAtLeast(if (isTapped) 1f else 0f)),
                 scaleY = 1f + (motion.scaleY - 1f) * motionDamp.coerceAtLeast(if (isTapped) 1f else 0f),
                 pivot = pivot,
             )
@@ -382,7 +409,9 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
             }
         }
 
-        LandmarkMotionStyle.TREE_SWAY -> {
+        LandmarkMotionStyle.TREE_SWAY,
+        LandmarkMotionStyle.SAKURA_PETALS,
+        -> {
             for (i in 0..3) {
                 val t = (phase * 2f + seedPhase + i * 0.25f).mod(1f)
                 val px = cx + (-0.28f + i * 0.19f) * wPx + sin(TWO_PI * t + i) * wPx * 0.06f
@@ -392,6 +421,22 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
                     color = Color(0xFFFF8FC2).copy(alpha = alpha),
                     topLeft = Offset(px, py),
                     size = Size(wPx * 0.026f, wPx * 0.017f),
+                )
+            }
+        }
+
+        LandmarkMotionStyle.CAMPFIRE_SMOKE -> {
+            val baseX = cx + wPx * 0.25f
+            val baseY = cy + hPx * 0.16f
+            for (i in 0..2) {
+                val t = (phase * 2f + seedPhase + i * 0.33f).mod(1f)
+                val sx = baseX + sin(TWO_PI * t + i) * wPx * 0.032f
+                val sy = baseY - t * hPx * 0.36f
+                val alpha = sin(PI.toFloat() * t) * 0.48f * alphaScale
+                drawCircle(
+                    color = Color.White.copy(alpha = alpha),
+                    radius = wPx * (0.024f + t * 0.022f),
+                    center = Offset(sx, sy),
                 )
             }
         }
@@ -499,17 +544,28 @@ private fun DrawScope.drawFourPointStar(
 }
 
 /**
- * Draws the single hand-drawn Umigarasu seabird gliding gracefully in world space
- * above roads, landmarks, and Sugoroku tiles so panning moves naturally underneath it.
+ * Projects the high-altitude Umigarasu screen position from its ground projection using
+ * a 2.5D altitude parallax factor (> 1.0 makes sky objects sweep faster than terrain on scroll).
  */
-internal fun DrawScope.drawWorldSpaceUmigarasu(
-    birdFrames: List<ImageBitmap>,
+fun computeParallaxBirdScreenPosition(
+    groundScreenPos: Offset,
+    screenCenter: Offset,
+    parallaxFactor: Float = UMIGARASU_ALTITUDE_PARALLAX,
+): Offset = Offset(
+    x = screenCenter.x + (groundScreenPos.x - screenCenter.x) * parallaxFactor,
+    y = screenCenter.y + (groundScreenPos.y - screenCenter.y) * parallaxFactor,
+)
+
+/**
+ * Draws the ground-projected aerial shadow of the Umigarasu inside world-space Canvas
+ * coordinates so the shadow stays locked 1:1 on Hokkaido terrain during pans and zooms.
+ */
+internal fun DrawScope.drawWorldSpaceUmigarasuShadow(
     patrolCenterWorld: Offset,
     phase: Float,
     zoomScale: Float,
 ) {
-    if (birdFrames.size < 3 || zoomScale < 0.08f) return
-
+    if (zoomScale < 0.08f) return
     val alphaFactor = ((zoomScale - 0.08f) / 0.12f).coerceIn(0f, 1f)
     if (alphaFactor <= 0.01f) return
 
@@ -526,13 +582,51 @@ internal fun DrawScope.drawWorldSpaceUmigarasu(
     val shadowOffsetX = 12.dp.toPx() * zoomCompensation
     val shadowOffsetY = bird.altitudeShadowDp.dp.toPx() * zoomCompensation
 
-    // Soft aerial ground shadow offset down-right for altitude depth
     drawOval(
         color = Color(0x28000000).copy(alpha = 0.16f * alphaFactor),
         topLeft = Offset(bx + shadowOffsetX - sizePx * 0.28f, by + shadowOffsetY - sizePx * 0.09f),
         size = Size(sizePx * 0.56f, sizePx * 0.18f),
     )
+}
 
+/**
+ * Draws the high-altitude Umigarasu body in screen space with 2.5D altitude parallax relative to
+ * its world-space patrol path so panning creates clear aerial separation above Hokkaido terrain.
+ */
+internal fun DrawScope.drawParallaxUmigarasuBody(
+    birdFrames: List<ImageBitmap>,
+    patrolCenterWorld: Offset,
+    panOffset: Offset,
+    zoomScale: Float,
+    phase: Float,
+    parallaxFactor: Float = UMIGARASU_ALTITUDE_PARALLAX,
+) {
+    if (birdFrames.size < 3 || zoomScale < 0.08f) return
+
+    val alphaFactor = ((zoomScale - 0.08f) / 0.12f).coerceIn(0f, 1f)
+    if (alphaFactor <= 0.01f) return
+
+    val zoomCompensation = if (zoomScale < 1.0f) {
+        zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
+    } else {
+        1.0f
+    }
+
+    val bird = computeWorldUmigarasu(phase)
+    val groundWorldX = patrolCenterWorld.x + bird.offsetXDp.dp.toPx()
+    val groundWorldY = patrolCenterWorld.y + bird.offsetYDp.dp.toPx()
+    val groundScreenPos = Offset(
+        x = groundWorldX * zoomScale + panOffset.x,
+        y = groundWorldY * zoomScale + panOffset.y,
+    )
+    val screenCenter = Offset(size.width / 2f, size.height / 2f)
+    val parallaxPos = computeParallaxBirdScreenPosition(
+        groundScreenPos = groundScreenPos,
+        screenCenter = screenCenter,
+        parallaxFactor = parallaxFactor,
+    )
+
+    val sizePx = bird.sizeDp.dp.toPx() * zoomScale * zoomCompensation
     val isLeftward = abs(bird.headingDeg) > 90f
     val visualTiltDeg = if (isLeftward) {
         val signed = if (bird.headingDeg > 0f) 180f - bird.headingDeg else -180f - bird.headingDeg
@@ -544,15 +638,15 @@ internal fun DrawScope.drawWorldSpaceUmigarasu(
     val frameBitmap = birdFrames[bird.flapFrame.coerceIn(0, birdFrames.lastIndex)]
     withTransform({
         if (isLeftward) {
-            scale(scaleX = -1f, scaleY = 1f, pivot = Offset(bx, by))
+            scale(scaleX = -1f, scaleY = 1f, pivot = parallaxPos)
         }
-        rotate(degrees = visualTiltDeg, pivot = Offset(bx, by))
+        rotate(degrees = visualTiltDeg, pivot = parallaxPos)
     }) {
         drawImage(
             image = frameBitmap,
             dstOffset = IntOffset(
-                x = (bx - sizePx / 2f).roundToInt(),
-                y = (by - sizePx / 2f).roundToInt(),
+                x = (parallaxPos.x - sizePx / 2f).roundToInt(),
+                y = (parallaxPos.y - sizePx / 2f).roundToInt(),
             ),
             dstSize = IntSize(sizePx.roundToInt(), sizePx.roundToInt()),
             alpha = alphaFactor,
