@@ -520,8 +520,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "hakodate_city_tram",
                 name = "函館市電",
-                x = 185.12f,
-                y = 345.30f,
+                x = 184.08f,
+                y = 344.46f,
                 type = RoadsideLandmarkType.CITY_TRAM,
                 scale = 0.96f,
                 reactionDialogue = "「レトロな函館市電がゴトゴト走ってる！」",
@@ -530,8 +530,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "hakodate_waving_squid",
                 name = "手を振る函館イカちゃん",
-                x = 183.98f,
-                y = 344.52f,
+                x = 184.10f,
+                y = 342.92f,
                 type = RoadsideLandmarkType.WAVING_SQUID,
                 scale = 1.0f,
                 isMajorRegional = false,
