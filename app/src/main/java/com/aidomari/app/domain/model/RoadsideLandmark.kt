@@ -600,8 +600,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "goryokaku_star_moat_cherry",
                 name = "五稜郭タワーと星形の堀",
-                x = 185.93f,
-                y = 340.60f,
+                x = 186.63f,
+                y = 341.05f,
                 type = RoadsideLandmarkType.GORYOKAKU_CHERRY,
                 scale = 1.12f,
                 reactionDialogue = "「五稜郭の星形と五稜郭タワーが見える！」",
@@ -610,7 +610,7 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "goryokaku_west_cherry_row",
                 name = "五稜郭公園の桜並木",
-                x = 185.72f,
+                x = 186.02f,
                 y = 341.22f,
                 type = RoadsideLandmarkType.CHERRY_ROW,
                 scale = 1.00f,
