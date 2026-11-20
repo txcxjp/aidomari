@@ -159,6 +159,25 @@ class SugorokuMapScreenshotTest {
     }
 
     @Test
+    fun captureSugorokuMap_step43_washinoki_coast() {
+        val washinokiNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "anchor_797ebdbf" }
+            ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = washinokiNode.stepIndex),
+                    currentNode = washinokiNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step43_washinoki_coast.png")
+    }
+
+    @Test
     fun captureSugorokuMap_step50_funkawan_yakumo() {
         val yakumoNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "funkawan_panorama_park" }
             ?: HokkaidoAct1Route.startNode

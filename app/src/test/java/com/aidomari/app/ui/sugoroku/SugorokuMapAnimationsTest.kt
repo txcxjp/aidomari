@@ -67,20 +67,79 @@ class SugorokuMapAnimationsTest {
 
         assertEquals(LandmarkMotionStyle.WILDLIFE_WALK_2FRAME, RoadsideLandmarkType.WALKING_FOX.motionStyle)
         assertEquals(LandmarkMotionStyle.SHINKANSEN_GLIDE, RoadsideLandmarkType.HOKKAIDO_SHINKANSEN.motionStyle)
-        assertEquals(LandmarkMotionStyle.BOAT_BOB, RoadsideLandmarkType.ONUMA_SWAN_BOAT.motionStyle)
+        assertEquals(LandmarkMotionStyle.CAMPFIRE_FLAME, RoadsideLandmarkType.HIGHLAND_CAMP.motionStyle)
+        assertEquals(LandmarkMotionStyle.SWAN_GLIDE, RoadsideLandmarkType.ONUMA_SWAN_BOAT.motionStyle)
         assertEquals(LandmarkMotionStyle.BOAT_BOB, RoadsideLandmarkType.UCHIURA_FISHING_BOAT.motionStyle)
         assertEquals(LandmarkMotionStyle.ONSEN_STEAM, RoadsideLandmarkType.WOODEN_ONSEN_BATH.motionStyle)
         assertEquals(LandmarkMotionStyle.RIVER_SHIMMER, RoadsideLandmarkType.RURAL_ARCH_BRIDGE.motionStyle)
         assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.HOLSTEIN_COWS.motionStyle)
         assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.WHITE_BIRCH_GROVE.motionStyle)
         assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.HAY_ROLLS_SILO.motionStyle)
-        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.EZO_SHIKA_DEER.motionStyle)
-        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.COASTAL_ROCKS_WAVES.motionStyle)
+        assertEquals(LandmarkMotionStyle.DEER_GRAZE, RoadsideLandmarkType.EZO_SHIKA_DEER.motionStyle)
+        assertEquals(LandmarkMotionStyle.COASTAL_WAVE_CRASH, RoadsideLandmarkType.COASTAL_ROCKS_WAVES.motionStyle)
 
         assertFalse(RoadsideLandmark.ACT1_LANDMARKS.any { it.id == "goryokaku_waving_fox" })
         assertFalse(RoadsideLandmark.ACT1_LANDMARKS.any { it.id == "funkawan_yakumo_pasture" })
         assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.HOLSTEIN_COWS })
         assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.WALKING_FOX })
+        assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.LILAC_BLOSSOMS })
+        assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.HAMANASU_ROSES })
+        assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.LUPINE_WILDFLOWERS })
+        assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.POTATO_BLOSSOMS })
+    }
+
+    @Test
+    fun `ACT1_LANDMARKS strictly never reuses identical landmark drawable assets`() {
+        val landmarks = RoadsideLandmark.ACT1_LANDMARKS
+        assertTrue("Expected at least 33 curated unique landmarks", landmarks.size >= 33)
+        assertEquals(
+            "Duplicate RoadsideLandmarkType found in ACT1_LANDMARKS",
+            landmarks.size,
+            landmarks.map { it.type }.toSet().size,
+        )
+        assertEquals(
+            "Duplicate drawableResId found in ACT1_LANDMARKS",
+            landmarks.size,
+            landmarks.map { it.type.drawableResId }.toSet().size,
+        )
+    }
+
+    @Test
+    fun `computeEdgeEntryPatrolCenter places bird outside viewport moving inward`() {
+        val viewport = Rect(left = 1000f, top = 500f, right = 1393f, bottom = 1351f)
+        val density = 3f
+        for (enterFromLeft in listOf(true, false)) {
+            for (phase in listOf(0f, 0.25f, 0.55f, 0.85f)) {
+                val placement = computeEdgeEntryPatrolCenter(
+                    viewportWorld = viewport,
+                    currentPhase = phase,
+                    density = density,
+                    zoomScale = 1.0f,
+                    enterFromLeft = enterFromLeft,
+                )
+                val startEffPhase = (phase + placement.phaseOffset).mod(1f)
+                val startBird = computeWorldUmigarasu(startEffPhase)
+                val startX = placement.patrolCenterWorld.x + startBird.offsetXDp * density
+                val startY = placement.patrolCenterWorld.y + startBird.offsetYDp * density
+
+                assertTrue("Bird Y should align in upper viewport", startY in viewport.top..viewport.center.y)
+                if (enterFromLeft) {
+                    assertTrue("Left entry should start outside left edge: $startX vs ${viewport.left}", startX < viewport.left)
+                    assertTrue("Left entry heading should point eastward: ${startBird.headingDeg}", abs(startBird.headingDeg) < 90f)
+                } else {
+                    assertTrue("Right entry should start outside right edge: $startX vs ${viewport.right}", startX > viewport.right)
+                    assertTrue("Right entry heading should point westward: ${startBird.headingDeg}", abs(startBird.headingDeg) > 90f)
+                }
+
+                val nextBird = computeWorldUmigarasu((startEffPhase + 0.08f).mod(1f))
+                val nextX = placement.patrolCenterWorld.x + nextBird.offsetXDp * density
+                if (enterFromLeft) {
+                    assertTrue("Left entry bird should advance rightward: $nextX > $startX", nextX > startX)
+                } else {
+                    assertTrue("Right entry bird should advance leftward: $nextX < $startX", nextX < startX)
+                }
+            }
+        }
     }
 
     @Test

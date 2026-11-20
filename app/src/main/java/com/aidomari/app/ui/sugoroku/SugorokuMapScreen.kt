@@ -148,7 +148,7 @@ fun SugorokuMapContent(
         BitmapFactory.decodeResource(context.resources, uiState.companion.drawableResId)?.asImageBitmap()
     }
     val landmarkBitmapCache = remember(context) {
-        object : LruCache<Int, ImageBitmap>(48) {}
+        object : LruCache<Int, ImageBitmap>(64) {}
     }
     val getLandmarkBitmap: (Int) -> ImageBitmap? = remember(context, landmarkBitmapCache) {
         { resId ->
@@ -460,6 +460,8 @@ fun SugorokuMapContent(
             }
 
             var birdPatrolCenter by remember { mutableStateOf(Offset.Unspecified) }
+            var birdPhaseOffset by remember { mutableFloatStateOf(0f) }
+            var birdEnterFromLeft by remember { mutableStateOf(true) }
 
             // Centering on initial load
             LaunchedEffect(currentStep, containerWidth, containerHeight) {
@@ -471,6 +473,7 @@ fun SugorokuMapContent(
                         x = centeredWorldX - 10f * density,
                         y = centeredWorldY - 95f * density,
                     )
+                    birdPhaseOffset = 0f
                     hasCenteredInitially = true
                 }
             }
@@ -542,22 +545,42 @@ fun SugorokuMapContent(
 
             LaunchedEffect(viewportWorld, hasCenteredInitially, containerWidth, containerHeight) {
                 if (hasCenteredInitially && containerWidth > 0f && containerHeight > 0f) {
+                    // Debounce while scrolling/zooming so an Umigarasu never materializes mid-screen
+                    delay(900L)
                     val zoomComp = if (zoomScale < 1.0f) {
                         zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
                     } else {
                         1.0f
                     }
                     val offscreenPad = 210f * density * zoomComp
-                    val isFarOffscreen = birdPatrolCenter == Offset.Unspecified ||
+                    val effectivePhase = (animPhaseState.value + birdPhaseOffset).mod(1f)
+                    val curBird = computeWorldUmigarasu(effectivePhase)
+                    val isCenterOffscreen = birdPatrolCenter == Offset.Unspecified ||
                         birdPatrolCenter.x < viewportWorld.left - offscreenPad ||
                         birdPatrolCenter.x > viewportWorld.right + offscreenPad ||
                         birdPatrolCenter.y < viewportWorld.top - offscreenPad ||
                         birdPatrolCenter.y > viewportWorld.bottom + offscreenPad
-                    if (isFarOffscreen) {
-                        birdPatrolCenter = Offset(
-                            x = viewportWorld.center.x - 10f * density,
-                            y = viewportWorld.center.y - 95f * density,
+                    val isBirdOffscreen = if (birdPatrolCenter == Offset.Unspecified) {
+                        true
+                    } else {
+                        val bx = birdPatrolCenter.x + curBird.offsetXDp * density
+                        val by = birdPatrolCenter.y + curBird.offsetYDp * density
+                        bx < viewportWorld.left - offscreenPad * 0.7f ||
+                            bx > viewportWorld.right + offscreenPad * 0.7f ||
+                            by < viewportWorld.top - offscreenPad * 0.7f ||
+                            by > viewportWorld.bottom + offscreenPad * 0.7f
+                    }
+                    if (isCenterOffscreen && isBirdOffscreen) {
+                        val placement = computeEdgeEntryPatrolCenter(
+                            viewportWorld = viewportWorld,
+                            currentPhase = animPhaseState.value,
+                            density = density,
+                            zoomScale = zoomScale,
+                            enterFromLeft = birdEnterFromLeft,
                         )
+                        birdPatrolCenter = placement.patrolCenterWorld
+                        birdPhaseOffset = placement.phaseOffset
+                        birdEnterFromLeft = !birdEnterFromLeft
                     }
                 }
             }
@@ -781,7 +804,7 @@ fun SugorokuMapContent(
                         drawWorldSpaceUmigarasu(
                             birdFrames = umigarasuFrames,
                             patrolCenterWorld = activeBirdPatrolCenter,
-                            phase = animPhase,
+                            phase = (animPhase + birdPhaseOffset).mod(1f),
                             zoomScale = zoomScale,
                         )
                     }
