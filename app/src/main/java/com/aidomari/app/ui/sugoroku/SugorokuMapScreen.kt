@@ -850,9 +850,9 @@ private fun DrawScope.drawRegionalTerrainWashes(
     scaleFactor: Float,
     zoomScale: Float,
 ) {
-    val woodlandWash = Color(0xFFC5E3C0).copy(alpha = 0.42f)
-    val pastureWash = Color(0xFFDCF0D6).copy(alpha = 0.40f)
-    val ridgeInk = Color(0xFF5D8E70).copy(alpha = 0.28f)
+    val woodlandWash = Color(0xFFC4ECA8).copy(alpha = 0.34f)
+    val pastureWash = Color(0xFFDEF6C8).copy(alpha = 0.34f)
+    val ridgeInk = Color(0xFF5FA374).copy(alpha = 0.25f)
 
     // Woodland & mountain zones (cx, cy, rx, ry in Hokkaido SVG space 0..612 x 0..387)
     val woodlandZones = listOf(
