@@ -1,6 +1,8 @@
 package com.aidomari.app.ui.sugoroku
 
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Path
+import com.aidomari.app.domain.model.HighwayCategory
 import com.aidomari.app.domain.model.LandmarkMotionStyle
 import com.aidomari.app.domain.model.RoadsideLandmark
 import com.aidomari.app.domain.model.RoadsideLandmarkType
@@ -58,7 +60,7 @@ class SugorokuMapAnimationsTest {
     }
 
     @Test
-    fun `landmark styles match user directions across Goryokaku and Chapter 2 scenery`() {
+    fun `landmark styles match user directions across Goryokaku and Chapter 2 wild nature`() {
         assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.GORYOKAKU_CHERRY.motionStyle)
         assertEquals(LandmarkMotionStyle.SAKURA_PETALS, RoadsideLandmarkType.CHERRY_ROW.motionStyle)
         assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.MORNING_MARKET.motionStyle)
@@ -66,13 +68,18 @@ class SugorokuMapAnimationsTest {
         assertEquals(LandmarkMotionStyle.WILDLIFE_WALK_2FRAME, RoadsideLandmarkType.WALKING_FOX.motionStyle)
         assertEquals(LandmarkMotionStyle.SHINKANSEN_GLIDE, RoadsideLandmarkType.HOKKAIDO_SHINKANSEN.motionStyle)
         assertEquals(LandmarkMotionStyle.BOAT_BOB, RoadsideLandmarkType.ONUMA_SWAN_BOAT.motionStyle)
-        assertEquals(LandmarkMotionStyle.BOAT_BOB, RoadsideLandmarkType.FERRY_SHIP.motionStyle)
-        assertEquals(LandmarkMotionStyle.LIGHTHOUSE_BEAM, RoadsideLandmarkType.CAPE_LIGHTHOUSE.motionStyle)
-        assertEquals(LandmarkMotionStyle.ONSEN_STEAM, RoadsideLandmarkType.ROTENBURO_ONSEN.motionStyle)
-        assertEquals(LandmarkMotionStyle.ROPEWAY_SPARKLE, RoadsideLandmarkType.MOUNTAIN_ROPEWAY.motionStyle)
+        assertEquals(LandmarkMotionStyle.BOAT_BOB, RoadsideLandmarkType.UCHIURA_FISHING_BOAT.motionStyle)
+        assertEquals(LandmarkMotionStyle.ONSEN_STEAM, RoadsideLandmarkType.WOODEN_ONSEN_BATH.motionStyle)
+        assertEquals(LandmarkMotionStyle.RIVER_SHIMMER, RoadsideLandmarkType.RURAL_ARCH_BRIDGE.motionStyle)
+        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.HOLSTEIN_COWS.motionStyle)
+        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.WHITE_BIRCH_GROVE.motionStyle)
+        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.HAY_ROLLS_SILO.motionStyle)
+        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.EZO_SHIKA_DEER.motionStyle)
+        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.COASTAL_ROCKS_WAVES.motionStyle)
 
-        // Fox must appear on mountain trails, not in urban Goryokaku Park
         assertFalse(RoadsideLandmark.ACT1_LANDMARKS.any { it.id == "goryokaku_waving_fox" })
+        assertFalse(RoadsideLandmark.ACT1_LANDMARKS.any { it.id == "funkawan_yakumo_pasture" })
+        assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.HOLSTEIN_COWS })
         assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.WALKING_FOX })
     }
 
@@ -158,23 +165,24 @@ class SugorokuMapAnimationsTest {
     }
 
     @Test
-    fun `computeParallaxBirdScreenPosition scales offset from screen center for 2_5D altitude depth`() {
-        val screenCenter = Offset(500f, 1000f)
-
-        val centered = computeParallaxBirdScreenPosition(
-            groundScreenPos = screenCenter,
-            screenCenter = screenCenter,
+    fun `CachedHighwayPath intersects respects viewport bounds accurately`() {
+        val viewport = Rect(left = 100f, top = 200f, right = 500f, bottom = 800f)
+        fun seg(minX: Float, minY: Float, maxX: Float, maxY: Float) = CachedHighwayPath(
+            category = HighwayCategory.NATIONAL_HIGHWAY,
+            path = Path(),
+            minX = minX,
+            minY = minY,
+            maxX = maxX,
+            maxY = maxY,
         )
-        assertEquals(500f, centered.x, 1e-4f)
-        assertEquals(1000f, centered.y, 1e-4f)
 
-        val shiftedGround = Offset(600f, 800f) // +100x, -200y relative to center
-        val shiftedBird = computeParallaxBirdScreenPosition(
-            groundScreenPos = shiftedGround,
-            screenCenter = screenCenter,
-        )
-        assertEquals(500f + 100f * UMIGARASU_ALTITUDE_PARALLAX, shiftedBird.x, 1e-3f)
-        assertEquals(1000f - 200f * UMIGARASU_ALTITUDE_PARALLAX, shiftedBird.y, 1e-3f)
-        assertTrue(UMIGARASU_ALTITUDE_PARALLAX > 1.0f)
+        assertTrue(seg(200f, 300f, 400f, 600f).intersects(viewport))
+        assertTrue(seg(50f, 300f, 100f, 400f).intersects(viewport)) // touching left edge
+        assertTrue(seg(450f, 750f, 700f, 900f).intersects(viewport)) // partial overlap bottom-right
+
+        assertFalse(seg(0f, 300f, 99f, 500f).intersects(viewport))
+        assertFalse(seg(501f, 300f, 700f, 500f).intersects(viewport))
+        assertFalse(seg(200f, 0f, 400f, 199f).intersects(viewport))
+        assertFalse(seg(200f, 801f, 400f, 1000f).intersects(viewport))
     }
 }

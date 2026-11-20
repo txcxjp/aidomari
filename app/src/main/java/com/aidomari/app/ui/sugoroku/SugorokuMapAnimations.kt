@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.domain.model.LandmarkMotionStyle
 import com.aidomari.app.domain.model.RoadsideLandmark
-import com.aidomari.app.domain.model.RoadsideLandmarkType
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -28,12 +27,6 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 private const val TWO_PI: Float = (Math.PI * 2.0).toFloat()
-
-/**
- * Apparent altitude parallax multiplier applied to the overhead Umigarasu relative to the
- * 1.0x ground map layer, creating a 2.5D high-sky depth illusion when panning.
- */
-const val UMIGARASU_ALTITUDE_PARALLAX: Float = 1.28f
 
 // Normalized Mt. Hakodate ropeway cable endpoints & pulley attachment ratios
 private const val ROPEWAY_CABLE_START_X = 0.7233f
@@ -253,18 +246,19 @@ fun computeWorldUmigarasu(phase: Float): WorldUmigarasuState {
 /**
  * Draws all visible roadside landmarks with gentle idle life motion, ambient effects,
  * and interactive spring-pop reactions without mutating or invalidating terrain Canvas layers.
+ * Accepts [getBitmap] backed by an LruCache so off-screen landmark assets are never eagerly decoded.
  */
 internal fun DrawScope.drawAnimatedRoadsideLandmarks(
     landmarks: List<RoadsideLandmark>,
-    landmarkBitmaps: Map<RoadsideLandmarkType, ImageBitmap?>,
-    landmarkFrame2Bitmaps: Map<RoadsideLandmarkType, ImageBitmap?>,
-    ropewayGondolaBitmap: ImageBitmap? = null,
+    getBitmap: (Int) -> ImageBitmap?,
+    ropewayGondolaResId: Int? = null,
     worldScaleFactor: Float,
     viewportWorld: Rect,
     zoomScale: Float,
     animPhase: Float,
     tappedLandmarkId: String?,
     tapPopProgress: Float,
+    scratchPath: Path = Path(),
 ) {
     if (landmarks.isEmpty() || zoomScale < 0.06f) return
 
@@ -300,11 +294,12 @@ internal fun DrawScope.drawAnimatedRoadsideLandmarks(
             seedPhase = seedPhase,
             tapPopProgress = pop,
         )
-        val bitmap = if (motion.useSecondFrame && landmarkFrame2Bitmaps[landmark.type] != null) {
-            landmarkFrame2Bitmaps[landmark.type]
+        val resId = if (motion.useSecondFrame && landmark.type.animFrame2DrawableResId != null) {
+            landmark.type.animFrame2DrawableResId
         } else {
-            landmarkBitmaps[landmark.type]
-        } ?: continue
+            landmark.type.drawableResId
+        }
+        val bitmap = getBitmap(resId) ?: continue
 
         val wPx = landmark.type.baseDisplayWidthDp.dp.toPx() * landmark.scale * zoomCompensation
         val hPx = landmark.type.baseDisplayHeightDp.dp.toPx() * landmark.scale * zoomCompensation
@@ -313,6 +308,11 @@ internal fun DrawScope.drawAnimatedRoadsideLandmarks(
         val tyPx = motion.translateYDp.dp.toPx() * unitScale
         val pivot = Offset(cx, cy + hPx * 0.45f)
         val effectiveFlipX = if (landmark.flipX xor motion.flipHorizontal) -1f else 1f
+        val gondolaBitmap = if (landmark.type.motionStyle == LandmarkMotionStyle.ROPEWAY_SPARKLE) {
+            ropewayGondolaResId?.let { getBitmap(it) }
+        } else {
+            null
+        }
 
         withTransform({
             translate(txPx, tyPx)
@@ -342,13 +342,20 @@ internal fun DrawScope.drawAnimatedRoadsideLandmarks(
                     phase = animPhase,
                     seedPhase = seedPhase,
                     alphaScale = motionDamp,
-                    ropewayGondolaBitmap = ropewayGondolaBitmap,
+                    ropewayGondolaBitmap = gondolaBitmap,
+                    scratchPath = scratchPath,
                 )
             }
         }
 
         if (isTapped) {
-            drawTapSparkleBurst(cx = cx, cy = cy - hPx * 0.15f, radius = wPx * 0.46f, progress = pop)
+            drawTapSparkleBurst(
+                cx = cx,
+                cy = cy - hPx * 0.15f,
+                radius = wPx * 0.46f,
+                progress = pop,
+                scratchPath = scratchPath,
+            )
         }
     }
 }
@@ -363,6 +370,7 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
     seedPhase: Float,
     alphaScale: Float,
     ropewayGondolaBitmap: ImageBitmap?,
+    scratchPath: Path,
 ) {
     when (style) {
         LandmarkMotionStyle.LIGHTHOUSE_BEAM -> {
@@ -373,14 +381,13 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
             withTransform({
                 rotate(degrees = sweepAngle, pivot = Offset(lanternX, lanternY))
             }) {
-                val beamPath = Path().apply {
-                    moveTo(lanternX, lanternY)
-                    lineTo(lanternX - beamLength, lanternY - beamLength * 0.20f)
-                    lineTo(lanternX - beamLength, lanternY + beamLength * 0.16f)
-                    close()
-                }
+                scratchPath.reset()
+                scratchPath.moveTo(lanternX, lanternY)
+                scratchPath.lineTo(lanternX - beamLength, lanternY - beamLength * 0.20f)
+                scratchPath.lineTo(lanternX - beamLength, lanternY + beamLength * 0.16f)
+                scratchPath.close()
                 drawPath(
-                    path = beamPath,
+                    path = scratchPath,
                     brush = Brush.horizontalGradient(
                         colors = listOf(
                             Color(0x00FFF176),
@@ -477,7 +484,12 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
                     val sy = cy - (if (i == 0) 0.25f else 0.31f) * hPx
                     val r = wPx * 0.025f * pulse
                     val color = Color(0xFFFFE04D).copy(alpha = 0.85f * pulse * alphaScale)
-                    drawFourPointStar(center = Offset(sx, sy), radius = r, color = color)
+                    drawFourPointStar(
+                        center = Offset(sx, sy),
+                        radius = r,
+                        color = color,
+                        scratchPath = scratchPath,
+                    )
                 }
             }
         }
@@ -507,6 +519,7 @@ private fun DrawScope.drawTapSparkleBurst(
     cy: Float,
     radius: Float,
     progress: Float,
+    scratchPath: Path,
 ) {
     val alpha = sin(PI.toFloat() * progress).coerceIn(0f, 1f)
     val reach = radius * (0.45f + 0.55f * progress)
@@ -519,6 +532,7 @@ private fun DrawScope.drawTapSparkleBurst(
             center = Offset(sx, sy),
             radius = radius * 0.09f * (1f - 0.3f * progress),
             color = starColor.copy(alpha = alpha),
+            scratchPath = scratchPath,
         )
     }
 }
@@ -527,45 +541,34 @@ private fun DrawScope.drawFourPointStar(
     center: Offset,
     radius: Float,
     color: Color,
+    scratchPath: Path,
 ) {
     val inner = radius * 0.32f
-    val path = Path().apply {
-        moveTo(center.x, center.y - radius)
-        lineTo(center.x + inner, center.y - inner)
-        lineTo(center.x + radius, center.y)
-        lineTo(center.x + inner, center.y + inner)
-        lineTo(center.x, center.y + radius)
-        lineTo(center.x - inner, center.y + inner)
-        lineTo(center.x - radius, center.y)
-        lineTo(center.x - inner, center.y - inner)
-        close()
-    }
-    drawPath(path = path, color = color)
+    scratchPath.reset()
+    scratchPath.moveTo(center.x, center.y - radius)
+    scratchPath.lineTo(center.x + inner, center.y - inner)
+    scratchPath.lineTo(center.x + radius, center.y)
+    scratchPath.lineTo(center.x + inner, center.y + inner)
+    scratchPath.lineTo(center.x, center.y + radius)
+    scratchPath.lineTo(center.x - inner, center.y + inner)
+    scratchPath.lineTo(center.x - radius, center.y)
+    scratchPath.lineTo(center.x - inner, center.y - inner)
+    scratchPath.close()
+    drawPath(path = scratchPath, color = color)
 }
 
 /**
- * Projects the high-altitude Umigarasu screen position from its ground projection using
- * a 2.5D altitude parallax factor (> 1.0 makes sky objects sweep faster than terrain on scroll).
+ * Draws the single hand-drawn Umigarasu seabird gliding gracefully in 1.0x world space
+ * above roads, landmarks, and Sugoroku tiles with its soft shadow directly underneath.
  */
-fun computeParallaxBirdScreenPosition(
-    groundScreenPos: Offset,
-    screenCenter: Offset,
-    parallaxFactor: Float = UMIGARASU_ALTITUDE_PARALLAX,
-): Offset = Offset(
-    x = screenCenter.x + (groundScreenPos.x - screenCenter.x) * parallaxFactor,
-    y = screenCenter.y + (groundScreenPos.y - screenCenter.y) * parallaxFactor,
-)
-
-/**
- * Draws the ground-projected aerial shadow of the Umigarasu inside world-space Canvas
- * coordinates so the shadow stays locked 1:1 on Hokkaido terrain during pans and zooms.
- */
-internal fun DrawScope.drawWorldSpaceUmigarasuShadow(
+internal fun DrawScope.drawWorldSpaceUmigarasu(
+    birdFrames: List<ImageBitmap>,
     patrolCenterWorld: Offset,
     phase: Float,
     zoomScale: Float,
 ) {
-    if (zoomScale < 0.08f) return
+    if (birdFrames.size < 3 || zoomScale < 0.08f) return
+
     val alphaFactor = ((zoomScale - 0.08f) / 0.12f).coerceIn(0f, 1f)
     if (alphaFactor <= 0.01f) return
 
@@ -582,51 +585,13 @@ internal fun DrawScope.drawWorldSpaceUmigarasuShadow(
     val shadowOffsetX = 12.dp.toPx() * zoomCompensation
     val shadowOffsetY = bird.altitudeShadowDp.dp.toPx() * zoomCompensation
 
+    // Soft aerial ground shadow offset down-right for altitude depth
     drawOval(
         color = Color(0x28000000).copy(alpha = 0.16f * alphaFactor),
         topLeft = Offset(bx + shadowOffsetX - sizePx * 0.28f, by + shadowOffsetY - sizePx * 0.09f),
         size = Size(sizePx * 0.56f, sizePx * 0.18f),
     )
-}
 
-/**
- * Draws the high-altitude Umigarasu body in screen space with 2.5D altitude parallax relative to
- * its world-space patrol path so panning creates clear aerial separation above Hokkaido terrain.
- */
-internal fun DrawScope.drawParallaxUmigarasuBody(
-    birdFrames: List<ImageBitmap>,
-    patrolCenterWorld: Offset,
-    panOffset: Offset,
-    zoomScale: Float,
-    phase: Float,
-    parallaxFactor: Float = UMIGARASU_ALTITUDE_PARALLAX,
-) {
-    if (birdFrames.size < 3 || zoomScale < 0.08f) return
-
-    val alphaFactor = ((zoomScale - 0.08f) / 0.12f).coerceIn(0f, 1f)
-    if (alphaFactor <= 0.01f) return
-
-    val zoomCompensation = if (zoomScale < 1.0f) {
-        zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
-    } else {
-        1.0f
-    }
-
-    val bird = computeWorldUmigarasu(phase)
-    val groundWorldX = patrolCenterWorld.x + bird.offsetXDp.dp.toPx()
-    val groundWorldY = patrolCenterWorld.y + bird.offsetYDp.dp.toPx()
-    val groundScreenPos = Offset(
-        x = groundWorldX * zoomScale + panOffset.x,
-        y = groundWorldY * zoomScale + panOffset.y,
-    )
-    val screenCenter = Offset(size.width / 2f, size.height / 2f)
-    val parallaxPos = computeParallaxBirdScreenPosition(
-        groundScreenPos = groundScreenPos,
-        screenCenter = screenCenter,
-        parallaxFactor = parallaxFactor,
-    )
-
-    val sizePx = bird.sizeDp.dp.toPx() * zoomScale * zoomCompensation
     val isLeftward = abs(bird.headingDeg) > 90f
     val visualTiltDeg = if (isLeftward) {
         val signed = if (bird.headingDeg > 0f) 180f - bird.headingDeg else -180f - bird.headingDeg
@@ -638,15 +603,15 @@ internal fun DrawScope.drawParallaxUmigarasuBody(
     val frameBitmap = birdFrames[bird.flapFrame.coerceIn(0, birdFrames.lastIndex)]
     withTransform({
         if (isLeftward) {
-            scale(scaleX = -1f, scaleY = 1f, pivot = parallaxPos)
+            scale(scaleX = -1f, scaleY = 1f, pivot = Offset(bx, by))
         }
-        rotate(degrees = visualTiltDeg, pivot = parallaxPos)
+        rotate(degrees = visualTiltDeg, pivot = Offset(bx, by))
     }) {
         drawImage(
             image = frameBitmap,
             dstOffset = IntOffset(
-                x = (parallaxPos.x - sizePx / 2f).roundToInt(),
-                y = (parallaxPos.y - sizePx / 2f).roundToInt(),
+                x = (bx - sizePx / 2f).roundToInt(),
+                y = (by - sizePx / 2f).roundToInt(),
             ),
             dstSize = IntSize(sizePx.roundToInt(), sizePx.roundToInt()),
             alpha = alphaFactor,
