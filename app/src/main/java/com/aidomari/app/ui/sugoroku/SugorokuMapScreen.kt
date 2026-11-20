@@ -1171,7 +1171,7 @@ private fun DrawScope.drawRegionalTerrainWashes(
     val woodlandZones = listOf(
         // Local corridor hills & parks
         floatArrayOf(184.0f, 345.3f, 1.3f, 1.4f), // Mt. Hakodate
-        floatArrayOf(187.1f, 341.1f, 1.2f, 1.1f), // Goryokaku Park
+        floatArrayOf(187.8f, 340.8f, 1.2f, 1.1f), // Goryokaku Park
         floatArrayOf(180.5f, 323.5f, 6.5f, 5.5f), // Onuma / Komagatake woods
         // Broad regional mountain & forest belts
         floatArrayOf(155.0f, 322.0f, 17.0f, 24.0f), // Oshima Peninsula interior hills
