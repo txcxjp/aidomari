@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.domain.model.LandmarkMotionStyle
 import com.aidomari.app.domain.model.RoadsideLandmark
+import com.aidomari.app.domain.model.RoadsideLandmarkType
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -111,28 +113,19 @@ fun computeLandmarkMotion(
         LandmarkMotionStyle.CAMPFIRE_FLAME,
         LandmarkMotionStyle.COASTAL_WAVE_CRASH,
         LandmarkMotionStyle.WIND_TURBINE_SPIN,
+        LandmarkMotionStyle.MOUNT_CLOUD_DRIFT,
+        LandmarkMotionStyle.SQUIRREL_NIBBLE,
         -> Unit
 
         LandmarkMotionStyle.DEER_GRAZE -> {
-            // Calm forest pause interspersed with a gentle grazing dip
-            val grazeWave = cos(TWO_PI * 4f * pNorm + seedRad)
-            val dip = ((grazeWave - 0.10f) / 0.90f).coerceAtLeast(0f)
-            val subNibble = 0.5f + 0.5f * sin(TWO_PI * 16f * pNorm + seedRad)
-            val activeDip = dip * (0.65f + 0.35f * subNibble)
-            ty = activeDip * 2.2f
-            rot = -activeDip * 2.4f
-            sx = 1f + activeDip * 0.015f
-            sy = 1f - activeDip * 0.03f
-        }
-
-        LandmarkMotionStyle.SQUIRREL_NIBBLE -> {
-            val burstEnv = (0.5f + 0.5f * sin(TWO_PI * 3f * pNorm + seedRad)).coerceIn(0f, 1f)
-            val chew = abs(sin(TWO_PI * 18f * pNorm + seedRad))
-            ty = -burstEnv * chew * 1.8f
-            rot = sin(TWO_PI * 9f * pNorm + seedRad) * burstEnv * 2.2f
-            val squash = burstEnv * chew * 0.04f
-            sx = 1f + squash * 0.5f
-            sy = 1f - squash
+            // Smooth 2-frame walking/grazing patrol using articulated f1/f2 frames (zero ground box)
+            val patrolAngle = TWO_PI * 1f * pNorm + seedRad
+            tx = sin(patrolAngle) * 11f
+            val stepAngle = TWO_PI * 10f * pNorm + seedRad
+            ty = -abs(sin(stepAngle)) * 1.6f
+            rot = sin(stepAngle) * 1.4f
+            secondFrame = (pNorm * 20f + seedPhase * 2f).mod(2f) >= 1f
+            flipHoriz = cos(patrolAngle) < 0f
         }
 
         LandmarkMotionStyle.SWAN_GLIDE -> {
@@ -417,6 +410,7 @@ internal fun DrawScope.drawAnimatedRoadsideLandmarks(
             if (motionDamp > 0.05f || landmark.type.motionStyle == LandmarkMotionStyle.ROPEWAY_SPARKLE) {
                 drawLandmarkAmbientOverlay(
                     style = landmark.type.motionStyle,
+                    landmarkType = landmark.type,
                     cx = cx,
                     cy = cy,
                     wPx = wPx,
@@ -444,6 +438,7 @@ internal fun DrawScope.drawAnimatedRoadsideLandmarks(
 
 private fun DrawScope.drawLandmarkAmbientOverlay(
     style: LandmarkMotionStyle,
+    landmarkType: RoadsideLandmarkType,
     cx: Float,
     cy: Float,
     wPx: Float,
@@ -483,17 +478,50 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
         }
 
         LandmarkMotionStyle.ONSEN_STEAM -> {
-            val baseX = cx - wPx * 0.24f
-            val baseY = cy - hPx * 0.10f
+            val (baseX, baseY) = when (landmarkType) {
+                RoadsideLandmarkType.WOODEN_ONSEN_BATH -> cx + wPx * 0.02f to cy - hPx * 0.04f
+                RoadsideLandmarkType.ONSEN_FOOTBATH -> cx - wPx * 0.04f to cy + hPx * 0.18f
+                else -> cx - wPx * 0.23f to cy - hPx * 0.04f
+            }
+            val inkW = (wPx * 0.010f).coerceAtLeast(1.3f)
             for (i in 0..2) {
                 val t = (phase * 2f + seedPhase + i * 0.33f).mod(1f)
-                val sx = baseX + (i - 1) * wPx * 0.08f + sin(TWO_PI * t + i) * wPx * 0.035f
-                val sy = baseY - t * hPx * 0.46f
-                val alpha = sin(PI.toFloat() * t) * 0.55f * alphaScale
+                val sx = baseX + (i - 1) * wPx * 0.085f + sin(TWO_PI * t + i) * wPx * 0.028f
+                val sy = baseY - t * hPx * 0.44f
+                val alpha = sin(PI.toFloat() * t) * alphaScale
+                val r = wPx * (0.028f + t * 0.018f)
+
+                scratchPath.reset()
+                scratchPath.moveTo(sx, sy + r)
+                scratchPath.cubicTo(
+                    sx - wPx * 0.024f,
+                    sy + r + hPx * 0.045f,
+                    sx + wPx * 0.024f,
+                    sy + r + hPx * 0.09f,
+                    sx,
+                    sy + r + hPx * 0.135f,
+                )
+                drawPath(
+                    path = scratchPath,
+                    color = Color.White.copy(alpha = 0.92f * alpha),
+                    style = Stroke(width = inkW * 2.2f, cap = StrokeCap.Round),
+                )
+                drawPath(
+                    path = scratchPath,
+                    color = Color(0xFF141416).copy(alpha = 0.85f * alpha),
+                    style = Stroke(width = inkW, cap = StrokeCap.Round),
+                )
+
                 drawCircle(
-                    color = Color.White.copy(alpha = alpha),
-                    radius = wPx * (0.032f + t * 0.028f),
+                    color = Color.White.copy(alpha = 0.94f * alpha),
+                    radius = r,
                     center = Offset(sx, sy),
+                )
+                drawCircle(
+                    color = Color(0xFF141416).copy(alpha = 0.88f * alpha),
+                    radius = r,
+                    center = Offset(sx, sy),
+                    style = Stroke(width = inkW),
                 )
             }
         }
@@ -501,25 +529,52 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
         LandmarkMotionStyle.TREE_SWAY,
         LandmarkMotionStyle.SAKURA_PETALS,
         -> {
-            for (i in 0..3) {
-                val t = (phase * 2f + seedPhase + i * 0.25f).mod(1f)
-                val px = cx + (-0.28f + i * 0.19f) * wPx + sin(TWO_PI * t + i) * wPx * 0.06f
-                val py = cy - hPx * 0.30f + t * hPx * 0.52f
-                val alpha = sin(PI.toFloat() * t) * 0.85f * alphaScale
-                drawOval(
-                    color = Color(0xFFFF8FC2).copy(alpha = alpha),
-                    topLeft = Offset(px, py),
-                    size = Size(wPx * 0.026f, wPx * 0.017f),
+            val inkW = (wPx * 0.0085f).coerceAtLeast(1.2f)
+            for (i in 0..5) {
+                val t = (phase * 2f + seedPhase + i * (1f / 6f)).mod(1f)
+                val px = cx + (-0.34f + i * 0.136f) * wPx + sin(TWO_PI * t + i) * wPx * 0.065f
+                val py = cy - hPx * 0.34f + t * hPx * 0.62f
+                val alpha = sin(PI.toFloat() * t) * alphaScale
+                val rotDeg = sin(TWO_PI * t + i) * 35f + i * 28f
+                drawOutlinedSakuraPetal(
+                    center = Offset(px, py),
+                    radius = wPx * 0.026f,
+                    rotationDeg = rotDeg,
+                    alpha = alpha,
+                    strokeWidth = inkW,
+                    scratchPath = scratchPath,
                 )
             }
         }
 
+        LandmarkMotionStyle.MOUNT_CLOUD_DRIFT -> {
+            val inkW = (wPx * 0.011f).coerceAtLeast(1.4f)
+            val drift1 = sin(TWO_PI * 1f * phase + seedPhase * TWO_PI) * wPx * 0.085f
+            val drift2 = -cos(TWO_PI * 1f * phase + seedPhase * TWO_PI) * wPx * 0.075f
+            drawOutlinedStorybookCloud(
+                center = Offset(cx - wPx * 0.28f + drift1, cy - hPx * 0.16f),
+                cloudWidth = wPx * 0.19f,
+                cloudHeight = hPx * 0.14f,
+                alphaScale = alphaScale,
+                strokeWidth = inkW,
+                scratchPath = scratchPath,
+            )
+            drawOutlinedStorybookCloud(
+                center = Offset(cx + wPx * 0.30f + drift2, cy - hPx * 0.05f),
+                cloudWidth = wPx * 0.16f,
+                cloudHeight = hPx * 0.115f,
+                alphaScale = alphaScale,
+                strokeWidth = inkW,
+                scratchPath = scratchPath,
+            )
+        }
+
         LandmarkMotionStyle.CAMPFIRE_FLAME -> {
-            // Exact campfire position on highland_camp: right-bottom stone ring (0.77, 0.76)
             val fireX = cx + wPx * 0.270f
             val fireBaseY = cy + hPx * 0.265f
             val sway = sin(TWO_PI * 10f * phase + seedPhase * TWO_PI)
             val flicker = 0.85f + 0.15f * cos(TWO_PI * 14f * phase + seedPhase * TWO_PI)
+            val inkW = (wPx * 0.008f).coerceAtLeast(1.1f)
 
             drawCircle(
                 brush = Brush.radialGradient(
@@ -534,7 +589,7 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
                 center = Offset(fireX, fireBaseY - hPx * 0.08f),
             )
 
-            // Outer flickering flame tongue
+            // Outer flickering flame tongue with crisp dark pen outline
             val flameH = hPx * (0.145f * flicker)
             val flameW = wPx * 0.048f
             scratchPath.reset()
@@ -554,7 +609,12 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
             scratchPath.close()
             drawPath(
                 path = scratchPath,
-                color = Color(0xFFFF7043).copy(alpha = 0.82f * alphaScale),
+                color = Color(0xFFFF7043).copy(alpha = 0.92f * alphaScale),
+            )
+            drawPath(
+                path = scratchPath,
+                color = Color(0xFF141416).copy(alpha = 0.85f * alphaScale),
+                style = Stroke(width = inkW, join = StrokeJoin.Round),
             )
 
             // Inner sunny core flame
@@ -577,101 +637,215 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
             scratchPath.close()
             drawPath(
                 path = scratchPath,
-                color = Color(0xFFFFEE58).copy(alpha = 0.92f * alphaScale),
+                color = Color(0xFFFFEE58).copy(alpha = 0.95f * alphaScale),
             )
 
-            // Rising glowing embers
+            // Rising glowing embers with subtle outline
             for (i in 0..2) {
                 val t = (phase * 4f + seedPhase + i * 0.33f).mod(1f)
                 val ex = fireX + sin(TWO_PI * 2f * t + i * 2.1f) * wPx * 0.042f
                 val ey = fireBaseY - hPx * (0.08f + t * 0.25f)
-                val alpha = sin(PI.toFloat() * t) * 0.88f * alphaScale
+                val alpha = sin(PI.toFloat() * t) * 0.92f * alphaScale
+                val er = wPx * (0.012f * (1f - 0.35f * t))
                 drawCircle(
                     color = if (i % 2 == 0) Color(0xFFFFCA28).copy(alpha = alpha) else Color(0xFFFF5722).copy(alpha = alpha),
-                    radius = wPx * (0.011f * (1f - 0.35f * t)),
+                    radius = er,
                     center = Offset(ex, ey),
+                )
+                drawCircle(
+                    color = Color(0xFF141416).copy(alpha = 0.72f * alpha),
+                    radius = er,
+                    center = Offset(ex, ey),
+                    style = Stroke(width = inkW * 0.7f),
                 )
             }
 
-            // Delicate white smoke wisps rising higher above the fire
+            // Outlined white smoke puffs rising above the campfire
             for (i in 0..1) {
                 val t = (phase * 2f + seedPhase + i * 0.5f).mod(1f)
                 val sx = fireX + sin(TWO_PI * t + i) * wPx * 0.032f
-                val sy = fireBaseY - hPx * (0.15f + t * 0.34f)
-                val alpha = sin(PI.toFloat() * t) * 0.44f * alphaScale
+                val sy = fireBaseY - hPx * (0.16f + t * 0.32f)
+                val alpha = sin(PI.toFloat() * t) * 0.85f * alphaScale
+                val sr = wPx * (0.022f + t * 0.016f)
                 drawCircle(
                     color = Color.White.copy(alpha = alpha),
-                    radius = wPx * (0.022f + t * 0.020f),
+                    radius = sr,
                     center = Offset(sx, sy),
+                )
+                drawCircle(
+                    color = Color(0xFF141416).copy(alpha = 0.75f * alpha),
+                    radius = sr,
+                    center = Offset(sx, sy),
+                    style = Stroke(width = inkW * 0.85f),
                 )
             }
         }
 
         LandmarkMotionStyle.SWAN_GLIDE -> {
-            // Centered beneath the swan boat at bottom-right of ONUMA_SWAN_BOAT (0.835, 0.855)
-            val swanWaterX = cx + wPx * 0.335f
-            val swanWaterY = cy + hPx * 0.355f
-            for (i in 0..1) {
-                val t = (phase * 3f + seedPhase + i * 0.5f).mod(1f)
-                val rx = wPx * (0.075f + t * 0.115f)
-                val ry = hPx * (0.032f + t * 0.045f)
-                val alpha = sin(PI.toFloat() * t) * 0.72f * alphaScale
-                drawOval(
-                    color = Color.White.copy(alpha = alpha),
-                    topLeft = Offset(swanWaterX - rx, swanWaterY - ry),
-                    size = Size(rx * 2f, ry * 2f),
-                    style = Stroke(width = wPx * 0.008f),
+            val inkW = (wPx * 0.008f).coerceAtLeast(1.1f)
+            if (landmarkType == RoadsideLandmarkType.LAKE_SWANS) {
+                val points = listOf(
+                    Offset(cx - wPx * 0.14f, cy + hPx * 0.22f),
+                    Offset(cx + wPx * 0.15f, cy + hPx * 0.30f),
                 )
-            }
-            for (i in 0..2) {
-                val t = (phase * 2f + seedPhase + i * 0.33f).mod(1f)
-                val sx = cx + (-0.28f + i * 0.24f - t * 0.06f) * wPx
-                val sy = cy + (0.28f + (i % 2) * 0.11f) * hPx
-                val alpha = sin(PI.toFloat() * t) * 0.65f * alphaScale
-                drawLine(
-                    color = Color.White.copy(alpha = alpha),
-                    start = Offset(sx, sy),
-                    end = Offset(sx + wPx * 0.055f, sy),
-                    strokeWidth = wPx * 0.010f,
-                    cap = StrokeCap.Round,
-                )
-            }
-        }
-
-        LandmarkMotionStyle.COASTAL_WAVE_CRASH -> {
-            for (w in 0..1) {
-                val t = (phase * 3f + seedPhase + w * 0.5f).mod(1f)
-                val crashX = cx + (if (w == 0) -0.18f else 0.18f) * wPx
-                val baseY = cy + hPx * 0.33f
-                val surgeUp = sin(PI.toFloat() * t) * hPx * 0.11f
-                val crestAlpha = sin(PI.toFloat() * t) * 0.78f * alphaScale
-                val foamWidth = wPx * (0.14f + 0.14f * t)
-                val foamHeight = hPx * (0.045f + 0.045f * t)
-
-                drawOval(
-                    color = Color(0xFFE0F7FA).copy(alpha = crestAlpha),
-                    topLeft = Offset(crashX - foamWidth * 0.5f, baseY - surgeUp - foamHeight * 0.5f),
-                    size = Size(foamWidth, foamHeight),
-                )
-
-                // Splash droplets arcing away as the wave strikes the sea-stack rock
-                for (d in -1..1) {
-                    val dt = (t * 1.15f).coerceIn(0f, 1f)
-                    val dx = d * wPx * (0.045f + 0.075f * dt)
-                    val arcY = baseY - surgeUp - sin(PI.toFloat() * dt) * hPx * (0.14f + (1 - abs(d)) * 0.04f)
-                    val dropAlpha = sin(PI.toFloat() * dt) * 0.90f * alphaScale
-                    drawCircle(
-                        color = Color.White.copy(alpha = dropAlpha),
-                        radius = wPx * (0.014f * (1f - 0.3f * dt)),
-                        center = Offset(crashX + dx, arcY),
+                for ((idx, center) in points.withIndex()) {
+                    val t = (phase * 3f + seedPhase + idx * 0.5f).mod(1f)
+                    val rx = wPx * (0.095f + t * 0.11f)
+                    val ry = hPx * (0.032f + t * 0.042f)
+                    val alpha = sin(PI.toFloat() * t) * alphaScale
+                    drawOval(
+                        color = Color(0xFF141416).copy(alpha = 0.60f * alpha),
+                        topLeft = Offset(center.x - rx, center.y - ry),
+                        size = Size(rx * 2f, ry * 2f),
+                        style = Stroke(width = inkW * 1.4f),
+                    )
+                    drawOval(
+                        color = Color.White.copy(alpha = 0.90f * alpha),
+                        topLeft = Offset(center.x - rx, center.y - ry),
+                        size = Size(rx * 2f, ry * 2f),
+                        style = Stroke(width = inkW * 0.75f),
+                    )
+                }
+            } else {
+                val swanWaterX = cx + wPx * 0.335f
+                val swanWaterY = cy + hPx * 0.355f
+                for (i in 0..1) {
+                    val t = (phase * 3f + seedPhase + i * 0.5f).mod(1f)
+                    val rx = wPx * (0.075f + t * 0.115f)
+                    val ry = hPx * (0.032f + t * 0.045f)
+                    val alpha = sin(PI.toFloat() * t) * alphaScale
+                    drawOval(
+                        color = Color(0xFF141416).copy(alpha = 0.62f * alpha),
+                        topLeft = Offset(swanWaterX - rx, swanWaterY - ry),
+                        size = Size(rx * 2f, ry * 2f),
+                        style = Stroke(width = inkW * 1.45f),
+                    )
+                    drawOval(
+                        color = Color.White.copy(alpha = 0.92f * alpha),
+                        topLeft = Offset(swanWaterX - rx, swanWaterY - ry),
+                        size = Size(rx * 2f, ry * 2f),
+                        style = Stroke(width = inkW * 0.75f),
                     )
                 }
             }
         }
 
-        LandmarkMotionStyle.WIND_TURBINE_SPIN,
-        LandmarkMotionStyle.WHALE_SPOUT,
-        -> Unit
+        LandmarkMotionStyle.COASTAL_WAVE_CRASH -> {
+            val spreadX = if (landmarkType == RoadsideLandmarkType.COASTAL_CLIFF_ARCH) 0.25f else 0.18f
+            val inkW = (wPx * 0.008f).coerceAtLeast(1.1f)
+            for (w in 0..1) {
+                val t = (phase * 3f + seedPhase + w * 0.5f).mod(1f)
+                val crashX = cx + (if (w == 0) -spreadX else spreadX) * wPx
+                val baseY = cy + hPx * 0.33f
+                val surgeUp = sin(PI.toFloat() * t) * hPx * 0.11f
+                val crestAlpha = sin(PI.toFloat() * t) * alphaScale
+                val foamWidth = wPx * (0.14f + 0.14f * t)
+                val foamHeight = hPx * (0.045f + 0.045f * t)
+
+                drawOval(
+                    color = Color(0xFFE0F7FA).copy(alpha = 0.90f * crestAlpha),
+                    topLeft = Offset(crashX - foamWidth * 0.5f, baseY - surgeUp - foamHeight * 0.5f),
+                    size = Size(foamWidth, foamHeight),
+                )
+                drawOval(
+                    color = Color(0xFF141416).copy(alpha = 0.75f * crestAlpha),
+                    topLeft = Offset(crashX - foamWidth * 0.5f, baseY - surgeUp - foamHeight * 0.5f),
+                    size = Size(foamWidth, foamHeight),
+                    style = Stroke(width = inkW * 0.85f),
+                )
+
+                for (d in -1..1) {
+                    val dt = (t * 1.15f).coerceIn(0f, 1f)
+                    val dx = d * wPx * (0.045f + 0.075f * dt)
+                    val arcY = baseY - surgeUp - sin(PI.toFloat() * dt) * hPx * (0.14f + (1 - abs(d)) * 0.04f)
+                    val dropAlpha = sin(PI.toFloat() * dt) * alphaScale
+                    val dr = wPx * (0.015f * (1f - 0.3f * dt))
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.95f * dropAlpha),
+                        radius = dr,
+                        center = Offset(crashX + dx, arcY),
+                    )
+                    drawCircle(
+                        color = Color(0xFF141416).copy(alpha = 0.80f * dropAlpha),
+                        radius = dr,
+                        center = Offset(crashX + dx, arcY),
+                        style = Stroke(width = inkW * 0.75f),
+                    )
+                }
+            }
+        }
+
+        LandmarkMotionStyle.WIND_TURBINE_SPIN -> {
+            if (landmarkType == RoadsideLandmarkType.OTONRUI_WIND_FARM) {
+                drawSpinningWindRotor(
+                    hub = Offset(cx + (0.3060f - 0.5f) * wPx, cy + (0.0993f - 0.5f) * hPx),
+                    bladeLen = wPx * 0.185f,
+                    angleDeg = phase * 1080f + seedPhase * 360f,
+                    alphaScale = alphaScale,
+                    scratchPath = scratchPath,
+                )
+                drawSpinningWindRotor(
+                    hub = Offset(cx + (0.5909f - 0.5f) * wPx, cy + (0.2754f - 0.5f) * hPx),
+                    bladeLen = wPx * 0.140f,
+                    angleDeg = phase * 1080f + seedPhase * 360f + 42f,
+                    alphaScale = alphaScale,
+                    scratchPath = scratchPath,
+                )
+                drawSpinningWindRotor(
+                    hub = Offset(cx + (0.8340f - 0.5f) * wPx, cy + (0.4130f - 0.5f) * hPx),
+                    bladeLen = wPx * 0.105f,
+                    angleDeg = phase * 1080f + seedPhase * 360f + 84f,
+                    alphaScale = alphaScale,
+                    scratchPath = scratchPath,
+                )
+            } else {
+                drawSpinningWindRotor(
+                    hub = Offset(cx + (0.1841f - 0.5f) * wPx, cy + (0.1117f - 0.5f) * hPx),
+                    bladeLen = wPx * 0.27f,
+                    angleDeg = phase * 1080f + seedPhase * 360f,
+                    alphaScale = alphaScale,
+                    scratchPath = scratchPath,
+                )
+                drawSpinningWindRotor(
+                    hub = Offset(cx + (0.7416f - 0.5f) * wPx, cy + (0.3224f - 0.5f) * hPx),
+                    bladeLen = wPx * 0.20f,
+                    angleDeg = phase * 1080f + seedPhase * 360f + 45f,
+                    alphaScale = alphaScale,
+                    scratchPath = scratchPath,
+                )
+            }
+        }
+
+        LandmarkMotionStyle.WHALE_SPOUT -> {
+            // Blowhole crown of blue-gray whale on WHALE_ORCA_SEA: (0.605, 0.095)
+            val blowX = cx + 0.105f * wPx
+            val blowY = cy - 0.390f * hPx
+            val t = (phase * 3f + seedPhase).mod(1f)
+            val inkW = (wPx * 0.007f).coerceAtLeast(1.0f)
+            if (t < 0.78f) {
+                val st = t / 0.78f
+                val alpha = sin(PI.toFloat() * st) * alphaScale
+                for (side in listOf(-1f, 1f)) {
+                    for (drop in 0..2) {
+                        val dt = (st * 0.85f + drop * 0.08f).coerceIn(0f, 1f)
+                        val px = blowX + side * wPx * (0.015f + 0.068f * dt)
+                        val py = blowY - sin(PI.toFloat() * dt * 0.82f) * hPx * (0.34f + drop * 0.06f)
+                        val r = wPx * (0.016f - 0.004f * dt)
+                        drawCircle(
+                            color = (if (drop == 0) Color.White else Color(0xFF81F7FD)).copy(alpha = 0.95f * alpha),
+                            radius = r,
+                            center = Offset(px, py),
+                        )
+                        drawCircle(
+                            color = Color(0xFF141416).copy(alpha = 0.78f * alpha),
+                            radius = r,
+                            center = Offset(px, py),
+                            style = Stroke(width = inkW),
+                        )
+                    }
+                }
+            }
+        }
 
         LandmarkMotionStyle.ROPEWAY_SPARKLE -> {
             val state = computeRopewayGondolaState(phase)
@@ -720,22 +894,163 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
         }
 
         LandmarkMotionStyle.RIVER_SHIMMER -> {
+            val inkW = (wPx * 0.008f).coerceAtLeast(1.1f)
             for (i in 0..2) {
                 val t = (phase * 2f + seedPhase + i * 0.33f).mod(1f)
                 val sx = cx + (0.04f - t * 0.16f) * wPx
                 val sy = cy + (-0.02f + i * 0.11f + t * 0.16f) * hPx
-                val alpha = sin(PI.toFloat() * t) * 0.72f * alphaScale
+                val alpha = sin(PI.toFloat() * t) * alphaScale
                 drawLine(
-                    color = Color.White.copy(alpha = alpha),
+                    color = Color(0xFF141416).copy(alpha = 0.60f * alpha),
                     start = Offset(sx, sy),
                     end = Offset(sx + wPx * 0.055f, sy - hPx * 0.02f),
-                    strokeWidth = wPx * 0.012f,
+                    strokeWidth = inkW * 1.9f,
+                    cap = StrokeCap.Round,
+                )
+                drawLine(
+                    color = Color.White.copy(alpha = 0.90f * alpha),
+                    start = Offset(sx, sy),
+                    end = Offset(sx + wPx * 0.055f, sy - hPx * 0.02f),
+                    strokeWidth = inkW,
                     cap = StrokeCap.Round,
                 )
             }
         }
 
         else -> Unit
+    }
+}
+
+private fun DrawScope.drawOutlinedStorybookCloud(
+    center: Offset,
+    cloudWidth: Float,
+    cloudHeight: Float,
+    alphaScale: Float,
+    strokeWidth: Float,
+    scratchPath: Path,
+) {
+    if (alphaScale <= 0.05f) return
+    val halfW = cloudWidth * 0.5f
+    val baseY = center.y + cloudHeight * 0.38f
+    scratchPath.reset()
+    scratchPath.moveTo(center.x - halfW * 0.85f, baseY)
+    scratchPath.cubicTo(
+        center.x - halfW * 1.05f,
+        baseY - cloudHeight * 0.02f,
+        center.x - halfW * 1.02f,
+        baseY - cloudHeight * 0.62f,
+        center.x - halfW * 0.48f,
+        baseY - cloudHeight * 0.56f,
+    )
+    scratchPath.cubicTo(
+        center.x - halfW * 0.34f,
+        baseY - cloudHeight * 1.12f,
+        center.x + halfW * 0.34f,
+        baseY - cloudHeight * 1.12f,
+        center.x + halfW * 0.48f,
+        baseY - cloudHeight * 0.56f,
+    )
+    scratchPath.cubicTo(
+        center.x + halfW * 1.02f,
+        baseY - cloudHeight * 0.62f,
+        center.x + halfW * 1.05f,
+        baseY - cloudHeight * 0.02f,
+        center.x + halfW * 0.85f,
+        baseY,
+    )
+    scratchPath.close()
+    drawPath(path = scratchPath, color = Color.White.copy(alpha = 0.96f * alphaScale))
+    drawPath(
+        path = scratchPath,
+        color = Color(0xFF141416).copy(alpha = 0.92f * alphaScale),
+        style = Stroke(width = strokeWidth, join = StrokeJoin.Round),
+    )
+}
+
+private fun DrawScope.drawOutlinedSakuraPetal(
+    center: Offset,
+    radius: Float,
+    rotationDeg: Float,
+    alpha: Float,
+    strokeWidth: Float,
+    scratchPath: Path,
+) {
+    if (alpha <= 0.03f) return
+    withTransform({
+        rotate(degrees = rotationDeg, pivot = center)
+    }) {
+        scratchPath.reset()
+        // Notched sakura petal silhouette matching Trial C crisp outline style
+        scratchPath.moveTo(center.x, center.y + radius * 0.85f)
+        scratchPath.cubicTo(
+            center.x - radius * 1.15f,
+            center.y + radius * 0.25f,
+            center.x - radius * 0.95f,
+            center.y - radius * 0.85f,
+            center.x - radius * 0.28f,
+            center.y - radius * 0.90f,
+        )
+        scratchPath.lineTo(center.x, center.y - radius * 0.52f)
+        scratchPath.lineTo(center.x + radius * 0.28f, center.y - radius * 0.90f)
+        scratchPath.cubicTo(
+            center.x + radius * 0.95f,
+            center.y - radius * 0.85f,
+            center.x + radius * 1.15f,
+            center.y + radius * 0.25f,
+            center.x,
+            center.y + radius * 0.85f,
+        )
+        scratchPath.close()
+        drawPath(path = scratchPath, color = Color(0xFFFF94C2).copy(alpha = 0.96f * alpha))
+        drawPath(
+            path = scratchPath,
+            color = Color(0xFF141416).copy(alpha = 0.90f * alpha),
+            style = Stroke(width = strokeWidth, join = StrokeJoin.Round),
+        )
+    }
+}
+
+private fun DrawScope.drawSpinningWindRotor(
+    hub: Offset,
+    bladeLen: Float,
+    angleDeg: Float,
+    alphaScale: Float,
+    scratchPath: Path,
+) {
+    if (alphaScale <= 0.05f) return
+    val outlineStroke = Stroke(width = (bladeLen * 0.058f).coerceAtLeast(1.2f), join = StrokeJoin.Round)
+    val inkColor = Color(0xFF141416).copy(alpha = alphaScale)
+    val fillColor = Color.White.copy(alpha = 0.96f * alphaScale)
+    withTransform({
+        rotate(degrees = angleDeg, pivot = hub)
+    }) {
+        for (i in 0..2) {
+            withTransform({
+                rotate(degrees = i * 120f, pivot = hub)
+            }) {
+                scratchPath.reset()
+                scratchPath.moveTo(hub.x, hub.y)
+                scratchPath.lineTo(hub.x - bladeLen * 0.085f, hub.y - bladeLen * 0.24f)
+                scratchPath.quadraticTo(
+                    hub.x - bladeLen * 0.045f,
+                    hub.y - bladeLen * 0.78f,
+                    hub.x,
+                    hub.y - bladeLen,
+                )
+                scratchPath.quadraticTo(
+                    hub.x + bladeLen * 0.055f,
+                    hub.y - bladeLen * 0.72f,
+                    hub.x + bladeLen * 0.075f,
+                    hub.y - bladeLen * 0.22f,
+                )
+                scratchPath.close()
+                drawPath(path = scratchPath, color = fillColor)
+                drawPath(path = scratchPath, color = inkColor, style = outlineStroke)
+            }
+        }
+        val hubRadius = (bladeLen * 0.125f).coerceAtLeast(2.2f)
+        drawCircle(color = fillColor, radius = hubRadius, center = hub)
+        drawCircle(color = inkColor, radius = hubRadius, center = hub, style = outlineStroke)
     }
 }
 

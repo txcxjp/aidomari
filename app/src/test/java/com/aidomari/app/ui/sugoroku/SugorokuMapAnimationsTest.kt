@@ -76,6 +76,8 @@ class SugorokuMapAnimationsTest {
         assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.WHITE_BIRCH_GROVE.motionStyle)
         assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.HAY_ROLLS_SILO.motionStyle)
         assertEquals(LandmarkMotionStyle.DEER_GRAZE, RoadsideLandmarkType.EZO_SHIKA_DEER.motionStyle)
+        assertTrue(RoadsideLandmarkType.EZO_SHIKA_DEER.animFrame2DrawableResId != null)
+        assertEquals(LandmarkMotionStyle.MOUNT_CLOUD_DRIFT, RoadsideLandmarkType.MOUNT_KOMAGATAKE.motionStyle)
         assertEquals(LandmarkMotionStyle.COASTAL_WAVE_CRASH, RoadsideLandmarkType.COASTAL_ROCKS_WAVES.motionStyle)
 
         assertFalse(RoadsideLandmark.ACT1_LANDMARKS.any { it.id == "goryokaku_waving_fox" })
@@ -86,12 +88,22 @@ class SugorokuMapAnimationsTest {
         assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.HAMANASU_ROSES })
         assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.LUPINE_WILDFLOWERS })
         assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.POTATO_BLOSSOMS })
+        assertEquals(LandmarkMotionStyle.WIND_TURBINE_SPIN, RoadsideLandmarkType.WIND_TURBINE_PAIR.motionStyle)
+        assertEquals(LandmarkMotionStyle.WIND_TURBINE_SPIN, RoadsideLandmarkType.OTONRUI_WIND_FARM.motionStyle)
+        assertEquals(LandmarkMotionStyle.WHALE_SPOUT, RoadsideLandmarkType.WHALE_ORCA_SEA.motionStyle)
+        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.EZO_SQUIRREL.motionStyle)
+        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.EZO_SHIKA_GRAZING.motionStyle)
+        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.REINDEER_HERD.motionStyle)
+        assertEquals(LandmarkMotionStyle.RIVER_SHIMMER, RoadsideLandmarkType.CUTE_BROWN_BEAR.motionStyle)
+        assertEquals(LandmarkMotionStyle.SWAN_GLIDE, RoadsideLandmarkType.LAKE_SWANS.motionStyle)
+        assertEquals(LandmarkMotionStyle.COASTAL_WAVE_CRASH, RoadsideLandmarkType.COASTAL_CLIFF_ARCH.motionStyle)
+        assertEquals(LandmarkMotionStyle.TRAM_CHUG, RoadsideLandmarkType.KIHA40_LOCAL_TRAIN.motionStyle)
     }
 
     @Test
     fun `ACT1_LANDMARKS strictly never reuses identical landmark drawable assets`() {
         val landmarks = RoadsideLandmark.ACT1_LANDMARKS
-        assertTrue("Expected at least 33 curated unique landmarks", landmarks.size >= 33)
+        assertEquals("Expected all 61 curated unique Hokkaido landmarks", 61, landmarks.size)
         assertEquals(
             "Duplicate RoadsideLandmarkType found in ACT1_LANDMARKS",
             landmarks.size,
@@ -102,6 +114,27 @@ class SugorokuMapAnimationsTest {
             landmarks.size,
             landmarks.map { it.type.drawableResId }.toSet().size,
         )
+        val primaryIds = landmarks.map { it.type.drawableResId }.toSet()
+        val secondaryIds = landmarks.mapNotNull { it.type.animFrame2DrawableResId }.toSet()
+        assertTrue(
+            "animFrame2DrawableResId must not collide with any primary drawableResId",
+            primaryIds.intersect(secondaryIds).isEmpty(),
+        )
+    }
+
+    @Test
+    fun `deer 2-frame walk toggles stride frames without distorting static props`() {
+        val samples = (0 until 40).map { i ->
+            computeLandmarkMotion(
+                style = LandmarkMotionStyle.DEER_GRAZE,
+                phase = i / 40f,
+                seedPhase = 0f,
+            )
+        }
+        assertTrue(samples.any { it.useSecondFrame })
+        assertTrue(samples.any { !it.useSecondFrame })
+        assertTrue(samples.any { it.flipHorizontal })
+        assertTrue(samples.any { !it.flipHorizontal })
     }
 
     @Test
