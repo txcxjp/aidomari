@@ -2,83 +2,129 @@ package com.aidomari.app.domain.model
 
 import com.aidomari.app.R
 
+/**
+ * Living map animation personality assigned to each roadside landmark type.
+ */
+enum class LandmarkMotionStyle {
+    NONE,
+    DANCE_BOUNCE,
+    WAVE_DANCE_2FRAME,
+    BOAT_BOB,
+    TREE_SWAY,
+    TRAM_CHUG,
+    ONSEN_STEAM,
+    LIGHTHOUSE_BEAM,
+    ROPEWAY_SPARKLE,
+    RIVER_SHIMMER,
+}
+
 enum class RoadsideLandmarkType(
     val defaultDialogue: String,
     val drawableResId: Int,
     val baseDisplayWidthDp: Float,
     val baseDisplayHeightDp: Float,
+    val motionStyle: LandmarkMotionStyle = LandmarkMotionStyle.NONE,
+    val animFrame2DrawableResId: Int? = null,
 ) {
     CAPE_LIGHTHOUSE(
         defaultDialogue = "「青い海と白い灯台が見える！」",
         drawableResId = R.drawable.landmark_cape_lighthouse,
         baseDisplayWidthDp = 142f,
         baseDisplayHeightDp = 82f,
+        motionStyle = LandmarkMotionStyle.LIGHTHOUSE_BEAM,
     ),
     RED_BRICK_WAREHOUSE(
         defaultDialogue = "「歴史ある赤レンガ倉庫だ！」",
         drawableResId = R.drawable.landmark_red_brick_warehouse,
         baseDisplayWidthDp = 164f,
         baseDisplayHeightDp = 84f,
+        motionStyle = LandmarkMotionStyle.NONE,
     ),
     WESTERN_HOUSE(
         defaultDialogue = "「旧函館区公会堂とハリストス正教会が見える！」",
         drawableResId = R.drawable.landmark_western_house,
         baseDisplayWidthDp = 166f,
         baseDisplayHeightDp = 91f,
+        motionStyle = LandmarkMotionStyle.NONE,
     ),
     CITY_TRAM(
         defaultDialogue = "「レトロな函館市電が走ってる！」",
         drawableResId = R.drawable.landmark_city_tram,
         baseDisplayWidthDp = 144f,
         baseDisplayHeightDp = 71f,
+        motionStyle = LandmarkMotionStyle.TRAM_CHUG,
     ),
     GORYOKAKU_CHERRY(
         defaultDialogue = "「五稜郭の星形と五稜郭タワーだ！」",
         drawableResId = R.drawable.landmark_goryokaku_cherry,
         baseDisplayWidthDp = 164f,
         baseDisplayHeightDp = 100f,
+        motionStyle = LandmarkMotionStyle.TREE_SWAY,
     ),
     ROTENBURO_ONSEN(
         defaultDialogue = "「湯けむり立つ露天風呂、気持ちよさそう〜！」",
         drawableResId = R.drawable.landmark_rotenburo_onsen,
         baseDisplayWidthDp = 148f,
         baseDisplayHeightDp = 70f,
+        motionStyle = LandmarkMotionStyle.ONSEN_STEAM,
     ),
     MORNING_MARKET(
         defaultDialogue = "「朝市に新鮮なカニやお魚が並んでる！」",
         drawableResId = R.drawable.landmark_morning_market,
         baseDisplayWidthDp = 146f,
         baseDisplayHeightDp = 85f,
+        motionStyle = LandmarkMotionStyle.DANCE_BOUNCE,
     ),
     TOWN_SHOPS(
         defaultDialogue = "「素敵なお店が並ぶ街並みだね！」",
         drawableResId = R.drawable.landmark_town_shops,
         baseDisplayWidthDp = 148f,
         baseDisplayHeightDp = 71f,
+        motionStyle = LandmarkMotionStyle.NONE,
     ),
     RED_BRIDGE_RIVER(
         defaultDialogue = "「赤い橋の下にきれいな川が流れてる！」",
         drawableResId = R.drawable.landmark_red_bridge_river,
         baseDisplayWidthDp = 144f,
         baseDisplayHeightDp = 67f,
+        motionStyle = LandmarkMotionStyle.RIVER_SHIMMER,
     ),
     FERRY_SHIP(
         defaultDialogue = "「青函連絡船・摩周丸が停まってる！」",
         drawableResId = R.drawable.landmark_ferry_ship,
         baseDisplayWidthDp = 156f,
         baseDisplayHeightDp = 89f,
+        motionStyle = LandmarkMotionStyle.BOAT_BOB,
     ),
     MOUNTAIN_ROPEWAY(
         defaultDialogue = "「函館山山頂の展望台とロープウェイだ！」",
         drawableResId = R.drawable.landmark_mountain_ropeway,
         baseDisplayWidthDp = 162f,
         baseDisplayHeightDp = 97f,
+        motionStyle = LandmarkMotionStyle.ROPEWAY_SPARKLE,
     ),
     CHERRY_ROW(
         defaultDialogue = "「公園の桜並木がきれいだね！」",
         drawableResId = R.drawable.landmark_cherry_row,
         baseDisplayWidthDp = 144f,
         baseDisplayHeightDp = 86f,
+        motionStyle = LandmarkMotionStyle.TREE_SWAY,
+    ),
+    WAVING_SQUID(
+        defaultDialogue = "「函館名物イカちゃんが手を振ってるよ！」",
+        drawableResId = R.drawable.landmark_waving_squid_f1,
+        baseDisplayWidthDp = 74f,
+        baseDisplayHeightDp = 81f,
+        motionStyle = LandmarkMotionStyle.WAVE_DANCE_2FRAME,
+        animFrame2DrawableResId = R.drawable.landmark_waving_squid_f2,
+    ),
+    WAVING_FOX(
+        defaultDialogue = "「キタキツネが楽しそうに踊ってる！」",
+        drawableResId = R.drawable.landmark_waving_fox_f1,
+        baseDisplayWidthDp = 76f,
+        baseDisplayHeightDp = 83f,
+        motionStyle = LandmarkMotionStyle.WAVE_DANCE_2FRAME,
+        animFrame2DrawableResId = R.drawable.landmark_waving_fox_f2,
     ),
 }
 
@@ -138,6 +184,15 @@ data class RoadsideLandmark(
                 type = RoadsideLandmarkType.CITY_TRAM,
                 scale = 0.96f,
                 reactionDialogue = "「レトロな函館市電がゴトゴト走ってる！」",
+                isMajorRegional = false,
+            ),
+            RoadsideLandmark(
+                id = "hakodate_waving_squid",
+                name = "手を振る函館イカちゃん",
+                x = 183.98f,
+                y = 344.52f,
+                type = RoadsideLandmarkType.WAVING_SQUID,
+                scale = 1.0f,
                 isMajorRegional = false,
             ),
             RoadsideLandmark(
@@ -220,10 +275,19 @@ data class RoadsideLandmark(
                 scale = 1.00f,
                 isMajorRegional = false,
             ),
+            RoadsideLandmark(
+                id = "goryokaku_waving_fox",
+                name = "踊るキタキツネ",
+                x = 186.52f,
+                y = 341.58f,
+                type = RoadsideLandmarkType.WAVING_FOX,
+                scale = 1.0f,
+                isMajorRegional = false,
+            ),
         )
 
         /**
-         * Complete Act 1 scenery list: 12 unique warm hand-drawn travel-journal landmarks.
+         * Complete Act 1 scenery list: 12 scenic landmarks plus 2 waving animated companions.
          */
         val ACT1_LANDMARKS: List<RoadsideLandmark> = CURATED_LANDMARKS
     }
