@@ -37,7 +37,7 @@ enum class RoadsideLandmarkType(
         defaultDialogue = "「歴史ある赤レンガ倉庫だ！」",
         drawableResId = R.drawable.landmark_red_brick_warehouse,
         baseDisplayWidthDp = 164f,
-        baseDisplayHeightDp = 84f,
+        baseDisplayHeightDp = 68.9f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     WESTERN_HOUSE(
@@ -59,7 +59,7 @@ enum class RoadsideLandmarkType(
         drawableResId = R.drawable.landmark_goryokaku_cherry,
         baseDisplayWidthDp = 164f,
         baseDisplayHeightDp = 100f,
-        motionStyle = LandmarkMotionStyle.TREE_SWAY,
+        motionStyle = LandmarkMotionStyle.NONE,
     ),
     ROTENBURO_ONSEN(
         defaultDialogue = "「湯けむり立つ露天風呂、気持ちよさそう〜！」",
@@ -73,7 +73,7 @@ enum class RoadsideLandmarkType(
         drawableResId = R.drawable.landmark_morning_market,
         baseDisplayWidthDp = 146f,
         baseDisplayHeightDp = 85f,
-        motionStyle = LandmarkMotionStyle.DANCE_BOUNCE,
+        motionStyle = LandmarkMotionStyle.NONE,
     ),
     TOWN_SHOPS(
         defaultDialogue = "「素敵なお店が並ぶ街並みだね！」",
@@ -100,7 +100,7 @@ enum class RoadsideLandmarkType(
         defaultDialogue = "「函館山山頂の展望台とロープウェイだ！」",
         drawableResId = R.drawable.landmark_mountain_ropeway,
         baseDisplayWidthDp = 162f,
-        baseDisplayHeightDp = 97f,
+        baseDisplayHeightDp = 96.5f,
         motionStyle = LandmarkMotionStyle.ROPEWAY_SPARKLE,
     ),
     CHERRY_ROW(
@@ -108,7 +108,7 @@ enum class RoadsideLandmarkType(
         drawableResId = R.drawable.landmark_cherry_row,
         baseDisplayWidthDp = 144f,
         baseDisplayHeightDp = 86f,
-        motionStyle = LandmarkMotionStyle.TREE_SWAY,
+        motionStyle = LandmarkMotionStyle.NONE,
     ),
     WAVING_SQUID(
         defaultDialogue = "「函館名物イカちゃんが手を振ってるよ！」",

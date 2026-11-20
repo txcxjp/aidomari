@@ -171,6 +171,9 @@ fun SugorokuMapContent(
             BitmapFactory.decodeResource(context.resources, resId)?.asImageBitmap()
         }
     }
+    val ropewayGondolaBitmap = remember(context) {
+        BitmapFactory.decodeResource(context.resources, R.drawable.landmark_ropeway_gondola)?.asImageBitmap()
+    }
 
     // Pre-parse official GSI Hokkaido coastline paths
     val mainlandPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.MAINLAND_D).toPath() }
@@ -460,12 +463,48 @@ fun SugorokuMapContent(
                 (currentStep + 40).coerceAtMost(allNodes.lastIndex)
             }
 
-            // Viewport in world coordinates for Frustum Culling
+            // Viewport in world coordinates for Frustum Culling & world-space Umigarasu patrol
             val viewLeft = -panOffset.x / zoomScale
             val viewTop = -panOffset.y / zoomScale
             val viewRight = (containerWidth - panOffset.x) / zoomScale
             val viewBottom = (containerHeight - panOffset.y) / zoomScale
             val viewportWorld = Rect(viewLeft, viewTop, viewRight, viewBottom)
+
+            var birdPatrolCenter by remember { mutableStateOf(Offset.Unspecified) }
+            val defaultBirdPatrolCenter = Offset(
+                x = uiState.playerWorldOffset.x * worldScaleFactor - 53f * density,
+                y = uiState.playerWorldOffset.y * worldScaleFactor - 118f * density,
+            )
+            val activeBirdPatrolCenter = if (birdPatrolCenter == Offset.Unspecified) {
+                defaultBirdPatrolCenter
+            } else {
+                birdPatrolCenter
+            }
+
+            LaunchedEffect(viewportWorld, hasCenteredInitially, containerWidth, containerHeight) {
+                if (hasCenteredInitially && containerWidth > 0f && containerHeight > 0f) {
+                    if (birdPatrolCenter == Offset.Unspecified) {
+                        birdPatrolCenter = defaultBirdPatrolCenter
+                    } else {
+                        val zoomComp = if (zoomScale < 1.0f) {
+                            zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
+                        } else {
+                            1.0f
+                        }
+                        val offscreenPad = 210f * density * zoomComp
+                        val isFarOffscreen = birdPatrolCenter.x < viewportWorld.left - offscreenPad ||
+                            birdPatrolCenter.x > viewportWorld.right + offscreenPad ||
+                            birdPatrolCenter.y < viewportWorld.top - offscreenPad ||
+                            birdPatrolCenter.y > viewportWorld.bottom + offscreenPad
+                        if (isFarOffscreen) {
+                            birdPatrolCenter = Offset(
+                                x = viewportWorld.center.x,
+                                y = viewportWorld.center.y - 60f * density,
+                            )
+                        }
+                    }
+                }
+            }
 
             // Performance-isolated layered Canvas stack:
             // static terrain/roads & tiles never redraw during 60fps landmark/bird animations.
@@ -570,6 +609,7 @@ fun SugorokuMapContent(
                             landmarks = uiState.roadsideLandmarks,
                             landmarkBitmaps = landmarkBitmaps,
                             landmarkFrame2Bitmaps = landmarkFrame2Bitmaps,
+                            ropewayGondolaBitmap = ropewayGondolaBitmap,
                             worldScaleFactor = worldScaleFactor,
                             viewportWorld = viewportWorld,
                             zoomScale = zoomScale,
@@ -673,14 +713,15 @@ fun SugorokuMapContent(
                                 }
                             }
                         }
-                    }
 
-                    // Screen-space sky layer above roads, landmarks, and tiles
-                    drawOverheadFlyingBirds(
-                        birdFrames = umigarasuFrames,
-                        phase = animPhase,
-                        zoomScale = zoomScale,
-                    )
+                        // Single world-space Umigarasu gliding in geographic airspace above roads & tiles
+                        drawWorldSpaceUmigarasu(
+                            birdFrames = umigarasuFrames,
+                            patrolCenterWorld = activeBirdPatrolCenter,
+                            phase = animPhase,
+                            zoomScale = zoomScale,
+                        )
+                    }
                 }
             }
 

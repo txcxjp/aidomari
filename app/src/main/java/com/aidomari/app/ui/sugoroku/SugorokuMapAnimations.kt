@@ -29,6 +29,16 @@ import kotlin.math.sin
 
 private const val TWO_PI: Float = (Math.PI * 2.0).toFloat()
 
+// Normalized Mt. Hakodate ropeway cable endpoints & pulley attachment ratios
+private const val ROPEWAY_CABLE_START_X = 0.7233f
+private const val ROPEWAY_CABLE_START_Y = 0.3269f
+private const val ROPEWAY_CABLE_END_X = 0.8218f
+private const val ROPEWAY_CABLE_END_Y = 0.2608f
+private const val ROPEWAY_GONDOLA_ATTACH_X = 0.4887f
+private const val ROPEWAY_GONDOLA_ATTACH_Y = 0.1487f
+private const val ROPEWAY_GONDOLA_WIDTH_RATIO = 0.1855f
+private const val ROPEWAY_GONDOLA_HEIGHT_RATIO = 0.4197f
+
 /**
  * Per-frame transform and frame-toggle state for a roadside landmark or character.
  */
@@ -42,11 +52,19 @@ data class LandmarkMotionOffset(
 )
 
 /**
- * Screen-space state for an overhead gliding Umigarasu seabird.
+ * Per-frame slide progress and gentle cabin swing for the Mt. Hakodate ropeway gondola.
  */
-data class OverheadBirdState(
-    val normX: Float,
-    val normY: Float,
+data class RopewayGondolaState(
+    val cableProgress: Float,
+    val swingDeg: Float,
+)
+
+/**
+ * World-space state for the single soaring Umigarasu seabird relative to its patrol center.
+ */
+data class WorldUmigarasuState(
+    val offsetXDp: Float,
+    val offsetYDp: Float,
     val headingDeg: Float,
     val flapFrame: Int,
     val sizeDp: Float,
@@ -159,72 +177,50 @@ fun birdFlapFrameIndex(
 }
 
 /**
- * Generates deterministic, smooth gliding sky paths for 3 overhead Umigarasu seabirds.
+ * Computes seamless periodic ropeway gondola slide progress and gentle cabin pendulum tilt.
  */
-fun computeOverheadBirds(phase: Float): List<OverheadBirdState> {
+fun computeRopewayGondolaState(phase: Float): RopewayGondolaState {
     val pNorm = phase.mod(1f)
-    return listOf(
-        // 1. Lead eastward Umigarasu cruising across open harbor/park sky (near x~0.26, y~0.31 at phase=0)
-        buildGlidingBird(
-            t = (pNorm + 0.31f).mod(1f),
-            eastward = true,
-            baseY = 0.29f,
-            ampY = 0.04f,
-            freqY = 2f,
-            flapOffset = 0.0f,
-            sizeDp = 50f,
-            shadowDp = 24f,
-        ),
-        // 2. Westward companion gliding across open upper-mid sky (near x~0.45, y~0.21 at phase=0)
-        buildGlidingBird(
-            t = (pNorm + 0.54f).mod(1f),
-            eastward = false,
-            baseY = 0.22f,
-            ampY = 0.03f,
-            freqY = 1f,
-            flapOffset = 0.33f,
-            sizeDp = 44f,
-            shadowDp = 20f,
-        ),
-        // 3. Third soaring seabird entering softly from the west along a lower arc
-        buildGlidingBird(
-            t = (pNorm + 0.96f).mod(1f),
-            eastward = true,
-            baseY = 0.62f,
-            ampY = 0.04f,
-            freqY = 2f,
-            flapOffset = 0.67f,
-            sizeDp = 40f,
-            shadowDp = 18f,
-        ),
+    val angle = TWO_PI * pNorm
+    val cableProgress = (0.5f + 0.5f * sin(angle)).coerceIn(0f, 1f)
+    val swingDeg = -cos(angle) * 2.2f
+    return RopewayGondolaState(
+        cableProgress = cableProgress,
+        swingDeg = swingDeg,
     )
 }
 
-private fun buildGlidingBird(
-    t: Float,
-    eastward: Boolean,
-    baseY: Float,
-    ampY: Float,
-    freqY: Float,
-    flapOffset: Float,
-    sizeDp: Float,
-    shadowDp: Float,
-): OverheadBirdState {
-    val span = 1.24f
-    val normX = if (eastward) -0.12f + t * span else 1.12f - t * span
-    val angleY = TWO_PI * freqY * t
-    val normY = baseY + ampY * sin(angleY)
-    val vx = if (eastward) span else -span
-    val vy = ampY * TWO_PI * freqY * cos(angleY)
+/**
+ * Computes deterministic world-space soaring state for a single Umigarasu seabird
+ * orbiting smoothly around its world patrol anchor without clinging to scroll gestures.
+ */
+fun computeWorldUmigarasu(phase: Float): WorldUmigarasuState {
+    val pNorm = phase.mod(1f)
+    val theta = TWO_PI * pNorm - 1.95f
+    val rx = 150f
+    val ry = 85f
+    val tiltRad = -10.0 * (Math.PI / 180.0)
+    val cosT = cos(tiltRad).toFloat()
+    val sinT = sin(tiltRad).toFloat()
+
+    val lx = rx * cos(theta)
+    val ly = ry * sin(theta)
+    val ox = lx * cosT - ly * sinT
+    val oy = lx * sinT + ly * cosT
+
+    val dlx = -rx * sin(theta)
+    val dly = ry * cos(theta)
+    val vx = dlx * cosT - dly * sinT
+    val vy = dlx * sinT + dly * cosT
     val headingDeg = Math.toDegrees(atan2(vy.toDouble(), vx.toDouble())).toFloat()
 
-    return OverheadBirdState(
-        normX = normX,
-        normY = normY,
+    return WorldUmigarasuState(
+        offsetXDp = ox,
+        offsetYDp = oy,
         headingDeg = headingDeg,
-        flapFrame = birdFlapFrameIndex(phase = t, cyclesPerLoop = 18, offset = flapOffset),
-        sizeDp = sizeDp,
-        altitudeShadowDp = shadowDp,
+        flapFrame = birdFlapFrameIndex(phase = pNorm, cyclesPerLoop = 18),
+        sizeDp = 50f,
+        altitudeShadowDp = 24f,
     )
 }
 
@@ -236,6 +232,7 @@ internal fun DrawScope.drawAnimatedRoadsideLandmarks(
     landmarks: List<RoadsideLandmark>,
     landmarkBitmaps: Map<RoadsideLandmarkType, ImageBitmap?>,
     landmarkFrame2Bitmaps: Map<RoadsideLandmarkType, ImageBitmap?>,
+    ropewayGondolaBitmap: ImageBitmap? = null,
     worldScaleFactor: Float,
     viewportWorld: Rect,
     zoomScale: Float,
@@ -308,7 +305,7 @@ internal fun DrawScope.drawAnimatedRoadsideLandmarks(
                 dstSize = IntSize(wPx.roundToInt(), hPx.roundToInt()),
             )
 
-            if (motionDamp > 0.05f) {
+            if (motionDamp > 0.05f || landmark.type.motionStyle == LandmarkMotionStyle.ROPEWAY_SPARKLE) {
                 drawLandmarkAmbientOverlay(
                     style = landmark.type.motionStyle,
                     cx = cx,
@@ -318,6 +315,7 @@ internal fun DrawScope.drawAnimatedRoadsideLandmarks(
                     phase = animPhase,
                     seedPhase = seedPhase,
                     alphaScale = motionDamp,
+                    ropewayGondolaBitmap = ropewayGondolaBitmap,
                 )
             }
         }
@@ -337,6 +335,7 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
     phase: Float,
     seedPhase: Float,
     alphaScale: Float,
+    ropewayGondolaBitmap: ImageBitmap?,
 ) {
     when (style) {
         LandmarkMotionStyle.LIGHTHOUSE_BEAM -> {
@@ -398,14 +397,43 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
         }
 
         LandmarkMotionStyle.ROPEWAY_SPARKLE -> {
-            for (i in 0..1) {
-                val t = (phase * 3f + seedPhase + i * 0.5f).mod(1f)
-                val pulse = 0.45f + 0.55f * abs(sin(TWO_PI * t))
-                val sx = cx + (if (i == 0) 0.10f else 0.26f) * wPx
-                val sy = cy - (if (i == 0) 0.25f else 0.04f) * hPx
-                val r = wPx * 0.030f * pulse
-                val color = Color(0xFFFFE04D).copy(alpha = 0.88f * pulse * alphaScale)
-                drawFourPointStar(center = Offset(sx, sy), radius = r, color = color)
+            val state = computeRopewayGondolaState(phase)
+            val left = cx - wPx / 2f
+            val top = cy - hPx / 2f
+            val attachNormX = ROPEWAY_CABLE_START_X +
+                (ROPEWAY_CABLE_END_X - ROPEWAY_CABLE_START_X) * state.cableProgress
+            val attachNormY = ROPEWAY_CABLE_START_Y +
+                (ROPEWAY_CABLE_END_Y - ROPEWAY_CABLE_START_Y) * state.cableProgress
+            val attachX = left + attachNormX * wPx
+            val attachY = top + attachNormY * hPx
+
+            ropewayGondolaBitmap?.let { gondola ->
+                val gw = wPx * ROPEWAY_GONDOLA_WIDTH_RATIO
+                val gh = hPx * ROPEWAY_GONDOLA_HEIGHT_RATIO
+                withTransform({
+                    rotate(degrees = state.swingDeg * alphaScale, pivot = Offset(attachX, attachY))
+                }) {
+                    drawImage(
+                        image = gondola,
+                        dstOffset = IntOffset(
+                            x = (attachX - gw * ROPEWAY_GONDOLA_ATTACH_X).roundToInt(),
+                            y = (attachY - gh * ROPEWAY_GONDOLA_ATTACH_Y).roundToInt(),
+                        ),
+                        dstSize = IntSize(gw.roundToInt(), gh.roundToInt()),
+                    )
+                }
+            }
+
+            if (alphaScale > 0.05f) {
+                for (i in 0..1) {
+                    val t = (phase * 3f + seedPhase + i * 0.5f).mod(1f)
+                    val pulse = 0.45f + 0.55f * abs(sin(TWO_PI * t))
+                    val sx = cx + (if (i == 0) 0.09f else -0.20f) * wPx
+                    val sy = cy - (if (i == 0) 0.25f else 0.31f) * hPx
+                    val r = wPx * 0.025f * pulse
+                    val color = Color(0xFFFFE04D).copy(alpha = 0.85f * pulse * alphaScale)
+                    drawFourPointStar(center = Offset(sx, sy), radius = r, color = color)
+                }
             }
         }
 
@@ -471,11 +499,12 @@ private fun DrawScope.drawFourPointStar(
 }
 
 /**
- * Draws the flock of 3 flapping hand-drawn Umigarasu seabirds soaring gracefully
- * across screen space above roads, landmarks, and Sugoroku tiles with aerial shadows.
+ * Draws the single hand-drawn Umigarasu seabird gliding gracefully in world space
+ * above roads, landmarks, and Sugoroku tiles so panning moves naturally underneath it.
  */
-internal fun DrawScope.drawOverheadFlyingBirds(
+internal fun DrawScope.drawWorldSpaceUmigarasu(
     birdFrames: List<ImageBitmap>,
+    patrolCenterWorld: Offset,
     phase: Float,
     zoomScale: Float,
 ) {
@@ -484,45 +513,49 @@ internal fun DrawScope.drawOverheadFlyingBirds(
     val alphaFactor = ((zoomScale - 0.08f) / 0.12f).coerceIn(0f, 1f)
     if (alphaFactor <= 0.01f) return
 
-    val birds = computeOverheadBirds(phase)
-    for (bird in birds) {
-        val bx = bird.normX * size.width
-        val by = bird.normY * size.height
-        val sizePx = bird.sizeDp.dp.toPx()
-        val shadowOffsetX = 12.dp.toPx()
-        val shadowOffsetY = bird.altitudeShadowDp.dp.toPx()
+    val zoomCompensation = if (zoomScale < 1.0f) {
+        zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
+    } else {
+        1.0f
+    }
 
-        // Soft aerial ground shadow offset down-right for altitude depth
-        drawOval(
-            color = Color(0x28000000).copy(alpha = 0.16f * alphaFactor),
-            topLeft = Offset(bx + shadowOffsetX - sizePx * 0.28f, by + shadowOffsetY - sizePx * 0.09f),
-            size = Size(sizePx * 0.56f, sizePx * 0.18f),
+    val bird = computeWorldUmigarasu(phase)
+    val bx = patrolCenterWorld.x + bird.offsetXDp.dp.toPx()
+    val by = patrolCenterWorld.y + bird.offsetYDp.dp.toPx()
+    val sizePx = bird.sizeDp.dp.toPx() * zoomCompensation
+    val shadowOffsetX = 12.dp.toPx() * zoomCompensation
+    val shadowOffsetY = bird.altitudeShadowDp.dp.toPx() * zoomCompensation
+
+    // Soft aerial ground shadow offset down-right for altitude depth
+    drawOval(
+        color = Color(0x28000000).copy(alpha = 0.16f * alphaFactor),
+        topLeft = Offset(bx + shadowOffsetX - sizePx * 0.28f, by + shadowOffsetY - sizePx * 0.09f),
+        size = Size(sizePx * 0.56f, sizePx * 0.18f),
+    )
+
+    val isLeftward = abs(bird.headingDeg) > 90f
+    val visualTiltDeg = if (isLeftward) {
+        val signed = if (bird.headingDeg > 0f) 180f - bird.headingDeg else -180f - bird.headingDeg
+        signed.coerceIn(-28f, 28f)
+    } else {
+        bird.headingDeg.coerceIn(-28f, 28f)
+    }
+
+    val frameBitmap = birdFrames[bird.flapFrame.coerceIn(0, birdFrames.lastIndex)]
+    withTransform({
+        if (isLeftward) {
+            scale(scaleX = -1f, scaleY = 1f, pivot = Offset(bx, by))
+        }
+        rotate(degrees = visualTiltDeg, pivot = Offset(bx, by))
+    }) {
+        drawImage(
+            image = frameBitmap,
+            dstOffset = IntOffset(
+                x = (bx - sizePx / 2f).roundToInt(),
+                y = (by - sizePx / 2f).roundToInt(),
+            ),
+            dstSize = IntSize(sizePx.roundToInt(), sizePx.roundToInt()),
+            alpha = alphaFactor,
         )
-
-        val isLeftward = abs(bird.headingDeg) > 90f
-        val visualTiltDeg = if (isLeftward) {
-            val signed = if (bird.headingDeg > 0f) 180f - bird.headingDeg else -180f - bird.headingDeg
-            signed.coerceIn(-28f, 28f)
-        } else {
-            bird.headingDeg.coerceIn(-28f, 28f)
-        }
-
-        val frameBitmap = birdFrames[bird.flapFrame.coerceIn(0, birdFrames.lastIndex)]
-        withTransform({
-            if (isLeftward) {
-                scale(scaleX = -1f, scaleY = 1f, pivot = Offset(bx, by))
-            }
-            rotate(degrees = visualTiltDeg, pivot = Offset(bx, by))
-        }) {
-            drawImage(
-                image = frameBitmap,
-                dstOffset = IntOffset(
-                    x = (bx - sizePx / 2f).roundToInt(),
-                    y = (by - sizePx / 2f).roundToInt(),
-                ),
-                dstSize = IntSize(sizePx.roundToInt(), sizePx.roundToInt()),
-                alpha = alphaFactor,
-            )
-        }
     }
 }
