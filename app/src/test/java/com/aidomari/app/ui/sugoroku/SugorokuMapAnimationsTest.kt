@@ -2,7 +2,9 @@ package com.aidomari.app.ui.sugoroku
 
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
+import com.aidomari.app.domain.model.Act1TravelRoute
 import com.aidomari.app.domain.model.HighwayCategory
+import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.LandmarkMotionStyle
 import com.aidomari.app.domain.model.RoadsideLandmark
 import com.aidomari.app.domain.model.RoadsideLandmarkType
@@ -11,6 +13,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.abs
+import kotlin.math.hypot
+import kotlin.math.max
 
 class SugorokuMapAnimationsTest {
 
@@ -119,6 +123,73 @@ class SugorokuMapAnimationsTest {
         assertTrue(
             "animFrame2DrawableResId must not collide with any primary drawableResId",
             primaryIds.intersect(secondaryIds).isEmpty(),
+        )
+    }
+
+    @Test
+    fun `ACT1_LANDMARKS bounding boxes do not overlap orange travel route at default zoom`() {
+        val worldScale = HokkaidoBoardTrack.WORLD_SCALE
+        val travelLegs = Act1TravelRoute.getLegs()
+        assertTrue("Expected high-density Act1TravelRoute legs in test resources", travelLegs.isNotEmpty())
+
+        val routePoints = buildList {
+            for (leg in travelLegs) {
+                val pts = leg.waypoints
+                for (i in 0 until pts.lastIndex) {
+                    val p0 = pts[i]
+                    val p1 = pts[i + 1]
+                    val steps = max(2, (hypot(p1.x - p0.x, p1.y - p0.y) * worldScale / 2f).toInt() + 1)
+                    for (s in 0 until steps) {
+                        val t = s / (steps - 1).toFloat()
+                        add((p0.x + (p1.x - p0.x) * t) to (p0.y + (p1.y - p0.y) * t))
+                    }
+                }
+            }
+            val nodes = HokkaidoAct1Route.nodes
+            for (i in 0 until nodes.lastIndex) {
+                val n0 = nodes[i]
+                val n1 = nodes[i + 1]
+                val steps = max(2, (hypot(n1.x - n0.x, n1.y - n0.y) * worldScale / 2f).toInt() + 1)
+                for (s in 0 until steps) {
+                    val t = s / (steps - 1).toFloat()
+                    add((n0.x + (n1.x - n0.x) * t) to (n0.y + (n1.y - n0.y) * t))
+                }
+            }
+        }
+
+        val violations = mutableListOf<String>()
+        for (lm in RoadsideLandmark.ACT1_LANDMARKS) {
+            val patrolX = when (lm.type.motionStyle) {
+                LandmarkMotionStyle.WILDLIFE_WALK_2FRAME -> 16f
+                LandmarkMotionStyle.DEER_GRAZE -> 11f
+                LandmarkMotionStyle.SHINKANSEN_GLIDE -> 4.5f
+                LandmarkMotionStyle.TRAM_CHUG -> 2.8f
+                LandmarkMotionStyle.SWAN_GLIDE -> 2.0f
+                else -> 0f
+            }
+            val patrolY = when (lm.type.motionStyle) {
+                LandmarkMotionStyle.BOAT_BOB, LandmarkMotionStyle.WHALE_SPOUT -> 2.5f
+                LandmarkMotionStyle.WAVE_DANCE_2FRAME -> 4.5f
+                else -> 1.5f
+            }
+            val hw = (lm.type.baseDisplayWidthDp * 0.5f + patrolX) * lm.scale / worldScale
+            val hh = (lm.type.baseDisplayHeightDp * 0.5f + patrolY) * lm.scale / worldScale
+
+            var minDistDp = Float.POSITIVE_INFINITY
+            for ((rx, ry) in routePoints) {
+                if (abs(rx - lm.x) > 3.5f || abs(ry - lm.y) > 3.5f) continue
+                val dx = max(0f, max((lm.x - hw) - rx, rx - (lm.x + hw))) * worldScale
+                val dy = max(0f, max((lm.y - hh) - ry, ry - (lm.y + hh))) * worldScale
+                val d = hypot(dx, dy)
+                if (d < minDistDp) minDistDp = d
+            }
+            if (minDistDp < 14.0f) {
+                violations += "${lm.id} (minDist=${"%.1f".format(minDistDp)}dp < 14.0dp)"
+            }
+        }
+        assertTrue(
+            "Landmarks overlapping orange TRAVEL_ROUTE (9dp half-width): $violations",
+            violations.isEmpty(),
         )
     }
 
