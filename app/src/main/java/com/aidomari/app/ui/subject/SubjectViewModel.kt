@@ -6,9 +6,11 @@ import com.aidomari.app.core.importer.ImportSummary
 import com.aidomari.app.core.importer.WordsDataExporter
 import com.aidomari.app.core.importer.WordsDataImporter
 import com.aidomari.app.domain.model.Subject
+import com.aidomari.app.domain.repository.SourceArticleRepository
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -18,7 +20,16 @@ class SubjectViewModel(
     private val repository: WordsRepository,
     private val importer: WordsDataImporter = WordsDataImporter(repository),
     private val exporter: WordsDataExporter = WordsDataExporter(repository),
+    private val sourceArticleRepository: SourceArticleRepository? = null,
 ) : ViewModel() {
+
+    val pendingArticlesCount: StateFlow<Int> = (sourceArticleRepository?.getPendingArticles() ?: emptyFlow())
+        .map { it.size }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = 0,
+        )
 
     val subjects: StateFlow<List<Subject>> = repository.getAllSubjects()
         .map { list -> list.filterNot { it.isArchived } }

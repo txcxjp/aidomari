@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
                         ttsManager = ttsManager,
                         themePreferences = themePreferences,
                         sugorokuDebugPreferences = app.sugorokuDebugPreferences,
+                        sourceArticleRepository = app.sourceArticleRepository,
                     )
                 }
             }

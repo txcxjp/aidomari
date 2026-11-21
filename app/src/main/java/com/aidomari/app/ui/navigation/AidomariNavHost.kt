@@ -10,14 +10,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.aidomari.app.core.ai.GeminiApiClientImpl
+import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.core.debug.SugorokuDebugPreferences
 import com.aidomari.app.core.tts.TtsManager
+import com.aidomari.app.domain.repository.SourceArticleRepository
 import com.aidomari.app.domain.repository.WordsRepository
 import com.aidomari.app.ui.calendar.CalendarScreen
 import com.aidomari.app.ui.calendar.CalendarViewModel
@@ -25,6 +29,8 @@ import com.aidomari.app.ui.card.CardListScreen
 import com.aidomari.app.ui.card.CardListViewModel
 import com.aidomari.app.ui.deck.DeckListScreen
 import com.aidomari.app.ui.deck.DeckViewModel
+import com.aidomari.app.ui.digest.BrowsingDigestScreen
+import com.aidomari.app.ui.digest.BrowsingDigestViewModel
 import com.aidomari.app.ui.study.StudyScreen
 import com.aidomari.app.ui.study.StudyViewModel
 import com.aidomari.app.ui.subject.SubjectListScreen
@@ -46,7 +52,9 @@ fun AidomariNavHost(
     navController: NavHostController = rememberNavController(),
     themePreferences: ThemePreferences? = null,
     sugorokuDebugPreferences: SugorokuDebugPreferences? = null,
+    sourceArticleRepository: SourceArticleRepository? = null,
 ) {
+    val context = LocalContext.current
     NavHost(
         navController = navController,
         startDestination = "subjects",
@@ -77,7 +85,7 @@ fun AidomariNavHost(
         },
     ) {
         composable("subjects") {
-            val subjectViewModel = remember { SubjectViewModel(repository) }
+            val subjectViewModel = remember { SubjectViewModel(repository, sourceArticleRepository = sourceArticleRepository) }
             SubjectListScreen(
                 viewModel = subjectViewModel,
                 themePreferences = themePreferences,
@@ -90,6 +98,30 @@ fun AidomariNavHost(
                 onSugorokuMapClick = {
                     navController.navigate("sugoroku_map")
                 },
+                onBrowsingDigestClick = {
+                    navController.navigate("browsing_digest")
+                },
+            )
+        }
+
+        composable("browsing_digest") {
+            val articleRepo = sourceArticleRepository ?: remember {
+                (context.applicationContext as? com.aidomari.app.AidomariApp)?.sourceArticleRepository
+                    ?: error("SourceArticleRepository is required")
+            }
+            val geminiPreferences = remember { GeminiPreferences(context) }
+            val geminiApiClient = remember { GeminiApiClientImpl() }
+            val digestViewModel = remember {
+                BrowsingDigestViewModel(
+                    sourceArticleRepository = articleRepo,
+                    wordsRepository = repository,
+                    geminiApiClient = geminiApiClient,
+                    geminiPreferences = geminiPreferences,
+                )
+            }
+            BrowsingDigestScreen(
+                viewModel = digestViewModel,
+                onBack = { navController.popBackStack() },
             )
         }
 
