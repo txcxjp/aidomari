@@ -116,6 +116,8 @@ fun SugorokuMapScreen(
         onBack = onBack,
         onSelectNode = { viewModel.selectNode(it) },
         onDismissDialog = { viewModel.clearSelectedNode() },
+        onDismissCelebration = { viewModel.dismissCelebration() },
+        onTestCelebration = { viewModel.triggerCelebration() },
         onAddDistance = { viewModel.addDistance(it) },
         onAdvanceToNextAnchor = { viewModel.advanceToNextAnchor() },
         onResetProgress = { viewModel.resetProgress() },
@@ -131,6 +133,8 @@ fun SugorokuMapContent(
     onBack: () -> Unit,
     onSelectNode: (SugorokuNode) -> Unit,
     onDismissDialog: () -> Unit,
+    onDismissCelebration: () -> Unit = {},
+    onTestCelebration: () -> Unit = {},
     onAddDistance: (Float) -> Unit = {},
     onAdvanceToNextAnchor: () -> Unit = {},
     onResetProgress: () -> Unit = {},
@@ -314,6 +318,13 @@ fun SugorokuMapContent(
                                 expanded = showSpeedMenu,
                                 onDismissRequest = { showSpeedMenu = false },
                             ) {
+                                DropdownMenuItem(
+                                    text = { Text("🎉 到着演出テスト") },
+                                    onClick = {
+                                        onTestCelebration()
+                                        showSpeedMenu = false
+                                    },
+                                )
                                 SugorokuDebugPreferences.AVAILABLE_SPEED_MULTIPLIERS.forEach { mult ->
                                     DropdownMenuItem(
                                         text = { Text("${mult.toInt()}倍速") },
@@ -1014,6 +1025,15 @@ fun SugorokuMapContent(
                     Text("閉じる")
                 }
             },
+        )
+    }
+
+    // Anchor Arrival Celebration Presentation (Issue #76)
+    uiState.arrivalCelebrationNode?.let { node ->
+        AnchorArrivalCelebrationDialog(
+            node = node,
+            totalDistanceMeters = uiState.totalDistanceMeters,
+            onDismiss = onDismissCelebration,
         )
     }
 }

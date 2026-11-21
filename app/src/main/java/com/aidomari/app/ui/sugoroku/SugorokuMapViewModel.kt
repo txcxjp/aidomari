@@ -6,6 +6,7 @@ import com.aidomari.app.core.debug.SugorokuDebugPreferences
 import com.aidomari.app.domain.model.Act1TravelRoute
 import com.aidomari.app.domain.model.Act1TravelRouteProgressCalculator
 import com.aidomari.app.domain.model.HokkaidoAct1Route
+import com.aidomari.app.domain.model.RoadsideLandmark
 import com.aidomari.app.domain.model.SugorokuNode
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,8 @@ class SugorokuMapViewModel(
     private val repository: WordsRepository,
     private val sugorokuDebugPreferences: SugorokuDebugPreferences? = null,
 ) : ViewModel() {
+
+    private var lastCelebratedAnchorIndex: Int? = null
 
     private val _uiState = MutableStateFlow(
         SugorokuMapUiState(
@@ -47,11 +50,22 @@ class SugorokuMapViewModel(
                 val node = HokkaidoAct1Route.getNodeByStepIndex(routeProgress.currentAnchorIndex)
                     ?: HokkaidoAct1Route.startNode
                 val remaining = (HokkaidoAct1Route.totalNodes - 1 - routeProgress.currentAnchorIndex).coerceAtLeast(0)
-                val nearby = com.aidomari.app.domain.model.RoadsideLandmark.ACT1_LANDMARKS.firstOrNull { landmark ->
+                val nearby = RoadsideLandmark.ACT1_LANDMARKS.firstOrNull { landmark ->
                     val dx = routeProgress.currentWorldOffset.x - landmark.x
                     val dy = routeProgress.currentWorldOffset.y - landmark.y
                     dx * dx + dy * dy <= 2.25f
                 }
+
+                val isFirstEmission = (lastCelebratedAnchorIndex == null)
+                val prevAnchorIndex = lastCelebratedAnchorIndex ?: routeProgress.currentAnchorIndex
+                lastCelebratedAnchorIndex = routeProgress.currentAnchorIndex
+
+                val newlyReachedNode = if (!isFirstEmission && routeProgress.currentAnchorIndex > prevAnchorIndex) {
+                    node
+                } else {
+                    null
+                }
+
                 _uiState.update { current ->
                     current.copy(
                         progress = progress,
@@ -62,6 +76,7 @@ class SugorokuMapViewModel(
                         isAct1Finished = routeProgress.isAct1Finished,
                         speedMultiplier = sugorokuDebugPreferences?.speedMultiplier?.value ?: 1.0f,
                         nearbyLandmark = nearby,
+                        arrivalCelebrationNode = newlyReachedNode ?: current.arrivalCelebrationNode,
                         isLoading = false,
                         isProgressLoaded = true,
                     )
@@ -84,6 +99,14 @@ class SugorokuMapViewModel(
         selectNode(null)
     }
 
+    fun triggerCelebration(node: SugorokuNode = _uiState.value.currentNode) {
+        _uiState.update { it.copy(arrivalCelebrationNode = node) }
+    }
+
+    fun dismissCelebration() {
+        _uiState.update { it.copy(arrivalCelebrationNode = null) }
+    }
+
     fun advanceProgress(questionsDelta: Int = 1) {
         viewModelScope.launch {
             repository.recordSugorokuProgress(questionsDelta)
@@ -103,6 +126,8 @@ class SugorokuMapViewModel(
     }
 
     fun resetProgress() {
+        lastCelebratedAnchorIndex = 0
+        _uiState.update { it.copy(arrivalCelebrationNode = null) }
         viewModelScope.launch {
             repository.resetSugorokuProgress()
         }

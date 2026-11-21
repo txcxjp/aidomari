@@ -112,6 +112,30 @@ class SugorokuMapViewModelTest {
         assertEquals(1, state.progress.currentStepIndex)
         assertEquals("柳川熊吉翁の碑", state.currentNode.name)
         assertTrue(state.totalDistanceMeters >= 558f)
+        assertNotNull(state.arrivalCelebrationNode)
+        assertEquals("柳川熊吉翁の碑", state.arrivalCelebrationNode?.name)
+    }
+
+    @Test
+    fun dismissCelebration_clearsArrivalCelebrationNode() = runTest {
+        advanceUntilIdle()
+
+        viewModel.advanceToNextAnchor()
+        advanceUntilIdle()
+        assertNotNull(viewModel.uiState.value.arrivalCelebrationNode)
+
+        viewModel.dismissCelebration()
+        assertNull(viewModel.uiState.value.arrivalCelebrationNode)
+    }
+
+    @Test
+    fun triggerCelebration_manuallySetsArrivalCelebrationNode() = runTest {
+        advanceUntilIdle()
+        assertNull(viewModel.uiState.value.arrivalCelebrationNode)
+
+        viewModel.triggerCelebration()
+        assertNotNull(viewModel.uiState.value.arrivalCelebrationNode)
+        assertEquals("函館山", viewModel.uiState.value.arrivalCelebrationNode?.name)
     }
 
     @Test
@@ -122,6 +146,9 @@ class SugorokuMapViewModelTest {
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.totalDistanceMeters > 0f)
 
+        viewModel.triggerCelebration()
+        assertNotNull(viewModel.uiState.value.arrivalCelebrationNode)
+
         viewModel.resetProgress()
         advanceUntilIdle()
 
@@ -129,6 +156,7 @@ class SugorokuMapViewModelTest {
         assertEquals(0f, state.totalDistanceMeters, 0.001f)
         assertEquals(0, state.progress.currentStepIndex)
         assertEquals("函館山", state.currentNode.name)
+        assertNull(state.arrivalCelebrationNode)
     }
 
     private class FakeSugorokuWordsRepository : WordsRepository {

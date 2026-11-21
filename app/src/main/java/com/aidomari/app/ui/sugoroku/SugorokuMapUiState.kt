@@ -11,6 +11,7 @@ data class SugorokuMapUiState(
     val progress: SugorokuProgress = SugorokuProgress(),
     val currentNode: SugorokuNode = HokkaidoAct1Route.startNode,
     val selectedNode: SugorokuNode? = null,
+    val arrivalCelebrationNode: SugorokuNode? = null,
     val totalNodes: Int = HokkaidoAct1Route.totalNodes,
     val remainingSteps: Int = (HokkaidoAct1Route.totalNodes - 1).coerceAtLeast(0),
     val totalDistanceMeters: Float = 0.0f,

@@ -595,4 +595,25 @@ class SugorokuMapScreenshotTest {
         composeTestRule.waitForIdle()
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step434_shiretoko_pass.png")
     }
+
+    @Test
+    fun captureSugorokuMap_anchorArrivalCelebration() {
+        val goryokakuNode = HokkaidoAct1Route.getNodeById("goryokaku") ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = goryokakuNode.stepIndex, totalDistanceMeters = 8400f),
+                    currentNode = goryokakuNode,
+                    arrivalCelebrationNode = goryokakuNode,
+                    totalDistanceMeters = 8400f,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+                onDismissCelebration = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_anchor_arrival_celebration.png")
+    }
 }
