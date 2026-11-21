@@ -101,12 +101,14 @@ fun SubjectListScreen(
     modifier: Modifier = Modifier,
     onCalendarClick: () -> Unit = {},
     onSugorokuMapClick: () -> Unit = {},
+    onBrowsingDigestClick: () -> Unit = {},
     themePreferences: ThemePreferences? = null,
     lockScreenPreferences: LockScreenPreferences? = null,
 ) {
     val context = LocalContext.current
     val subjects by viewModel.subjects.collectAsState()
     val archivedSubjects by viewModel.archivedSubjects.collectAsState()
+    val pendingArticlesCount by viewModel.pendingArticlesCount.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -187,6 +189,8 @@ fun SubjectListScreen(
         onThemeClick = { showThemeDialog = true },
         onCalendarClick = onCalendarClick,
         onSugorokuMapClick = onSugorokuMapClick,
+        onBrowsingDigestClick = onBrowsingDigestClick,
+        pendingArticlesCount = pendingArticlesCount,
         onLockScreenClick = { showLockScreenDialog = true },
         onAiSettingsClick = { showGeminiDialog = true },
         onArchiveSubject = { subject ->
@@ -599,6 +603,8 @@ fun SubjectListContent(
     onAiSettingsClick: () -> Unit = {},
     onCalendarClick: () -> Unit = {},
     onSugorokuMapClick: () -> Unit = {},
+    onBrowsingDigestClick: () -> Unit = {},
+    pendingArticlesCount: Int = 0,
 ) {
     var showTopBarMenu by remember { mutableStateOf(false) }
 
@@ -647,6 +653,26 @@ fun SubjectListContent(
                                 text = "🗺️",
                                 fontSize = 20.sp,
                             )
+                        }
+                        IconButton(
+                            onClick = onBrowsingDigestClick,
+                            modifier = Modifier.testTag("BrowsingDigestButton"),
+                        ) {
+                            Box {
+                                Text(
+                                    text = "📰",
+                                    fontSize = 20.sp,
+                                )
+                                if (pendingArticlesCount > 0) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .size(10.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.error),
+                                    )
+                                }
+                            }
                         }
                         IconButton(
                             onClick = onCalendarClick,
@@ -726,6 +752,24 @@ fun SubjectListContent(
                                     onClick = {
                                         showTopBarMenu = false
                                         onSwitchToArchived()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        val label = if (pendingArticlesCount > 0) {
+                                            "本日の閲覧デッキ化 (${pendingArticlesCount}件未処理)"
+                                        } else {
+                                            "本日の閲覧デッキ化"
+                                        }
+                                        Text(text = label)
+                                    },
+                                    modifier = Modifier.testTag("MenuBrowsingDigestItem"),
+                                    leadingIcon = {
+                                        Text(text = "📰", fontSize = 16.sp)
+                                    },
+                                    onClick = {
+                                        showTopBarMenu = false
+                                        onBrowsingDigestClick()
                                     },
                                 )
                                 DropdownMenuItem(
@@ -978,6 +1022,21 @@ fun SubjectListContent(
                                     }
                                 }
                             }
+                            if (pendingArticlesCount > 0) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(
+                                    onClick = onBrowsingDigestClick,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                ) {
+                                    Text(text = "📰", fontSize = 16.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(text = "届いているWeb記事をデッキ化する (${pendingArticlesCount}件)")
+                                }
+                            }
                         }
                     }
                 } else {
@@ -987,6 +1046,47 @@ fun SubjectListContent(
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
+                        if (pendingArticlesCount > 0) {
+                            item(key = "browsing_digest_banner") {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onBrowsingDigestClick() },
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                    ),
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(text = "📰", fontSize = 24.sp)
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "本日のWeb閲覧からデッキ化",
+                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            )
+                                            Text(
+                                                text = "${pendingArticlesCount}件の新着記事が待機中・タップしてAI生成",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         items(subjects, key = { it.id }) { subject ->
                             val subjectTheme = subject.colorTheme?.let { themeName ->
                                 try {
