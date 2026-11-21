@@ -296,6 +296,8 @@ private class FakeSourceArticleRepository : SourceArticleRepository {
         articlesList.removeIf { it.id == id }
         articlesFlow.value = articlesList.toList()
     }
+
+    override suspend fun cleanupOldArticles(textRetentionDays: Int, pendingRetentionDays: Int): com.aidomari.app.domain.repository.CleanupResult = com.aidomari.app.domain.repository.CleanupResult()
 }
 
 private class FakeWordsRepository : WordsRepository {

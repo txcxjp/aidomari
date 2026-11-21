@@ -10,6 +10,9 @@ import com.aidomari.app.core.server.LocalIngestServerManager
 import com.aidomari.app.domain.repository.SourceArticleRepository
 import com.aidomari.app.domain.repository.WordsRepository
 import com.aidomari.app.ui.theme.ThemePreferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class AidomariApp : Application() {
 
@@ -44,5 +47,10 @@ class AidomariApp : Application() {
     override fun onCreate() {
         super.onCreate()
         localIngestServerManager.startServer()
+        if (android.os.Build.FINGERPRINT != "robolectric") {
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching { sourceArticleRepository.cleanupOldArticles() }
+            }
+        }
     }
 }

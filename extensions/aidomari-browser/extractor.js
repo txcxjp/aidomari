@@ -12,6 +12,53 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  // 検索エンジンドメイン
+  const SEARCH_ENGINE_DOMAINS = [
+    'google.com', 'google.co.jp', 'bing.com', 'yahoo.co.jp', 'search.yahoo.co.jp',
+    'yahoo.com', 'duckduckgo.com', 'baidu.com', 'ecosia.org', 'yandex.com', 'ask.com'
+  ];
+
+  // 認証・ログイン系ホストプレフィックス
+  const EXCLUDED_HOST_PREFIXES = [
+    'login.', 'auth.', 'signin.', 'accounts.', 'account.', 'id.', 'admin.', 'sso.'
+  ];
+
+  /**
+   * プライバシー除外チェック
+   */
+  function checkPrivacyExclusion(rawUrl) {
+    if (!rawUrl) return { isExcluded: false, reason: null };
+    try {
+      const parsed = new URL(rawUrl);
+      const host = parsed.hostname.toLowerCase();
+      const path = parsed.pathname.toLowerCase();
+
+      // ローカル / 内部ホスト
+      if (['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(host) || host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.lan')) {
+        return { isExcluded: true, reason: 'ローカルホストまたは内部ページの除外' };
+      }
+
+      // 検索エンジン
+      if (SEARCH_ENGINE_DOMAINS.some(d => host === d || host === `www.${d}` || host.endsWith(`.${d}`))) {
+        return { isExcluded: true, reason: '検索結果ページは取り込み対象外です' };
+      }
+
+      // 認証・ログインサブドメイン
+      if (EXCLUDED_HOST_PREFIXES.some(p => host.startsWith(p))) {
+        return { isExcluded: true, reason: 'ログイン・アカウント管理ページはセキュリティ保護のため除外されます' };
+      }
+
+      // 認証・ログインパス
+      if (path.includes('/login') || path.includes('/signin') || path.includes('/auth/') || path.includes('/oauth')) {
+        return { isExcluded: true, reason: 'ログイン・認証関連ページのため除外されます' };
+      }
+
+      return { isExcluded: false, reason: null };
+    } catch (_) {
+      return { isExcluded: false, reason: null };
+    }
+  }
+
   // 不要要素セレクタ
   const UNWANTED_SELECTORS = [
     'script', 'style', 'noscript', 'iframe', 'svg', 'canvas', 'audio', 'video',
@@ -308,13 +355,17 @@
     const estimatedCards = Math.max(1, Math.min(10, Math.round(charCount / 400)));
     const excerpt = content.slice(0, 150).replace(/\n+/g, ' ') + (content.length > 150 ? '...' : '');
 
+    const privacyCheck = checkPrivacyExclusion(url);
+
     return {
       title,
       url,
       content,
       charCount,
       estimatedCards,
-      excerpt
+      excerpt,
+      isExcluded: privacyCheck.isExcluded,
+      exclusionReason: privacyCheck.reason
     };
   }
 
@@ -323,6 +374,7 @@
     extractTitle,
     extractUrl,
     cleanTitle,
-    normalizeText
+    normalizeText,
+    checkPrivacyExclusion
   };
 }));

@@ -306,4 +306,15 @@ console.log('--- Aidomari Extractor Unit Tests ---');
   console.log('✓ Test 4: Fallback URL & estimated card count scaling');
 }
 
-console.log('\nAll 4 Extractor Unit Tests Passed Successfully!');
+// Test 5: プライバシー除外フィルター（検索エンジン、ログイン、ローカルホスト）
+{
+  assert.strictEqual(extractor.checkPrivacyExclusion('https://www.google.com/search?q=kotlin').isExcluded, true, 'Google検索は除外されること');
+  assert.strictEqual(extractor.checkPrivacyExclusion('https://search.yahoo.co.jp/search?p=test').isExcluded, true, 'Yahoo検索は除外されること');
+  assert.strictEqual(extractor.checkPrivacyExclusion('https://accounts.google.com/signin').isExcluded, true, 'Googleログインは除外されること');
+  assert.strictEqual(extractor.checkPrivacyExclusion('https://example.com/login').isExcluded, true, 'ログインパスは除外されること');
+  assert.strictEqual(extractor.checkPrivacyExclusion('http://localhost:3000/dashboard').isExcluded, true, 'localhostは除外されること');
+  assert.strictEqual(extractor.checkPrivacyExclusion('https://qiita.com/developer/items/12345').isExcluded, false, '一般技術記事は除外されないこと');
+  console.log('✓ Test 5: Privacy exclusion filter for search engines, auth pages, and localhost');
+}
+
+console.log('\nAll 5 Extractor Unit Tests Passed Successfully!');
