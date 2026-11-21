@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
@@ -78,10 +79,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aidomari.app.core.ai.GeminiApiClientImpl
+import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.core.lockscreen.LockScreenPreferences
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.ui.lockscreen.LockScreenSettingsDialog
 import com.aidomari.app.ui.preview.PreviewSampleData
+import com.aidomari.app.ui.settings.GeminiSettingsDialog
 import com.aidomari.app.ui.theme.AidomariTheme
 import com.aidomari.app.ui.theme.AppColorTheme
 import com.aidomari.app.ui.theme.ThemePreferences
@@ -111,6 +115,7 @@ fun SubjectListScreen(
     var showImportDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLockScreenDialog by remember { mutableStateOf(false) }
+    var showGeminiDialog by remember { mutableStateOf(false) }
     var subjectToEdit by remember { mutableStateOf<Subject?>(null) }
     var subjectToDelete by remember { mutableStateOf<Subject?>(null) }
     var importTargetSubjectId by remember { mutableStateOf<String?>(null) }
@@ -183,6 +188,7 @@ fun SubjectListScreen(
         onCalendarClick = onCalendarClick,
         onSugorokuMapClick = onSugorokuMapClick,
         onLockScreenClick = { showLockScreenDialog = true },
+        onAiSettingsClick = { showGeminiDialog = true },
         onArchiveSubject = { subject ->
             viewModel.archiveSubject(subject.id)
             coroutineScope.launch {
@@ -554,6 +560,19 @@ fun SubjectListScreen(
             onDismissRequest = { showLockScreenDialog = false },
         )
     }
+
+    // Gemini AI Settings Dialog
+    if (showGeminiDialog) {
+        val geminiPrefs = remember { GeminiPreferences(context) }
+        val geminiConfig by geminiPrefs.config.collectAsState()
+        val geminiClient = remember { GeminiApiClientImpl() }
+        GeminiSettingsDialog(
+            config = geminiConfig,
+            onConfigChanged = { geminiPrefs.updateConfig(it) },
+            onTestConnection = { key, model -> geminiClient.testConnection(key, model) },
+            onDismissRequest = { showGeminiDialog = false },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -577,6 +596,7 @@ fun SubjectListContent(
     onFilePickerClick: (() -> Unit)? = null,
     onEditSubject: (Subject) -> Unit = {},
     onLockScreenClick: () -> Unit = {},
+    onAiSettingsClick: () -> Unit = {},
     onCalendarClick: () -> Unit = {},
     onSugorokuMapClick: () -> Unit = {},
 ) {
@@ -706,6 +726,20 @@ fun SubjectListContent(
                                     onClick = {
                                         showTopBarMenu = false
                                         onSwitchToArchived()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(text = "AI設定 (Gemini)") },
+                                    modifier = Modifier.testTag("MenuAiSettingsItem"),
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.AutoAwesome,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        showTopBarMenu = false
+                                        onAiSettingsClick()
                                     },
                                 )
                             }
