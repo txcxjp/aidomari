@@ -104,7 +104,7 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step10_goryokaku() {
-        val goryokakuNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("五稜郭") } ?: HokkaidoAct1Route.startNode
+        val goryokakuNode = HokkaidoAct1Route.getNodeById("goryokaku") ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -238,7 +238,9 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step250_suttsu_area() {
-        val suttsuNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("寿都") } ?: HokkaidoAct1Route.startNode
+        val suttsuNode = HokkaidoAct1Route.getNodeById("minatomare_suttsu_michinoeki")
+            ?: HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("寿都") }
+            ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -264,7 +266,7 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step377_kabuto_cape() {
-        val kamuiNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("神威岬") } ?: HokkaidoAct1Route.startNode
+        val kamuiNode = HokkaidoAct1Route.getNodeById("kamui_cape") ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -282,7 +284,9 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1162_noshappu() {
-        val noshappuNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "noshappu_cape" } ?: HokkaidoAct1Route.startNode
+        val noshappuNode = HokkaidoAct1Route.getNodeById("minato_no_yu_onsen")
+            ?: HokkaidoAct1Route.getNodeById("anchor_98c6e368")
+            ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -300,7 +304,9 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1169_ferry_terminal() {
-        val ferryNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "haboro_port" } ?: HokkaidoAct1Route.startNode
+        val ferryNode = HokkaidoAct1Route.getNodeById("haboro_rose_garden")
+            ?: HokkaidoAct1Route.getNodeById("haboro_hashi")
+            ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -318,7 +324,9 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1495_saruru_cape() {
-        val hinodeNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("日の出岬") } ?: HokkaidoAct1Route.startNode
+        val hinodeNode = HokkaidoAct1Route.getNodeById("saruru_cape")
+            ?: HokkaidoAct1Route.getNodeById("la_luna_observatory")
+            ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -336,7 +344,7 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1218_soya() {
-        val soyaNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("宗谷岬") } ?: HokkaidoAct1Route.startNode
+        val soyaNode = HokkaidoAct1Route.getNodeById("soya_cape") ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -354,7 +362,7 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step1218_soya_wide() {
-        val soyaNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("宗谷岬") } ?: HokkaidoAct1Route.startNode
+        val soyaNode = HokkaidoAct1Route.getNodeById("soya_cape") ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -406,7 +414,7 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step_teshio_area() {
-        val teshioRiverNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "teshio_river_mouth" } ?: HokkaidoAct1Route.startNode
+        val teshioRiverNode = HokkaidoAct1Route.getNodeById("teshio_river_mouth_bridge") ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -424,7 +432,9 @@ class SugorokuMapScreenshotTest {
 
     @Test
     fun captureSugorokuMap_step_mombetsu_area() {
-        val garinkoNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "mombetsu_port_garinko" } ?: HokkaidoAct1Route.startNode
+        val garinkoNode = HokkaidoAct1Route.getNodeById("kani_no_tsume_object")
+            ?: HokkaidoAct1Route.getNodeById("port_of_monbetsu")
+            ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
             SugorokuMapContent(
                 uiState = SugorokuMapUiState(
@@ -494,5 +504,95 @@ class SugorokuMapScreenshotTest {
         }
         composeTestRule.waitForIdle()
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step1999_aidomari.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step161_otaru_canal() {
+        val otaruNode = HokkaidoAct1Route.getNodeById("otaru_canal") ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = otaruNode.stepIndex),
+                    currentNode = otaruNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step161_otaru_canal.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step213_sapporo_clock_tower() {
+        val sapporoNode = HokkaidoAct1Route.getNodeById("sapporo_clock_tower") ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = sapporoNode.stepIndex),
+                    currentNode = sapporoNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step213_sapporo_clock_tower.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step398_abashiri_prison() {
+        val abashiriNode = HokkaidoAct1Route.getNodeById("abashiri_prison_museum") ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = abashiriNode.stepIndex),
+                    currentNode = abashiriNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step398_abashiri_prison.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step432_shiretoko_five_lakes() {
+        val shiretokoNode = HokkaidoAct1Route.getNodeById("shiretoko_five_lakes") ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = shiretokoNode.stepIndex),
+                    currentNode = shiretokoNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step432_shiretoko_five_lakes.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step434_shiretoko_pass() {
+        val passNode = HokkaidoAct1Route.getNodeById("shiretoko_pass_observatory") ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = passNode.stepIndex),
+                    currentNode = passNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step434_shiretoko_pass.png")
     }
 }
