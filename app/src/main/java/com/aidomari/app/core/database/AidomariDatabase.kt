@@ -6,9 +6,11 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.aidomari.app.core.database.dao.SourceArticleDao
 import com.aidomari.app.core.database.entity.CardEntity
 import com.aidomari.app.core.database.entity.CardStudyLogEntity
 import com.aidomari.app.core.database.entity.DeckEntity
+import com.aidomari.app.core.database.entity.SourceArticleEntity
 import com.aidomari.app.core.database.entity.StudySessionEntity
 import com.aidomari.app.core.database.entity.SubjectEntity
 import com.aidomari.app.core.database.entity.SugorokuProgressEntity
@@ -21,13 +23,15 @@ import com.aidomari.app.core.database.entity.SugorokuProgressEntity
         StudySessionEntity::class,
         CardStudyLogEntity::class,
         SugorokuProgressEntity::class,
+        SourceArticleEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false,
 )
 abstract class AidomariDatabase : RoomDatabase() {
 
     abstract fun aidomariDao(): AidomariDao
+    abstract fun sourceArticleDao(): SourceArticleDao
 
     companion object {
         private const val DATABASE_NAME = "aidomari.db"
@@ -107,6 +111,28 @@ abstract class AidomariDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS source_articles (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        url TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        domain TEXT NOT NULL,
+                        extracted_text TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        created_at INTEGER NOT NULL,
+                        generated_card_count INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_source_articles_url ON source_articles(url)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_source_articles_status ON source_articles(status)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_source_articles_created_at ON source_articles(created_at)")
+            }
+        }
+
         @Volatile
         private var instance: AidomariDatabase? = null
 
@@ -121,7 +147,17 @@ abstract class AidomariDatabase : RoomDatabase() {
                 AidomariDatabase::class.java,
                 DATABASE_NAME,
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                .addMigrations(
+                    MIGRATION_1_2,
+                    MIGRATION_2_3,
+                    MIGRATION_3_4,
+                    MIGRATION_4_5,
+                    MIGRATION_5_6,
+                    MIGRATION_6_7,
+                    MIGRATION_7_8,
+                    MIGRATION_8_9,
+                    MIGRATION_9_10,
+                )
                 .addCallback(
                     object : RoomDatabase.Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
