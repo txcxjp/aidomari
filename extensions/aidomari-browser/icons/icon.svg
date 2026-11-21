@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3F51B5" />
+      <stop offset="100%" stop-color="#1A237E" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#EDE7F6" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Background Rounded Rect -->
+  <rect width="128" height="128" rx="28" fill="url(#bgGrad)" />
+  
+  <!-- Back Card (Tilted) -->
+  <rect x="30" y="24" width="70" height="80" rx="8" fill="#7986CB" transform="rotate(-10 65 64)" opacity="0.8" />
+  
+  <!-- Main Card -->
+  <rect x="30" y="24" width="68" height="80" rx="8" fill="url(#cardGrad)" filter="url(#shadow)" />
+  
+  <!-- Card Content Lines -->
+  <rect x="42" y="38" width="44" height="6" rx="3" fill="#3F51B5" />
+  <rect x="42" y="50" width="34" height="4" rx="2" fill="#9FA8DA" />
+  <rect x="42" y="58" width="38" height="4" rx="2" fill="#C5CAE9" />
+  <rect x="42" y="66" width="28" height="4" rx="2" fill="#C5CAE9" />
+  
+  <!-- AI Sparkle / Lightning Badge -->
+  <g transform="translate(68, 70)">
+    <circle cx="18" cy="18" r="14" fill="#FFB300" filter="url(#shadow)" />
+    <!-- 4-point star -->
+    <path d="M18 9 L20 15 L26 18 L20 21 L18 27 L16 21 L10 18 L16 15 Z" fill="#FFFFFF" />
+  </g>
+</svg>

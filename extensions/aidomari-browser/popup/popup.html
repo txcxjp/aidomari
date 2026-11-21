@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aidomari Web Ingest</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <img src="../icons/icon-48.png" alt="Aidomari Logo" class="app-icon">
+        <div class="app-titles">
+          <h1 class="app-name">Aidomari</h1>
+          <span class="app-subtitle">Web Ingest</span>
+        </div>
+      </div>
+      <div id="connection-status" class="status-chip checking">
+        <span class="status-dot"></span>
+        <span class="status-label">確認中...</span>
+      </div>
+    </header>
+
+    <!-- Main Content State: Extracting / Preview / Sent -->
+    <main class="main-content">
+      <!-- Loading extraction -->
+      <div id="extracting-view" class="state-view">
+        <div class="spinner"></div>
+        <p class="loading-text">ページ本文を抽出しています...</p>
+      </div>
+
+      <!-- Preview article view -->
+      <div id="preview-view" class="state-view hidden">
+        <div class="article-card">
+          <div class="article-badges">
+            <span id="article-domain" class="domain-badge">example.com</span>
+            <span id="article-chars" class="badge">0文字</span>
+            <span id="article-cards" class="badge badge-accent">AIカード: ~0枚</span>
+          </div>
+          <h2 id="article-title" class="article-title">記事タイトル</h2>
+          <p id="article-excerpt" class="article-excerpt">本文プレビュー...</p>
+        </div>
+
+        <div class="action-section">
+          <button id="send-btn" class="btn btn-primary">
+            <span class="btn-icon">📥</span>
+            <span class="btn-label">Aidomariへ送信</span>
+          </button>
+        </div>
+
+        <div id="result-message" class="result-message hidden"></div>
+      </div>
+
+      <!-- Error view -->
+      <div id="error-view" class="state-view hidden">
+        <div class="error-box">
+          <p id="error-message">本文を抽出できませんでした。</p>
+          <button id="retry-extract-btn" class="btn btn-secondary">再試行</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer Settings Accordion -->
+    <footer class="app-footer">
+      <details id="settings-details">
+        <summary class="settings-summary">⚙️ 受信設定 (ローカル連携)</summary>
+        <div class="settings-content">
+          <label for="endpoint-input" class="input-label">Aidomari エンドポイント:</label>
+          <div class="input-group">
+            <input type="text" id="endpoint-input" class="text-input" value="http://127.0.0.1:8877" placeholder="http://127.0.0.1:8877">
+            <button id="save-endpoint-btn" class="btn btn-small">保存</button>
+          </div>
+          <button id="ping-btn" class="btn btn-small btn-secondary btn-full">接続テスト</button>
+          <p class="hint-text">
+            ※ Android上のAidomariアプリを起動しておくと、ポート8877で自動的に記事を受信します。
+          </p>
+        </div>
+      </details>
+    </footer>
+  </div>
+
+  <script src="../extractor.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
