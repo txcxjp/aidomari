@@ -27,6 +27,9 @@ enum class LandmarkMotionStyle {
     WIND_TURBINE_SPIN,
     WHALE_SPOUT,
     MOUNT_CLOUD_DRIFT,
+    FISHING_BOAT_LIGHTS,
+    GAS_LAMP_GLOW,
+    ICEBREAKER_DRILL,
 }
 
 enum class RoadsideLandmarkType(
@@ -493,14 +496,14 @@ enum class RoadsideLandmarkType(
         drawableResId = R.drawable.landmark_benkei_cape_lighthouse,
         baseDisplayWidthDp = 116.0f,
         baseDisplayHeightDp = 111.2f,
-        motionStyle = LandmarkMotionStyle.NONE,
+        motionStyle = LandmarkMotionStyle.LIGHTHOUSE_BEAM,
     ),
     SUTTSU_SQUID_FISHING_BOAT(
         defaultDialogue = "「寿都のイカ釣り漁船！集魚灯が並んでるね！」",
         drawableResId = R.drawable.landmark_suttsu_squid_fishing_boat,
         baseDisplayWidthDp = 148.0f,
         baseDisplayHeightDp = 87.0f,
-        motionStyle = LandmarkMotionStyle.BOAT_BOB,
+        motionStyle = LandmarkMotionStyle.FISHING_BOAT_LIGHTS,
     ),
     MT_YOTEI_VOLCANO(
         defaultDialogue = "「蝦夷富士・羊蹄山が遠くにくっきりとそびえ立ってる！」",
@@ -556,7 +559,7 @@ enum class RoadsideLandmarkType(
         drawableResId = R.drawable.landmark_otaru_canal_warehouses,
         baseDisplayWidthDp = 156.0f,
         baseDisplayHeightDp = 75.0f,
-        motionStyle = LandmarkMotionStyle.RIVER_SHIMMER,
+        motionStyle = LandmarkMotionStyle.GAS_LAMP_GLOW,
     ),
     OTARU_GLASS_MUSICBOX(
         defaultDialogue = "「小樽のガラス浮き球とオルゴール、きれいな音色！」",
@@ -612,14 +615,14 @@ enum class RoadsideLandmarkType(
         drawableResId = R.drawable.landmark_tobetsu_nordic_windmill_house,
         baseDisplayWidthDp = 148.0f,
         baseDisplayHeightDp = 93.4f,
-        motionStyle = LandmarkMotionStyle.NONE,
+        motionStyle = LandmarkMotionStyle.WIND_TURBINE_SPIN,
     ),
     ISHIKARI_RED_WHITE_LIGHTHOUSE(
         defaultDialogue = "「ハマナス咲く石狩灯台が見えてきた！」",
         drawableResId = R.drawable.landmark_ishikari_red_white_lighthouse,
         baseDisplayWidthDp = 118.0f,
         baseDisplayHeightDp = 123.0f,
-        motionStyle = LandmarkMotionStyle.NONE,
+        motionStyle = LandmarkMotionStyle.LIGHTHOUSE_BEAM,
     ),
     OFUYU_CLIFF_WATERFALL(
         defaultDialogue = "「雄冬岬の断崖から白銀の滝が豪快に流れ落ちてる！」",
@@ -675,7 +678,7 @@ enum class RoadsideLandmarkType(
         drawableResId = R.drawable.landmark_teshio_shijimi_bucket,
         baseDisplayWidthDp = 126.0f,
         baseDisplayHeightDp = 73.8f,
-        motionStyle = LandmarkMotionStyle.NONE,
+        motionStyle = LandmarkMotionStyle.ONSEN_STEAM,
     ),
     RISHIRI_FUJI_ISLAND(
         defaultDialogue = "「海の向こうに雪を冠った利尻富士がそびえてる！」",
@@ -738,7 +741,7 @@ enum class RoadsideLandmarkType(
         drawableResId = R.drawable.landmark_mombetsu_garinko_icebreaker,
         baseDisplayWidthDp = 154.0f,
         baseDisplayHeightDp = 92.0f,
-        motionStyle = LandmarkMotionStyle.BOAT_BOB,
+        motionStyle = LandmarkMotionStyle.ICEBREAKER_DRILL,
     ),
     SAROMA_SANGOSO_BOARDWALK(
         defaultDialogue = "「サロマ湖畔の真っ赤なサンゴ草と木道がきれい！」",

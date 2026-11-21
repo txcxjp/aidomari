@@ -102,6 +102,13 @@ class SugorokuMapAnimationsTest {
         assertEquals(LandmarkMotionStyle.SWAN_GLIDE, RoadsideLandmarkType.LAKE_SWANS.motionStyle)
         assertEquals(LandmarkMotionStyle.COASTAL_WAVE_CRASH, RoadsideLandmarkType.COASTAL_CLIFF_ARCH.motionStyle)
         assertEquals(LandmarkMotionStyle.TRAM_CHUG, RoadsideLandmarkType.KIHA40_LOCAL_TRAIN.motionStyle)
+        assertEquals(LandmarkMotionStyle.FISHING_BOAT_LIGHTS, RoadsideLandmarkType.SUTTSU_SQUID_FISHING_BOAT.motionStyle)
+        assertEquals(LandmarkMotionStyle.GAS_LAMP_GLOW, RoadsideLandmarkType.OTARU_CANAL_WAREHOUSES.motionStyle)
+        assertEquals(LandmarkMotionStyle.ICEBREAKER_DRILL, RoadsideLandmarkType.MOMBETSU_GARINKO_ICEBREAKER.motionStyle)
+        assertEquals(LandmarkMotionStyle.WIND_TURBINE_SPIN, RoadsideLandmarkType.TOBETSU_NORDIC_WINDMILL_HOUSE.motionStyle)
+        assertEquals(LandmarkMotionStyle.LIGHTHOUSE_BEAM, RoadsideLandmarkType.BENKEI_CAPE_LIGHTHOUSE.motionStyle)
+        assertEquals(LandmarkMotionStyle.LIGHTHOUSE_BEAM, RoadsideLandmarkType.ISHIKARI_RED_WHITE_LIGHTHOUSE.motionStyle)
+        assertEquals(LandmarkMotionStyle.ONSEN_STEAM, RoadsideLandmarkType.TESHIO_SHIJIMI_BUCKET.motionStyle)
     }
 
     @Test
@@ -168,7 +175,11 @@ class SugorokuMapAnimationsTest {
                 else -> 0f
             }
             val patrolY = when (lm.type.motionStyle) {
-                LandmarkMotionStyle.BOAT_BOB, LandmarkMotionStyle.WHALE_SPOUT -> 2.5f
+                LandmarkMotionStyle.BOAT_BOB,
+                LandmarkMotionStyle.WHALE_SPOUT,
+                LandmarkMotionStyle.FISHING_BOAT_LIGHTS,
+                LandmarkMotionStyle.ICEBREAKER_DRILL,
+                -> 2.5f
                 LandmarkMotionStyle.WAVE_DANCE_2FRAME -> 4.5f
                 else -> 1.5f
             }
@@ -191,6 +202,17 @@ class SugorokuMapAnimationsTest {
             "Landmarks overlapping orange TRAVEL_ROUTE (9dp half-width): $violations",
             violations.isEmpty(),
         )
+    }
+
+    @Test
+    fun `fishing boat lights and icebreaker drill periodic motion wrap seamlessly at phase 0 and 1`() {
+        for (style in listOf(LandmarkMotionStyle.FISHING_BOAT_LIGHTS, LandmarkMotionStyle.ICEBREAKER_DRILL)) {
+            val start = computeLandmarkMotion(style = style, phase = 0f, seedPhase = 0.3f)
+            val end = computeLandmarkMotion(style = style, phase = 1f, seedPhase = 0.3f)
+            assertEquals("Expected seamless periodic X motion for $style", start.translateXDp, end.translateXDp, 0.001f)
+            assertEquals("Expected seamless periodic Y motion for $style", start.translateYDp, end.translateYDp, 0.001f)
+            assertEquals("Expected seamless periodic rotation for $style", start.rotationDeg, end.rotationDeg, 0.001f)
+        }
     }
 
     @Test
