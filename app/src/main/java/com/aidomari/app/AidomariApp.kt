@@ -2,9 +2,12 @@ package com.aidomari.app
 
 import android.app.Application
 import com.aidomari.app.core.database.AidomariDatabase
+import com.aidomari.app.core.database.SourceArticleRepositoryImpl
 import com.aidomari.app.core.database.WordsRepositoryImpl
 import com.aidomari.app.core.debug.SugorokuDebugPreferences
 import com.aidomari.app.core.lockscreen.LockScreenPreferences
+import com.aidomari.app.core.server.LocalIngestServerManager
+import com.aidomari.app.domain.repository.SourceArticleRepository
 import com.aidomari.app.domain.repository.WordsRepository
 import com.aidomari.app.ui.theme.ThemePreferences
 
@@ -16,6 +19,14 @@ class AidomariApp : Application() {
 
     val repository: WordsRepository by lazy {
         WordsRepositoryImpl(database.aidomariDao(), this)
+    }
+
+    val sourceArticleRepository: SourceArticleRepository by lazy {
+        SourceArticleRepositoryImpl(database.sourceArticleDao())
+    }
+
+    val localIngestServerManager: LocalIngestServerManager by lazy {
+        LocalIngestServerManager(sourceArticleRepository)
     }
 
     val themePreferences: ThemePreferences by lazy {
@@ -32,5 +43,6 @@ class AidomariApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        localIngestServerManager.startServer()
     }
 }
