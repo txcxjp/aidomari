@@ -113,6 +113,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       articleCardsEl.className = 'badge badge-accent';
     }
+
+    // プライバシー除外チェックの反映
+    if (article.isExcluded) {
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = '<span class="btn-icon">⚠️</span> <span class="btn-label">除外対象ページ</span>';
+      resultMessageEl.className = 'result-message error';
+      resultMessageEl.innerHTML = `🛡️ <strong>プライバシー除外:</strong> ${article.exclusionReason || '検索結果や認証ページのため送信できません'}`;
+      resultMessageEl.classList.remove('hidden');
+    } else {
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = '<span class="btn-icon">📥</span> <span class="btn-label">Aidomariへ送信</span>';
+    }
   }
 
   // エラー表示

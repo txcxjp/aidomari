@@ -39,4 +39,10 @@ interface SourceArticleDao {
 
     @Query("DELETE FROM source_articles WHERE created_at < :cutoffTimestamp")
     suspend fun deleteArticlesOlderThan(cutoffTimestamp: Long): Int
+
+    @Query("UPDATE source_articles SET extracted_text = '' WHERE created_at < :cutoffTimestamp AND (status = :status1 OR status = :status2)")
+    suspend fun purgeExtractedTextOlderThan(cutoffTimestamp: Long, status1: String, status2: String): Int
+
+    @Query("DELETE FROM source_articles WHERE created_at < :cutoffTimestamp AND status = :status")
+    suspend fun deleteArticlesOlderThanAndStatus(cutoffTimestamp: Long, status: String): Int
 }

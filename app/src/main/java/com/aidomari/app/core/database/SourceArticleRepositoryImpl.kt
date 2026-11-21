@@ -2,8 +2,10 @@ package com.aidomari.app.core.database
 
 import com.aidomari.app.core.database.dao.SourceArticleDao
 import com.aidomari.app.core.database.entity.SourceArticleEntity
+import com.aidomari.app.core.privacy.PrivacyFilter
 import com.aidomari.app.domain.model.article.ArticleStatus
 import com.aidomari.app.domain.model.article.SourceArticle
+import com.aidomari.app.domain.repository.CleanupResult
 import com.aidomari.app.domain.repository.SourceArticleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -35,8 +37,14 @@ class SourceArticleRepositoryImpl(
         require(content.isNotBlank()) { "Article content cannot be blank" }
 
         val cleanUrl = url.trim()
-        val cleanTitle = if (title.isNotBlank()) title.trim() else extractFallbackTitle(cleanUrl)
         val domain = extractDomain(cleanUrl)
+
+        // プライバシー保護: 検索エンジンやログイン・内部ドメインは拒否
+        require(!PrivacyFilter.isExcluded(cleanUrl, domain)) {
+            "プライバシー保護のため、除外対象のドメイン/ページです: $domain"
+        }
+
+        val cleanTitle = if (title.isNotBlank()) title.trim() else extractFallbackTitle(cleanUrl)
 
         val existing = dao.getArticleByUrl(cleanUrl)
         val articleToSave = if (existing != null) {
@@ -70,6 +78,27 @@ class SourceArticleRepositoryImpl(
 
     override suspend fun deleteArticle(id: String) {
         dao.deleteArticleById(id)
+    }
+
+    override suspend fun cleanupOldArticles(textRetentionDays: Int, pendingRetentionDays: Int): CleanupResult {
+        val now = System.currentTimeMillis()
+        val textCutoff = now - (textRetentionDays.toLong() * 24 * 60 * 60 * 1000)
+        val pendingCutoff = now - (pendingRetentionDays.toLong() * 24 * 60 * 60 * 1000)
+
+        // 1. 生成済み・破棄された古い記事の本文テキストをパージしてストレージ節約
+        val purgedCount = dao.purgeExtractedTextOlderThan(
+            cutoffTimestamp = textCutoff,
+            status1 = ArticleStatus.GENERATED.name,
+            status2 = ArticleStatus.DISCARDED.name,
+        )
+
+        // 2. 30日以上放置された未処理（PENDING）記事を削除
+        val deletedCount = dao.deleteArticlesOlderThanAndStatus(
+            cutoffTimestamp = pendingCutoff,
+            status = ArticleStatus.PENDING.name,
+        )
+
+        return CleanupResult(purgedTextCount = purgedCount, deletedArticlesCount = deletedCount)
     }
 
     private fun extractDomain(urlString: String): String = try {
