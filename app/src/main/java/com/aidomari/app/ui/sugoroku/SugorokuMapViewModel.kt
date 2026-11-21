@@ -21,7 +21,12 @@ class SugorokuMapViewModel(
     private val sugorokuDebugPreferences: SugorokuDebugPreferences? = null,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SugorokuMapUiState())
+    private val _uiState = MutableStateFlow(
+        SugorokuMapUiState(
+            isLoading = true,
+            isProgressLoaded = false,
+        ),
+    )
     val uiState: StateFlow<SugorokuMapUiState> = _uiState.asStateFlow()
 
     init {
@@ -58,6 +63,7 @@ class SugorokuMapViewModel(
                         speedMultiplier = sugorokuDebugPreferences?.speedMultiplier?.value ?: 1.0f,
                         nearbyLandmark = nearby,
                         isLoading = false,
+                        isProgressLoaded = true,
                     )
                 }
             }

@@ -18,6 +18,7 @@ data class SugorokuMapUiState(
     val speedMultiplier: Float = 1.0f,
     val isAct1Finished: Boolean = false,
     val isLoading: Boolean = false,
+    val isProgressLoaded: Boolean = true,
     val companion: TravelerCompanion = TravelerCompanion.DEFAULT,
     val roadsideLandmarks: List<RoadsideLandmark> = RoadsideLandmark.ACT1_LANDMARKS,
     val nearbyLandmark: RoadsideLandmark? = null,
