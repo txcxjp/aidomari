@@ -463,9 +463,9 @@ fun SugorokuMapContent(
             var birdPhaseOffset by remember { mutableFloatStateOf(0f) }
             var birdEnterFromLeft by remember { mutableStateOf(true) }
 
-            // Centering on initial load
-            LaunchedEffect(currentStep, containerWidth, containerHeight) {
-                if (!hasCenteredInitially && containerWidth > 0 && containerHeight > 0) {
+            // Centering on initial load: waits until player progress is loaded and layout has valid dimensions
+            LaunchedEffect(uiState.isProgressLoaded, containerWidth, containerHeight) {
+                if (!hasCenteredInitially && uiState.isProgressLoaded && containerWidth > 0 && containerHeight > 0) {
                     centerOnPlayer()
                     val centeredWorldX = (-panOffset.x + containerWidth / 2f) / zoomScale
                     val centeredWorldY = (-panOffset.y + containerHeight / 2f) / zoomScale
@@ -607,7 +607,7 @@ fun SugorokuMapContent(
                         detectTapGestures { tapOffset ->
                             val worldX = (tapOffset.x - panOffset.x) / zoomScale
                             val worldY = (tapOffset.y - panOffset.y) / zoomScale
-                            val threshold = 32.dp.toPx()
+                            val threshold = (28.dp.toPx() / zoomScale).coerceIn(24.dp.toPx(), 72.dp.toPx())
 
                             val maxVisibleTrackStep = if (isDebugScrollUnlocked) {
                                 allNodes.lastIndex
@@ -1341,6 +1341,15 @@ private fun DrawScope.drawSugorokuTiles(
         return
     }
 
+    // Dynamic tile scale compensation:
+    // When zooming in (> 1.0f), strictly compensates with 1/zoomScale so on-screen size never grows giant.
+    // When zooming out (< 1.0f), smoothly compensates with inverse power so tiles remain legible without crowding.
+    val tileScale = if (zoomScale >= 1.0f) {
+        1.0f / zoomScale
+    } else {
+        (1.0f / zoomScale).pow(0.55f).coerceAtMost(2.2f)
+    }
+
     val tileSizePx = HokkaidoBoardTrack.TILE_SIZE_DP.dp.toPx()
     val halfTile = tileSizePx / 2f
     val cornerRadius = CornerRadius(11.dp.toPx(), 11.dp.toPx())
@@ -1349,12 +1358,20 @@ private fun DrawScope.drawSugorokuTiles(
     val stepNumberPaint = renderCache.stepNumberPaint
     val badgePaint = renderCache.badgePaint
 
-    // Viewport bounds with padding
-    val pad = tileSizePx * 2f
+    // Viewport bounds with padding expanded for tileScale
+    val pad = tileSizePx * tileScale * 2f
     val vLeft = viewportWorld.left - pad
     val vTop = viewportWorld.top - pad
     val vRight = viewportWorld.right + pad
     val vBottom = viewportWorld.bottom + pad
+
+    // Adaptive milestone density at wide zoom levels to prevent overlapping
+    val fullTileStride = when {
+        zoomScale >= 0.65f -> 1
+        zoomScale >= 0.45f -> 2
+        zoomScale >= 0.28f -> 4
+        else -> 8
+    }
 
     for (i in 0 until count) {
         val ptDp = tileCentersDp[i]
@@ -1367,106 +1384,155 @@ private fun DrawScope.drawSugorokuTiles(
         }
 
         val node = nodes[i]
-        val left = cx - halfTile
-        val top = cy - halfTile
-
         val isVisited = i < currentStep
         val isCurrent = i == currentStep
 
-        // 1. Soft drop shadow beneath tile
-        drawRoundRect(
-            color = Color(0x38000000),
-            topLeft = Offset(left + 1.5.dp.toPx(), top + 2.5.dp.toPx()),
-            size = Size(tileSizePx, tileSizePx),
-            cornerRadius = cornerRadius,
-        )
+        val shouldDrawFullTile = isCurrent ||
+            (zoomScale >= 0.65f) ||
+            node.rank >= 2 ||
+            node.type == SugorokuNodeType.SCENIC_SPOT ||
+            i == 0 ||
+            i == count - 1 ||
+            (i % fullTileStride == 0)
 
-        // 2. Tile background & border colors
-        val (bgColor, borderColor, borderWidth) = when {
-            isCurrent -> Triple(Color(0xFFFFF176), Color(0xFFF57F17), 3.dp.toPx())
-            isVisited && node.isAnchor -> Triple(Color(0xFFE1BEE7), Color(0xFF8E24AA), 2.5.dp.toPx())
-            isVisited -> Triple(Color(0xFFFFE0B2), Color(0xFFFB8C00), 1.8.dp.toPx())
-            node.isAnchor -> Triple(Color(0xFFEDE7F6), Color(0xFF7B1FA2), 2.5.dp.toPx())
-            node.type == SugorokuNodeType.SCENIC_SPOT -> Triple(Color(0xFFFFF9C4), Color(0xFFFBC02D), 2.2.dp.toPx())
-            else -> Triple(Color(0xFFFFFFFF), Color(0xFFB0BEC5), 1.5.dp.toPx())
-        }
+        withTransform({
+            scale(tileScale, tileScale, pivot = Offset(cx, cy))
+        }) {
+            if (shouldDrawFullTile) {
+                val left = cx - halfTile
+                val top = cy - halfTile
 
-        // Draw tile body
-        drawRoundRect(
-            color = bgColor,
-            topLeft = Offset(left, top),
-            size = Size(tileSizePx, tileSizePx),
-            cornerRadius = cornerRadius,
-        )
-        // Draw tile border
-        drawRoundRect(
-            color = borderColor,
-            topLeft = Offset(left, top),
-            size = Size(tileSizePx, tileSizePx),
-            cornerRadius = cornerRadius,
-            style = Stroke(width = borderWidth),
-        )
+                // 1. Soft drop shadow beneath tile
+                drawRoundRect(
+                    color = Color(0x38000000),
+                    topLeft = Offset(left + 1.5.dp.toPx(), top + 2.5.dp.toPx()),
+                    size = Size(tileSizePx, tileSizePx),
+                    cornerRadius = cornerRadius,
+                )
 
-        // 3. Tile Contents: Step number on top
-        drawContext.canvas.nativeCanvas.drawText(
-            "#${i + 1}",
-            cx,
-            top + 12.dp.toPx(),
-            stepNumberPaint,
-        )
+                // 2. Tile background & border colors
+                val (bgColor, borderColor, borderWidth) = when {
+                    isCurrent -> Triple(Color(0xFFFFF176), Color(0xFFF57F17), 3.dp.toPx())
+                    isVisited && node.isAnchor -> Triple(Color(0xFFE1BEE7), Color(0xFF8E24AA), 2.5.dp.toPx())
+                    isVisited -> Triple(Color(0xFFFFE0B2), Color(0xFFFB8C00), 1.8.dp.toPx())
+                    node.isAnchor -> Triple(Color(0xFFEDE7F6), Color(0xFF7B1FA2), 2.5.dp.toPx())
+                    node.type == SugorokuNodeType.SCENIC_SPOT -> Triple(Color(0xFFFFF9C4), Color(0xFFFBC02D), 2.2.dp.toPx())
+                    else -> Triple(Color(0xFFFFFFFF), Color(0xFFB0BEC5), 1.5.dp.toPx())
+                }
 
-        if (isCurrent) {
-            // For current tile: floating pill badge beneath tile
-            val badgeText = node.name
-            val textWidth = badgePaint.measureText(badgeText)
-            val badgeWidth = textWidth + 12.dp.toPx()
-            val badgeHeight = 17.dp.toPx()
-            val badgeLeft = cx - badgeWidth / 2f
-            val badgeTop = top + tileSizePx + 4.dp.toPx()
+                // Draw tile body
+                drawRoundRect(
+                    color = bgColor,
+                    topLeft = Offset(left, top),
+                    size = Size(tileSizePx, tileSizePx),
+                    cornerRadius = cornerRadius,
+                )
+                // Draw tile border
+                drawRoundRect(
+                    color = borderColor,
+                    topLeft = Offset(left, top),
+                    size = Size(tileSizePx, tileSizePx),
+                    cornerRadius = cornerRadius,
+                    style = Stroke(width = borderWidth),
+                )
 
-            // Badge shadow & white pill background
-            drawRoundRect(
-                color = Color(0x33000000),
-                topLeft = Offset(badgeLeft + 1.dp.toPx(), badgeTop + 1.5.dp.toPx()),
-                size = Size(badgeWidth, badgeHeight),
-                cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
-            )
-            drawRoundRect(
-                color = Color(0xFFFFFFFF),
-                topLeft = Offset(badgeLeft, badgeTop),
-                size = Size(badgeWidth, badgeHeight),
-                cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
-            )
-            drawRoundRect(
-                color = Color(0xFFF57F17),
-                topLeft = Offset(badgeLeft, badgeTop),
-                size = Size(badgeWidth, badgeHeight),
-                cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
-                style = Stroke(width = 1.2.dp.toPx()),
-            )
-            drawContext.canvas.nativeCanvas.drawText(
-                badgeText,
-                cx,
-                badgeTop + 12.dp.toPx(),
-                badgePaint,
-            )
-        } else {
-            // Normal tile: name cleanly centered vertically
-            drawTileLabel(
-                text = node.name,
-                cx = cx,
-                cy = top + 29.dp.toPx(),
-                maxTextWidthPx = 48.dp.toPx(),
-                baseTextSizePx = 10.dp.toPx(),
-                paint = labelPaint,
-            )
+                // 3. Tile Contents: Step number on top
+                drawContext.canvas.nativeCanvas.drawText(
+                    "#${i + 1}",
+                    cx,
+                    top + 12.dp.toPx(),
+                    stepNumberPaint,
+                )
 
-            // Subtle anchor indicator (elegant diamond/dot without preset emojis)
-            if (node.isAnchor) {
+                if (isCurrent) {
+                    // For current tile: floating pill badge beneath tile
+                    val badgeText = node.name
+                    val textWidth = badgePaint.measureText(badgeText)
+                    val badgeWidth = textWidth + 12.dp.toPx()
+                    val badgeHeight = 17.dp.toPx()
+                    val badgeLeft = cx - badgeWidth / 2f
+                    val badgeTop = top + tileSizePx + 4.dp.toPx()
+
+                    // Badge shadow & white pill background
+                    drawRoundRect(
+                        color = Color(0x33000000),
+                        topLeft = Offset(badgeLeft + 1.dp.toPx(), badgeTop + 1.5.dp.toPx()),
+                        size = Size(badgeWidth, badgeHeight),
+                        cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
+                    )
+                    drawRoundRect(
+                        color = Color(0xFFFFFFFF),
+                        topLeft = Offset(badgeLeft, badgeTop),
+                        size = Size(badgeWidth, badgeHeight),
+                        cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
+                    )
+                    drawRoundRect(
+                        color = Color(0xFFF57F17),
+                        topLeft = Offset(badgeLeft, badgeTop),
+                        size = Size(badgeWidth, badgeHeight),
+                        cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
+                        style = Stroke(width = 1.2.dp.toPx()),
+                    )
+                    drawContext.canvas.nativeCanvas.drawText(
+                        badgeText,
+                        cx,
+                        badgeTop + 12.dp.toPx(),
+                        badgePaint,
+                    )
+                } else {
+                    // Normal tile: name cleanly centered vertically
+                    drawTileLabel(
+                        text = node.name,
+                        cx = cx,
+                        cy = top + 29.dp.toPx(),
+                        maxTextWidthPx = 48.dp.toPx(),
+                        baseTextSizePx = 10.dp.toPx(),
+                        paint = labelPaint,
+                    )
+
+                    // Subtle anchor indicator (elegant diamond/dot without preset emojis)
+                    if (node.isAnchor) {
+                        drawCircle(
+                            color = if (isVisited) Color(0xFF8E24AA) else Color(0xFFAB47BC),
+                            radius = 2.2.dp.toPx(),
+                            center = Offset(cx, top + 41.5.dp.toPx()),
+                        )
+                    }
+                }
+            } else {
+                // Sleek Milestone Pip at wide zooms for uncluttered clarity
+                val (pipBg, pipBorder) = when {
+                    isVisited && node.isAnchor -> Color(0xFFE1BEE7) to Color(0xFF8E24AA)
+                    isVisited -> Color(0xFFFFE0B2) to Color(0xFFFB8C00)
+                    node.isAnchor -> Color(0xFFEDE7F6) to Color(0xFF7B1FA2)
+                    node.type == SugorokuNodeType.SCENIC_SPOT -> Color(0xFFFFF9C4) to Color(0xFFFBC02D)
+                    else -> Color(0xFFFFFFFF) to Color(0xFF90A4AE)
+                }
+                val pipRadius = 7.dp.toPx()
+
+                // Pip shadow
                 drawCircle(
-                    color = if (isVisited) Color(0xFF8E24AA) else Color(0xFFAB47BC),
+                    color = Color(0x33000000),
+                    radius = pipRadius + 0.5.dp.toPx(),
+                    center = Offset(cx + 0.8.dp.toPx(), cy + 1.2.dp.toPx()),
+                )
+                // Pip body & border
+                drawCircle(
+                    color = pipBg,
+                    radius = pipRadius,
+                    center = Offset(cx, cy),
+                )
+                drawCircle(
+                    color = pipBorder,
+                    radius = pipRadius,
+                    center = Offset(cx, cy),
+                    style = Stroke(width = 1.6.dp.toPx()),
+                )
+                // Pip center accent dot
+                drawCircle(
+                    color = pipBorder,
                     radius = 2.2.dp.toPx(),
-                    center = Offset(cx, top + 41.5.dp.toPx()),
+                    center = Offset(cx, cy),
                 )
             }
         }

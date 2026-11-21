@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -47,10 +48,23 @@ class SugorokuMapViewModelTest {
     }
 
     @Test
+    fun initialState_beforeLoadingProgress_hasIsProgressLoadedFalse() = runTest {
+        val initialVm = SugorokuMapViewModel(fakeRepository)
+        assertFalse(initialVm.uiState.value.isProgressLoaded)
+        assertTrue(initialVm.uiState.value.isLoading)
+
+        advanceUntilIdle()
+        assertTrue(initialVm.uiState.value.isProgressLoaded)
+        assertFalse(initialVm.uiState.value.isLoading)
+    }
+
+    @Test
     fun initialState_loadsProgressAndStartNode() = runTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
+        assertTrue(state.isProgressLoaded)
+        assertFalse(state.isLoading)
         assertEquals(0, state.progress.currentStepIndex)
         assertEquals("函館山", state.currentNode.name)
         assertEquals(HokkaidoAct1Route.totalNodes, state.totalNodes)
