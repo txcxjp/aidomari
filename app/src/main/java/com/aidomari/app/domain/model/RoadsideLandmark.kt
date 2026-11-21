@@ -475,10 +475,10 @@ enum class RoadsideLandmarkType(
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     OSHAMAMBE_KANIMESHI(
-        defaultDialogue = "「長万部名物のかにめしだ！ほかほか美味しそう！」",
+        defaultDialogue = "「長万部名物カニめし本舗！香ばしいカニとタケノコが絶品だよ！」",
         drawableResId = R.drawable.landmark_oshamambe_kanimeshi,
-        baseDisplayWidthDp = 118.0f,
-        baseDisplayHeightDp = 87.1f,
+        baseDisplayWidthDp = 120.0f,
+        baseDisplayHeightDp = 102.2f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     KUROMATSUNAI_BEECH_FOREST(
@@ -503,7 +503,7 @@ enum class RoadsideLandmarkType(
         motionStyle = LandmarkMotionStyle.BOAT_BOB,
     ),
     MT_YOTEI_VOLCANO(
-        defaultDialogue = "「蝦夷富士・羊蹄山がくっきり見える！」",
+        defaultDialogue = "「蝦夷富士・羊蹄山が遠くにくっきりとそびえ立ってる！」",
         drawableResId = R.drawable.landmark_mt_yotei_volcano,
         baseDisplayWidthDp = 164.0f,
         baseDisplayHeightDp = 66.6f,
@@ -517,7 +517,7 @@ enum class RoadsideLandmarkType(
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     SAKAZUKI_COASTAL_ROTENBURO(
-        defaultDialogue = "「海辺の岩露天風呂、波音が心地よさそう！」",
+        defaultDialogue = "「日本海を望む盃温泉！潮風と波音を感じる露天風呂だね！」",
         drawableResId = R.drawable.landmark_sakazuki_coastal_rotenburo,
         baseDisplayWidthDp = 134.0f,
         baseDisplayHeightDp = 74.9f,
@@ -790,7 +790,7 @@ enum class RoadsideLandmarkType(
         motionStyle = LandmarkMotionStyle.MOUNT_CLOUD_DRIFT,
     ),
     SESEKI_SEA_ROTENBURO(
-        defaultDialogue = "「羅臼・セセキの海辺に湧くワイルドな露天風呂だ！」",
+        defaultDialogue = "「満潮になると海に沈むセセキの天然岩露天風呂！」",
         drawableResId = R.drawable.landmark_seseki_sea_rotenburo,
         baseDisplayWidthDp = 136.0f,
         baseDisplayHeightDp = 76.8f,
@@ -1591,7 +1591,7 @@ data class RoadsideLandmark(
             ),
             RoadsideLandmark(
                 id = "oshamambe_kanimeshi",
-                name = "長万部名物かにめし",
+                name = "長万部名物カニめし本舗",
                 x = 162.66f,
                 y = 279.17f,
                 type = RoadsideLandmarkType.OSHAMAMBE_KANIMESHI,
@@ -1609,7 +1609,7 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "suttsu_squid_fishing_boat",
                 name = "寿都のイカ釣り漁船",
-                x = 154.20f,
+                x = 150.00f,
                 y = 254.34f,
                 type = RoadsideLandmarkType.SUTTSU_SQUID_FISHING_BOAT,
                 scale = 0.94f,
@@ -1625,8 +1625,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "mt_yotei_volcano",
                 name = "蝦夷富士・羊蹄山",
-                x = 170.97f,
-                y = 239.38f,
+                x = 181.50f,
+                y = 245.50f,
                 type = RoadsideLandmarkType.MT_YOTEI_VOLCANO,
                 scale = 1.06f,
                 isMajorRegional = true,
@@ -1650,10 +1650,11 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "kamui_cape_ridge",
                 name = "積丹・神威岬の尾根と神威岩",
-                x = 162.21f,
-                y = 207.75f,
+                x = 161.40f,
+                y = 207.71f,
                 type = RoadsideLandmarkType.KAMUI_CAPE_RIDGE,
                 scale = 0.98f,
+                flipX = true,
                 isMajorRegional = true,
             ),
             RoadsideLandmark(
