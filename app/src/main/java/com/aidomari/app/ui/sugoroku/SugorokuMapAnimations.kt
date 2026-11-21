@@ -115,6 +115,7 @@ fun computeLandmarkMotion(
         LandmarkMotionStyle.WIND_TURBINE_SPIN,
         LandmarkMotionStyle.MOUNT_CLOUD_DRIFT,
         LandmarkMotionStyle.SQUIRREL_NIBBLE,
+        LandmarkMotionStyle.GAS_LAMP_GLOW,
         -> Unit
 
         LandmarkMotionStyle.DEER_GRAZE -> {
@@ -172,7 +173,10 @@ fun computeLandmarkMotion(
             sy = 1f + squash
         }
 
-        LandmarkMotionStyle.BOAT_BOB -> {
+        LandmarkMotionStyle.BOAT_BOB,
+        LandmarkMotionStyle.FISHING_BOAT_LIGHTS,
+        LandmarkMotionStyle.ICEBREAKER_DRILL,
+        -> {
             val waveAngle = TWO_PI * 3f * pNorm + seedRad
             ty = sin(waveAngle) * 2.5f
             rot = cos(waveAngle) * 1.8f
@@ -452,8 +456,13 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
     when (style) {
         LandmarkMotionStyle.LIGHTHOUSE_BEAM -> {
             val sweepAngle = sin(TWO_PI * 2f * phase + seedPhase * TWO_PI) * 32f
-            val lanternX = cx - wPx * 0.03f
-            val lanternY = cy - hPx * 0.34f
+            val (lanternRelX, lanternRelY) = when (landmarkType) {
+                RoadsideLandmarkType.BENKEI_CAPE_LIGHTHOUSE -> 0.02f to -0.27f
+                RoadsideLandmarkType.ISHIKARI_RED_WHITE_LIGHTHOUSE -> -0.02f to -0.29f
+                else -> -0.03f to -0.34f
+            }
+            val lanternX = cx + lanternRelX * wPx
+            val lanternY = cy + lanternRelY * hPx
             val beamLength = wPx * 0.52f
             withTransform({
                 rotate(degrees = sweepAngle, pivot = Offset(lanternX, lanternY))
@@ -481,6 +490,10 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
             val (baseX, baseY) = when (landmarkType) {
                 RoadsideLandmarkType.WOODEN_ONSEN_BATH -> cx + wPx * 0.02f to cy - hPx * 0.04f
                 RoadsideLandmarkType.ONSEN_FOOTBATH -> cx - wPx * 0.04f to cy + hPx * 0.14f
+                RoadsideLandmarkType.SAPPORO_MISO_RAMEN -> cx - wPx * 0.05f to cy - hPx * 0.08f
+                RoadsideLandmarkType.SAKAZUKI_COASTAL_ROTENBURO -> cx - wPx * 0.02f to cy - hPx * 0.10f
+                RoadsideLandmarkType.SESEKI_SEA_ROTENBURO -> cx + wPx * 0.04f to cy - hPx * 0.06f
+                RoadsideLandmarkType.TESHIO_SHIJIMI_BUCKET -> cx + wPx * 0.18f to cy - hPx * 0.14f
                 else -> cx - wPx * 0.23f to cy - hPx * 0.04f
             }
             val inkW = (wPx * 0.0052f).coerceAtLeast(0.85f)
@@ -755,48 +768,61 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
 
         LandmarkMotionStyle.WIND_TURBINE_SPIN -> {
             val bladeStrokeW = (wPx * 0.0055f).coerceAtLeast(0.95f)
-            if (landmarkType == RoadsideLandmarkType.OTONRUI_WIND_FARM) {
-                drawSpinningWindRotor(
-                    hub = Offset(cx + (0.26f - 0.5f) * wPx, cy + (0.36f - 0.5f) * hPx),
-                    bladeLen = wPx * 0.285f,
-                    angleDeg = phase * 1080f + seedPhase * 360f,
-                    strokeWidth = bladeStrokeW,
-                    alphaScale = alphaScale,
-                    scratchPath = scratchPath,
-                )
-                drawSpinningWindRotor(
-                    hub = Offset(cx + (0.54f - 0.5f) * wPx, cy + (0.44f - 0.5f) * hPx),
-                    bladeLen = wPx * 0.225f,
-                    angleDeg = phase * 1080f + seedPhase * 360f + 42f,
-                    strokeWidth = bladeStrokeW,
-                    alphaScale = alphaScale,
-                    scratchPath = scratchPath,
-                )
-                drawSpinningWindRotor(
-                    hub = Offset(cx + (0.78f - 0.5f) * wPx, cy + (0.51f - 0.5f) * hPx),
-                    bladeLen = wPx * 0.175f,
-                    angleDeg = phase * 1080f + seedPhase * 360f + 84f,
-                    strokeWidth = bladeStrokeW,
-                    alphaScale = alphaScale,
-                    scratchPath = scratchPath,
-                )
-            } else {
-                drawSpinningWindRotor(
-                    hub = Offset(cx + (0.32f - 0.5f) * wPx, cy + (0.36f - 0.5f) * hPx),
-                    bladeLen = wPx * 0.325f,
-                    angleDeg = phase * 1080f + seedPhase * 360f,
-                    strokeWidth = bladeStrokeW,
-                    alphaScale = alphaScale,
-                    scratchPath = scratchPath,
-                )
-                drawSpinningWindRotor(
-                    hub = Offset(cx + (0.72f - 0.5f) * wPx, cy + (0.46f - 0.5f) * hPx),
-                    bladeLen = wPx * 0.245f,
-                    angleDeg = phase * 1080f + seedPhase * 360f + 45f,
-                    strokeWidth = bladeStrokeW,
-                    alphaScale = alphaScale,
-                    scratchPath = scratchPath,
-                )
+            when (landmarkType) {
+                RoadsideLandmarkType.OTONRUI_WIND_FARM -> {
+                    drawSpinningWindRotor(
+                        hub = Offset(cx + (0.26f - 0.5f) * wPx, cy + (0.36f - 0.5f) * hPx),
+                        bladeLen = wPx * 0.285f,
+                        angleDeg = phase * 1080f + seedPhase * 360f,
+                        strokeWidth = bladeStrokeW,
+                        alphaScale = alphaScale,
+                        scratchPath = scratchPath,
+                    )
+                    drawSpinningWindRotor(
+                        hub = Offset(cx + (0.54f - 0.5f) * wPx, cy + (0.44f - 0.5f) * hPx),
+                        bladeLen = wPx * 0.225f,
+                        angleDeg = phase * 1080f + seedPhase * 360f + 42f,
+                        strokeWidth = bladeStrokeW,
+                        alphaScale = alphaScale,
+                        scratchPath = scratchPath,
+                    )
+                    drawSpinningWindRotor(
+                        hub = Offset(cx + (0.78f - 0.5f) * wPx, cy + (0.51f - 0.5f) * hPx),
+                        bladeLen = wPx * 0.175f,
+                        angleDeg = phase * 1080f + seedPhase * 360f + 84f,
+                        strokeWidth = bladeStrokeW,
+                        alphaScale = alphaScale,
+                        scratchPath = scratchPath,
+                    )
+                }
+                RoadsideLandmarkType.TOBETSU_NORDIC_WINDMILL_HOUSE -> {
+                    drawSpinningNordicWindmill(
+                        hub = Offset(cx + 0.184f * wPx, cy - 0.145f * hPx),
+                        sailLen = wPx * 0.220f,
+                        angleDeg = phase * 360f + seedPhase * 360f,
+                        strokeWidth = bladeStrokeW,
+                        alphaScale = alphaScale,
+                        scratchPath = scratchPath,
+                    )
+                }
+                else -> {
+                    drawSpinningWindRotor(
+                        hub = Offset(cx + (0.32f - 0.5f) * wPx, cy + (0.36f - 0.5f) * hPx),
+                        bladeLen = wPx * 0.325f,
+                        angleDeg = phase * 1080f + seedPhase * 360f,
+                        strokeWidth = bladeStrokeW,
+                        alphaScale = alphaScale,
+                        scratchPath = scratchPath,
+                    )
+                    drawSpinningWindRotor(
+                        hub = Offset(cx + (0.72f - 0.5f) * wPx, cy + (0.46f - 0.5f) * hPx),
+                        bladeLen = wPx * 0.245f,
+                        angleDeg = phase * 1080f + seedPhase * 360f + 45f,
+                        strokeWidth = bladeStrokeW,
+                        alphaScale = alphaScale,
+                        scratchPath = scratchPath,
+                    )
+                }
             }
         }
 
@@ -897,6 +923,162 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
                     end = Offset(sx + wPx * 0.055f, sy - hPx * 0.02f),
                     strokeWidth = inkW,
                     cap = StrokeCap.Round,
+                )
+            }
+        }
+
+        LandmarkMotionStyle.FISHING_BOAT_LIGHTS -> {
+            val inkW = (wPx * 0.0055f).coerceAtLeast(0.85f)
+            val numBulbs = 5
+            for (b in 0 until numBulbs) {
+                val frac = b / (numBulbs - 1).toFloat()
+                val lx = cx + (-0.28f + frac * 0.58f) * wPx
+                val sag = sin(PI.toFloat() * frac) * hPx * 0.035f
+                val ly = cy - hPx * 0.18f + sag
+
+                val flickerPhase = (phase * (3f + b * 1.4f) + seedPhase + b * 0.31f).mod(1f)
+                val glow = 0.65f + 0.35f * sin(TWO_PI * flickerPhase)
+                val alpha = glow * alphaScale
+
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFFFEE58).copy(alpha = 0.45f * alpha),
+                            Color.Transparent,
+                        ),
+                        center = Offset(lx, ly),
+                        radius = wPx * 0.045f,
+                    ),
+                    radius = wPx * 0.045f,
+                    center = Offset(lx, ly),
+                )
+                drawCircle(
+                    color = Color(0xFFFFFFE0).copy(alpha = 0.95f * alpha),
+                    radius = wPx * 0.013f,
+                    center = Offset(lx, ly),
+                )
+                drawCircle(
+                    color = Color(0xFF141416).copy(alpha = 0.70f * alpha),
+                    radius = wPx * 0.013f,
+                    center = Offset(lx, ly),
+                    style = Stroke(width = inkW * 0.7f),
+                )
+            }
+            val waterY = cy + hPx * 0.38f
+            val reflAlpha = 0.22f * alphaScale * (0.8f + 0.2f * sin(TWO_PI * 3f * phase + seedPhase * TWO_PI))
+            drawOval(
+                color = Color(0xFFFFF59D).copy(alpha = reflAlpha),
+                topLeft = Offset(cx - wPx * 0.26f, waterY - hPx * 0.03f),
+                size = Size(wPx * 0.52f, hPx * 0.06f),
+            )
+        }
+
+        LandmarkMotionStyle.GAS_LAMP_GLOW -> {
+            val inkW = (wPx * 0.0055f).coerceAtLeast(0.85f)
+            val lampRelPos = listOf(
+                Offset(-0.43f, -0.15f),
+                Offset(-0.19f, -0.12f),
+                Offset(0.22f, -0.13f),
+                Offset(0.44f, -0.16f),
+            )
+            for ((idx, pos) in lampRelPos.withIndex()) {
+                val lx = cx + pos.x * wPx
+                val ly = cy + pos.y * hPx
+                val flicker = 0.82f + 0.18f * sin(TWO_PI * (4f + idx * 0.7f) * phase + seedPhase * TWO_PI + idx * 1.5f)
+                val alpha = flicker * alphaScale
+
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFFFB300).copy(alpha = 0.40f * alpha),
+                            Color.Transparent,
+                        ),
+                        center = Offset(lx, ly),
+                        radius = wPx * 0.046f,
+                    ),
+                    radius = wPx * 0.046f,
+                    center = Offset(lx, ly),
+                )
+                drawCircle(
+                    color = Color(0xFFFFF9C4).copy(alpha = 0.95f * alpha),
+                    radius = wPx * 0.012f,
+                    center = Offset(lx, ly),
+                )
+                drawCircle(
+                    color = Color(0xFF141416).copy(alpha = 0.65f * alpha),
+                    radius = wPx * 0.012f,
+                    center = Offset(lx, ly),
+                    style = Stroke(width = inkW * 0.65f),
+                )
+            }
+            val canalY = cy + hPx * 0.28f
+            for (i in 0..1) {
+                val waveT = (phase * 2f + seedPhase + i * 0.5f).mod(1f)
+                val rx = wPx * (0.28f + waveT * 0.06f)
+                val ry = hPx * (0.024f + waveT * 0.012f)
+                val rAlpha = sin(PI.toFloat() * waveT) * 0.20f * alphaScale
+                drawOval(
+                    color = Color(0xFFFFCC80).copy(alpha = rAlpha),
+                    topLeft = Offset(cx - rx, canalY + i * hPx * 0.05f - ry),
+                    size = Size(rx * 2f, ry * 2f),
+                )
+            }
+        }
+
+        LandmarkMotionStyle.ICEBREAKER_DRILL -> {
+            val inkW = (wPx * 0.0055f).coerceAtLeast(0.85f)
+            val drillX = cx - wPx * 0.22f
+            val drillY = cy + hPx * 0.22f
+
+            val drillSpin = (phase * 6f + seedPhase).mod(1f)
+            val toothSpread = wPx * 0.035f
+            for (i in -1..1) {
+                val tx = drillX + (i + drillSpin - 0.5f) * toothSpread
+                val ty = drillY
+                val lineH = hPx * 0.06f
+                drawLine(
+                    color = Color(0xFFFFD54F).copy(alpha = 0.85f * alphaScale),
+                    start = Offset(tx - toothSpread * 0.3f, ty - lineH * 0.5f),
+                    end = Offset(tx + toothSpread * 0.3f, ty + lineH * 0.5f),
+                    strokeWidth = inkW * 1.2f,
+                    cap = StrokeCap.Round,
+                )
+            }
+
+            val churnW = wPx * 0.14f
+            val churnH = hPx * 0.048f
+            val churnAlpha = (0.80f + 0.20f * sin(TWO_PI * 4f * phase + seedPhase * TWO_PI)) * alphaScale
+            drawOval(
+                color = Color(0xFFE0F7FA).copy(alpha = 0.85f * churnAlpha),
+                topLeft = Offset(drillX - churnW * 0.5f, drillY + hPx * 0.03f - churnH * 0.5f),
+                size = Size(churnW, churnH),
+            )
+            drawOval(
+                color = Color(0xFF141416).copy(alpha = 0.65f * churnAlpha),
+                topLeft = Offset(drillX - churnW * 0.5f, drillY + hPx * 0.03f - churnH * 0.5f),
+                size = Size(churnW, churnH),
+                style = Stroke(width = inkW * 0.75f),
+            )
+
+            for (i in 0..4) {
+                val t = (phase * 4f + seedPhase + i * 0.20f).mod(1f)
+                val spreadAngle = -0.7f + i * 0.32f
+                val speed = wPx * (0.05f + (i % 3) * 0.025f)
+                val px = drillX - cos(spreadAngle) * speed * t
+                val py = drillY - sin(spreadAngle) * speed * t * 0.7f + (t * t) * hPx * 0.07f
+                val alpha = sin(PI.toFloat() * t) * alphaScale
+                val pr = wPx * (0.012f * (1f - 0.35f * t))
+
+                drawCircle(
+                    color = if (i % 2 == 0) Color(0xFFE1F5FE).copy(alpha = alpha) else Color.White.copy(alpha = alpha),
+                    radius = pr,
+                    center = Offset(px, py),
+                )
+                drawCircle(
+                    color = Color(0xFF141416).copy(alpha = 0.72f * alpha),
+                    radius = pr,
+                    center = Offset(px, py),
+                    style = Stroke(width = inkW * 0.7f),
                 )
             }
         }
@@ -1079,6 +1261,63 @@ private fun DrawScope.drawSpinningWindRotor(
         }
         val hubRadius = (bladeLen * 0.082f).coerceAtLeast(2.0f)
         drawCircle(color = accentColor, radius = hubRadius, center = hub)
+        drawCircle(color = inkColor, radius = hubRadius, center = hub, style = outlineStroke)
+    }
+}
+
+private fun DrawScope.drawSpinningNordicWindmill(
+    hub: Offset,
+    sailLen: Float,
+    angleDeg: Float,
+    strokeWidth: Float,
+    alphaScale: Float,
+    scratchPath: Path,
+) {
+    if (alphaScale <= 0.05f) return
+    val outlineStroke = Stroke(width = strokeWidth, join = StrokeJoin.Round)
+    val inkColor = Color(0xFF141416).copy(alpha = alphaScale)
+    val sailWoodColor = Color(0xFF8D6E63).copy(alpha = 0.95f * alphaScale)
+    val latticeColor = Color(0xFFD7CCC8).copy(alpha = 0.95f * alphaScale)
+
+    withTransform({
+        rotate(degrees = angleDeg, pivot = hub)
+    }) {
+        for (i in 0..3) {
+            withTransform({
+                rotate(degrees = i * 90f, pivot = hub)
+            }) {
+                drawLine(
+                    color = inkColor,
+                    start = hub,
+                    end = Offset(hub.x, hub.y - sailLen),
+                    strokeWidth = strokeWidth * 1.5f,
+                    cap = StrokeCap.Round,
+                )
+                val sailStart = sailLen * 0.28f
+                val sailEnd = sailLen * 0.96f
+                val sailWidth = sailLen * 0.22f
+                scratchPath.reset()
+                scratchPath.moveTo(hub.x, hub.y - sailStart)
+                scratchPath.lineTo(hub.x + sailWidth, hub.y - sailStart)
+                scratchPath.lineTo(hub.x + sailWidth, hub.y - sailEnd)
+                scratchPath.lineTo(hub.x, hub.y - sailEnd)
+                scratchPath.close()
+                drawPath(path = scratchPath, color = latticeColor)
+                drawPath(path = scratchPath, color = inkColor, style = outlineStroke)
+
+                for (step in 1..3) {
+                    val y = hub.y - sailStart - (sailEnd - sailStart) * (step / 4f)
+                    drawLine(
+                        color = inkColor,
+                        start = Offset(hub.x, y),
+                        end = Offset(hub.x + sailWidth, y),
+                        strokeWidth = strokeWidth * 0.8f,
+                    )
+                }
+            }
+        }
+        val hubRadius = (sailLen * 0.075f).coerceAtLeast(2.0f)
+        drawCircle(color = sailWoodColor, radius = hubRadius, center = hub)
         drawCircle(color = inkColor, radius = hubRadius, center = hub, style = outlineStroke)
     }
 }
