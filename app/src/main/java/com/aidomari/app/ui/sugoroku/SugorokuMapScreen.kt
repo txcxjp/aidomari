@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +32,8 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -74,12 +77,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aidomari.app.core.debug.SugorokuDebugPreferences
 import com.aidomari.app.domain.model.HighwayCategory
 import com.aidomari.app.domain.model.HighwaySegment
 import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.HokkaidoRoadNetwork
 import com.aidomari.app.domain.model.SugorokuNode
 import com.aidomari.app.domain.model.SugorokuNodeType
+import com.aidomari.app.domain.util.SugorokuWalkingCalculator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,6 +99,10 @@ fun SugorokuMapScreen(
         onBack = onBack,
         onSelectNode = { viewModel.selectNode(it) },
         onDismissDialog = { viewModel.clearSelectedNode() },
+        onAddDistance = { viewModel.addDistance(it) },
+        onAdvanceToNextAnchor = { viewModel.advanceToNextAnchor() },
+        onResetProgress = { viewModel.resetProgress() },
+        onSetSpeedMultiplier = { viewModel.setSpeedMultiplier(it) },
         modifier = modifier,
     )
 }
@@ -105,6 +114,10 @@ fun SugorokuMapContent(
     onBack: () -> Unit,
     onSelectNode: (SugorokuNode) -> Unit,
     onDismissDialog: () -> Unit,
+    onAddDistance: (Float) -> Unit = {},
+    onAdvanceToNextAnchor: () -> Unit = {},
+    onResetProgress: () -> Unit = {},
+    onSetSpeedMultiplier: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val allNodes = HokkaidoAct1Route.nodes
@@ -163,7 +176,7 @@ fun SugorokuMapContent(
                             fontSize = 18.sp,
                         )
                         Text(
-                            text = "北への旅路",
+                            text = "旅路: ${SugorokuWalkingCalculator.formatDistance(uiState.totalDistanceMeters)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -181,17 +194,78 @@ fun SugorokuMapContent(
                     }
                 },
                 actions = {
-                    // Temporary debug toggle for developer inspection across all 2,000 nodes
-                    IconButton(
-                        onClick = { isDebugScrollUnlocked = !isDebugScrollUnlocked },
-                        modifier = Modifier.testTag("DebugScrollLockButton"),
-                    ) {
-                        Text(
-                            text = if (isDebugScrollUnlocked) "🔓全域" else "🔒制限",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDebugScrollUnlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                        )
+                    if (com.aidomari.app.BuildConfig.DEBUG) {
+                        var showSpeedMenu by remember { mutableStateOf(false) }
+                        Box {
+                            TextButton(
+                                onClick = { showSpeedMenu = true },
+                                modifier = Modifier.testTag("DebugSpeedMultiplierButton"),
+                            ) {
+                                Text(
+                                    text = "⚡${uiState.speedMultiplier.toInt()}x",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showSpeedMenu,
+                                onDismissRequest = { showSpeedMenu = false },
+                            ) {
+                                SugorokuDebugPreferences.AVAILABLE_SPEED_MULTIPLIERS.forEach { mult ->
+                                    DropdownMenuItem(
+                                        text = { Text("${mult.toInt()}倍速") },
+                                        onClick = {
+                                            onSetSpeedMultiplier(mult)
+                                            showSpeedMenu = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { onAddDistance(500f) },
+                            modifier = Modifier.testTag("DebugAdd500mButton"),
+                        ) {
+                            Text(
+                                text = "+500m",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onAdvanceToNextAnchor,
+                            modifier = Modifier.testTag("DebugNextAnchorButton"),
+                        ) {
+                            Text(
+                                text = "📍次",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onResetProgress,
+                            modifier = Modifier.testTag("DebugResetButton"),
+                        ) {
+                            Text(
+                                text = "🔄",
+                                fontSize = 12.sp,
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { isDebugScrollUnlocked = !isDebugScrollUnlocked },
+                            modifier = Modifier.testTag("DebugScrollLockButton"),
+                        ) {
+                            Text(
+                                text = if (isDebugScrollUnlocked) "🔓全域" else "🔒制限",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDebugScrollUnlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                            )
+                        }
                     }
                     Text(
                         text = "🗾",
@@ -252,6 +326,17 @@ fun SugorokuMapContent(
                 return Offset(clampedX, clampedY)
             }
 
+            fun centerOnPlayer() {
+                val targetWorldOffset = uiState.playerWorldOffset
+                val targetX = targetWorldOffset.x * worldScaleFactor * zoomScale
+                val targetY = targetWorldOffset.y * worldScaleFactor * zoomScale
+                val newPan = Offset(
+                    x = containerWidth / 2f - targetX,
+                    y = containerHeight / 2f - targetY,
+                )
+                panOffset = clampPan(newPan, zoomScale)
+            }
+
             fun centerOnStep(stepIndex: Int) {
                 val ptDp = tileCentersDp.getOrNull(stepIndex) ?: Offset.Zero
                 val targetX = ptDp.x * density * zoomScale
@@ -278,7 +363,7 @@ fun SugorokuMapContent(
             // Centering on initial load
             LaunchedEffect(currentStep, containerWidth, containerHeight) {
                 if (!hasCenteredInitially && containerWidth > 0 && containerHeight > 0) {
-                    centerOnStep(currentStep)
+                    centerOnPlayer()
                     hasCenteredInitially = true
                 }
             }
@@ -374,51 +459,62 @@ fun SugorokuMapContent(
                         zoomScale = zoomScale,
                         viewportWorld = viewportWorld,
                     )
+                }
+            }
 
-                    // 4. Player Marker / Avatar Piece at current step
-                    if (currentStep in tileCentersDp.indices) {
-                        val curPtDp = tileCentersDp[currentStep]
-                        val curX = curPtDp.x * density
-                        val curY = curPtDp.y * density
+            // Animated Player Marker Overlay Canvas
+            // Isolated from the heavy map Canvas so the 1-second breathing animation
+            // invalidates ONLY this lightweight overlay, maintaining 60-120 FPS smoothly.
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("SugorokuPlayerOverlayCanvas"),
+            ) {
+                withTransform({
+                    translate(panOffset.x, panOffset.y)
+                    scale(zoomScale, zoomScale, Offset.Zero)
+                }) {
+                    val playerWorldOffset = uiState.playerWorldOffset
+                    val curX = playerWorldOffset.x * worldScaleFactor
+                    val curY = playerWorldOffset.y * worldScaleFactor
 
-                        if (zoomScale < 0.05f) {
-                            // Wide view: draw a single prominent player position beacon at current step
-                            val beaconRadius = 7.dp.toPx() / zoomScale
-                            val ringWidth = 2.dp.toPx() / zoomScale
-                            val haloRadius = 12.dp.toPx() / zoomScale
+                    if (zoomScale < 0.05f) {
+                        // Wide view: draw a single prominent player position beacon at current step
+                        val beaconRadius = 7.dp.toPx() / zoomScale
+                        val ringWidth = 2.dp.toPx() / zoomScale
+                        val haloRadius = 12.dp.toPx() / zoomScale
 
-                            // Outer soft halo
-                            drawCircle(
-                                color = Color(0xFFFF9800).copy(alpha = 0.35f),
-                                radius = haloRadius,
-                                center = Offset(curX, curY),
-                            )
-                            // Outer white ring
-                            drawCircle(
-                                color = Color.White,
-                                radius = beaconRadius + ringWidth,
-                                center = Offset(curX, curY),
-                            )
-                            // Primary player marker (vibrant warm orange matching traveler theme)
-                            drawCircle(
-                                color = Color(0xFFE65100),
-                                radius = beaconRadius,
-                                center = Offset(curX, curY),
-                            )
-                            // Center crisp ivory core
-                            drawCircle(
-                                color = Color(0xFFFFF3E0),
-                                radius = beaconRadius * 0.45f,
-                                center = Offset(curX, curY),
-                            )
-                        } else {
-                            // Detailed view: Cute Traveler Avatar Piece
-                            drawTravelerPiece(
-                                x = curX,
-                                y = curY + 10.dp.toPx() + playerFloatY * 1.5f,
-                                shadowY = curY + 24.dp.toPx(),
-                            )
-                        }
+                        // Outer soft halo
+                        drawCircle(
+                            color = Color(0xFFFF9800).copy(alpha = 0.35f),
+                            radius = haloRadius,
+                            center = Offset(curX, curY),
+                        )
+                        // Outer white ring
+                        drawCircle(
+                            color = Color.White,
+                            radius = beaconRadius + ringWidth,
+                            center = Offset(curX, curY),
+                        )
+                        // Primary player marker (vibrant warm orange matching traveler theme)
+                        drawCircle(
+                            color = Color(0xFFE65100),
+                            radius = beaconRadius,
+                            center = Offset(curX, curY),
+                        )
+                        // Center crisp ivory core
+                        drawCircle(
+                            color = Color(0xFFFFF3E0),
+                            radius = beaconRadius * 0.45f,
+                            center = Offset(curX, curY),
+                        )
+                    } else {
+                        // Detailed view: Cute Traveler Avatar Piece
+                        drawTravelerPiece(
+                            x = curX,
+                            y = curY + 10.dp.toPx() + playerFloatY * 1.5f,
+                            shadowY = curY + 24.dp.toPx(),
+                        )
                     }
                 }
             }
@@ -481,7 +577,7 @@ fun SugorokuMapContent(
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                             Text(
-                                text = "${currentStep + 1} マス",
+                                text = SugorokuWalkingCalculator.formatDistance(uiState.totalDistanceMeters),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -502,7 +598,7 @@ fun SugorokuMapContent(
                     .align(Alignment.BottomStart)
                     .padding(start = 16.dp, bottom = 20.dp),
                 onMiniMapClick = {
-                    centerOnStep(currentStep)
+                    centerOnPlayer()
                 },
             )
 
@@ -515,7 +611,7 @@ fun SugorokuMapContent(
             ) {
                 FloatingActionButton(
                     onClick = {
-                        centerOnStep(currentStep)
+                        centerOnPlayer()
                     },
                     modifier = Modifier
                         .size(46.dp)

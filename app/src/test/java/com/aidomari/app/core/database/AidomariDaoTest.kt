@@ -587,6 +587,7 @@ class AidomariDaoTest {
             currentProgressInStep = 0,
             targetQuestionsPerStep = 1,
             totalQuestionsAnswered = 5,
+            totalDistanceMeters = 350.5f,
             visitedNodeIdsJson = "[\"node_0000\",\"node_0001\",\"node_0005\"]",
             updatedAt = 1000L,
         )
@@ -598,6 +599,7 @@ class AidomariDaoTest {
         assertEquals(5, retrievedSync?.currentStepIndex)
         assertEquals(0, retrievedSync?.currentProgressInStep)
         assertEquals(5, retrievedSync?.totalQuestionsAnswered)
+        assertEquals(350.5f, retrievedSync!!.totalDistanceMeters, 0.001f)
 
         // Flow retrieval
         val retrievedFlow = dao.getSugorokuProgress("default_progress").first()
@@ -605,8 +607,10 @@ class AidomariDaoTest {
         assertEquals(5, retrievedFlow?.currentStepIndex)
         assertEquals(0, retrievedFlow?.currentProgressInStep)
         assertEquals(5, retrievedFlow?.totalQuestionsAnswered)
+        assertEquals(350.5f, retrievedFlow!!.totalDistanceMeters, 0.001f)
 
-        val domain = retrievedSync!!.toDomain()
+        val domain = retrievedSync.toDomain()
+        assertEquals(350.5f, domain.totalDistanceMeters, 0.001f)
         assertEquals(setOf("node_0000", "node_0001", "node_0005"), domain.visitedNodeIds)
     }
 }

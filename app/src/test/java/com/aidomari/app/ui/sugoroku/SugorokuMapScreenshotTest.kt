@@ -5,6 +5,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import com.aidomari.app.domain.model.Act1TravelRoute
+import com.aidomari.app.domain.model.Act1TravelRouteProgressCalculator
 import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.SugorokuProgress
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -37,6 +39,28 @@ class SugorokuMapScreenshotTest {
             )
         }
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_initial.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_continuousWalking_300m_onRoad() {
+        val legs = Act1TravelRoute.getLegs()
+        val routeProgress = Act1TravelRouteProgressCalculator.calculateProgress(300f, legs)
+
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(totalDistanceMeters = 300f),
+                    currentNode = HokkaidoAct1Route.startNode,
+                    totalDistanceMeters = 300f,
+                    playerWorldOffset = routeProgress.currentWorldOffset,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_walking_300m_road.png")
     }
 
     @Test

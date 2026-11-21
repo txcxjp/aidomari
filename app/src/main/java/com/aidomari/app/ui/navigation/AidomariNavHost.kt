@@ -16,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.aidomari.app.core.debug.SugorokuDebugPreferences
 import com.aidomari.app.core.tts.TtsManager
 import com.aidomari.app.domain.repository.WordsRepository
 import com.aidomari.app.ui.calendar.CalendarScreen
@@ -44,6 +45,7 @@ fun AidomariNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     themePreferences: ThemePreferences? = null,
+    sugorokuDebugPreferences: SugorokuDebugPreferences? = null,
 ) {
     NavHost(
         navController = navController,
@@ -92,7 +94,7 @@ fun AidomariNavHost(
         }
 
         composable("sugoroku_map") {
-            val mapViewModel = remember { SugorokuMapViewModel(repository) }
+            val mapViewModel = remember { SugorokuMapViewModel(repository, sugorokuDebugPreferences) }
             SugorokuMapScreen(
                 viewModel = mapViewModel,
                 onBack = { navController.popBackStack() },
@@ -174,7 +176,7 @@ fun AidomariNavHost(
         ) { backStackEntry ->
             val deckId = backStackEntry.arguments?.getString("deckId") ?: return@composable
             val partIndex = backStackEntry.arguments?.getInt("partIndex") ?: 0
-            val studyViewModel = remember(deckId) { StudyViewModel(repository) }
+            val studyViewModel = remember(deckId) { StudyViewModel(repository, sugorokuDebugPreferences) }
             val state by studyViewModel.uiState.collectAsState()
             val currentConfig = LocalThemeConfig.current
             val subjectColorTheme = state.subject?.colorTheme?.let { runCatching { AppColorTheme.valueOf(it) }.getOrNull() }

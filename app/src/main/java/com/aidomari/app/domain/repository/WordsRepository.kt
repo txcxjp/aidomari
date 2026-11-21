@@ -117,4 +117,8 @@ interface WordsRepository {
     suspend fun getSugorokuProgressSync(): SugorokuProgress = SugorokuProgress()
     suspend fun saveSugorokuProgress(progress: SugorokuProgress) {}
     suspend fun recordSugorokuProgress(questionsDelta: Int = 1): SugorokuProgress = SugorokuProgress()
+    suspend fun recordStudyWalkingProgress(durationSeconds: Float, speedMultiplier: Float = 1.0f): SugorokuProgress = SugorokuProgress()
+    suspend fun recordSugorokuDistance(distanceMetersDelta: Float): SugorokuProgress = SugorokuProgress()
+    suspend fun advanceToNextAnchor(): SugorokuProgress = SugorokuProgress()
+    suspend fun resetSugorokuProgress(): SugorokuProgress = SugorokuProgress()
 }

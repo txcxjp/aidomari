@@ -2,6 +2,9 @@ package com.aidomari.app.ui.sugoroku
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aidomari.app.core.debug.SugorokuDebugPreferences
+import com.aidomari.app.domain.model.Act1TravelRoute
+import com.aidomari.app.domain.model.Act1TravelRouteProgressCalculator
 import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.SugorokuNode
 import com.aidomari.app.domain.repository.WordsRepository
@@ -15,6 +18,7 @@ import kotlinx.coroutines.launch
 
 class SugorokuMapViewModel(
     private val repository: WordsRepository,
+    private val sugorokuDebugPreferences: SugorokuDebugPreferences? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SugorokuMapUiState())
@@ -22,25 +26,42 @@ class SugorokuMapViewModel(
 
     init {
         loadProgress()
+        observeDebugPreferences()
     }
 
     private fun loadProgress() {
         _uiState.update { it.copy(isLoading = true) }
+        val legs = Act1TravelRoute.getLegs()
         repository.getSugorokuProgress()
             .onEach { progress ->
-                val node = HokkaidoAct1Route.getNodeByStepIndex(progress.currentStepIndex)
+                val routeProgress = Act1TravelRouteProgressCalculator.calculateProgress(
+                    totalDistanceMeters = progress.totalDistanceMeters,
+                    legs = legs,
+                    anchors = HokkaidoAct1Route.anchors,
+                )
+                val node = HokkaidoAct1Route.getNodeByStepIndex(routeProgress.currentAnchorIndex)
                     ?: HokkaidoAct1Route.startNode
-                val remaining = (HokkaidoAct1Route.totalNodes - 1 - progress.currentStepIndex).coerceAtLeast(0)
+                val remaining = (HokkaidoAct1Route.totalNodes - 1 - routeProgress.currentAnchorIndex).coerceAtLeast(0)
                 _uiState.update { current ->
                     current.copy(
                         progress = progress,
                         currentNode = node,
                         remainingSteps = remaining,
+                        totalDistanceMeters = progress.totalDistanceMeters,
+                        playerWorldOffset = routeProgress.currentWorldOffset,
+                        isAct1Finished = routeProgress.isAct1Finished,
+                        speedMultiplier = sugorokuDebugPreferences?.speedMultiplier?.value ?: 1.0f,
                         isLoading = false,
                     )
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun observeDebugPreferences() {
+        sugorokuDebugPreferences?.speedMultiplier?.onEach { multiplier ->
+            _uiState.update { it.copy(speedMultiplier = multiplier) }
+        }?.launchIn(viewModelScope)
     }
 
     fun selectNode(node: SugorokuNode?) {
@@ -55,5 +76,27 @@ class SugorokuMapViewModel(
         viewModelScope.launch {
             repository.recordSugorokuProgress(questionsDelta)
         }
+    }
+
+    fun addDistance(meters: Float) {
+        viewModelScope.launch {
+            repository.recordSugorokuDistance(meters)
+        }
+    }
+
+    fun advanceToNextAnchor() {
+        viewModelScope.launch {
+            repository.advanceToNextAnchor()
+        }
+    }
+
+    fun resetProgress() {
+        viewModelScope.launch {
+            repository.resetSugorokuProgress()
+        }
+    }
+
+    fun setSpeedMultiplier(multiplier: Float) {
+        sugorokuDebugPreferences?.setSpeedMultiplier(multiplier)
     }
 }

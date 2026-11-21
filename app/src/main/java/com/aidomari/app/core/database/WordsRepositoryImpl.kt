@@ -1,14 +1,17 @@
 package com.aidomari.app.core.database
 
+import android.content.Context
 import com.aidomari.app.core.database.entity.CardEntity
 import com.aidomari.app.core.database.entity.CardStudyLogEntity
 import com.aidomari.app.core.database.entity.DeckEntity
 import com.aidomari.app.core.database.entity.StudySessionEntity
 import com.aidomari.app.core.database.entity.SubjectEntity
 import com.aidomari.app.core.database.entity.SugorokuProgressEntity
+import com.aidomari.app.domain.model.Act1TravelRoute
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.PastDayGroup
 import com.aidomari.app.domain.model.StudySession
@@ -17,12 +20,14 @@ import com.aidomari.app.domain.model.SugorokuProgress
 import com.aidomari.app.domain.repository.WordsRepository
 import com.aidomari.app.domain.util.CardSnoozeCalculator
 import com.aidomari.app.domain.util.PastDayDecksCalculator
+import com.aidomari.app.domain.util.SugorokuWalkingCalculator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 
 class WordsRepositoryImpl(
     private val dao: AidomariDao,
+    private val context: Context? = null,
 ) : WordsRepository {
 
     override fun getAllSubjects(): Flow<List<Subject>> =
@@ -276,6 +281,55 @@ class WordsRepositoryImpl(
     override suspend fun recordSugorokuProgress(questionsDelta: Int): SugorokuProgress {
         val current = getSugorokuProgressSync()
         val updated = current.advanceByQuestions(questionsDelta)
+        saveSugorokuProgress(updated)
+        return updated
+    }
+
+    override suspend fun recordStudyWalkingProgress(
+        durationSeconds: Float,
+        speedMultiplier: Float,
+    ): SugorokuProgress {
+        val distanceDelta = SugorokuWalkingCalculator.calculateDistanceMeters(
+            durationSeconds = durationSeconds,
+            speedMultiplier = speedMultiplier,
+        )
+        return applyDistanceProgress(distanceDelta, questionsAnsweredDelta = 1)
+    }
+
+    override suspend fun recordSugorokuDistance(
+        distanceMetersDelta: Float,
+    ): SugorokuProgress = applyDistanceProgress(distanceMetersDelta, questionsAnsweredDelta = 0)
+
+    override suspend fun advanceToNextAnchor(): SugorokuProgress {
+        val current = getSugorokuProgressSync()
+        val legs = Act1TravelRoute.getLegs(context)
+        val nextStepIndex = (current.currentStepIndex + 1).coerceAtMost(legs.size)
+        var targetDistance = 0.0f
+        for (i in 0 until nextStepIndex.coerceAtMost(legs.size)) {
+            targetDistance += legs[i].distanceMeters
+        }
+        val neededDelta = (targetDistance - current.totalDistanceMeters).coerceAtLeast(1.0f)
+        return applyDistanceProgress(neededDelta, questionsAnsweredDelta = 0)
+    }
+
+    override suspend fun resetSugorokuProgress(): SugorokuProgress {
+        val reset = SugorokuProgress().resetProgress()
+        saveSugorokuProgress(reset)
+        return reset
+    }
+
+    private suspend fun applyDistanceProgress(
+        distanceMetersDelta: Float,
+        questionsAnsweredDelta: Int,
+    ): SugorokuProgress {
+        val current = getSugorokuProgressSync()
+        val legs = Act1TravelRoute.getLegs(context)
+        val updated = current.advanceByDistance(
+            distanceMetersDelta = distanceMetersDelta,
+            legs = legs,
+            anchors = HokkaidoAct1Route.anchors,
+            questionsAnsweredDelta = questionsAnsweredDelta,
+        )
         saveSugorokuProgress(updated)
         return updated
     }
