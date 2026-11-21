@@ -83,6 +83,26 @@ class SugorokuMapScreenshotTest {
     }
 
     @Test
+    fun captureSugorokuMap_hakodateZoomedOut() {
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = 0),
+                    currentNode = HokkaidoAct1Route.startNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        repeat(5) {
+            composeTestRule.onNodeWithContentDescription("縮小").performClick()
+            composeTestRule.waitForIdle()
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_hakodate_zoomed_out.png")
+    }
+
+    @Test
     fun captureSugorokuMap_step10_goryokaku() {
         val goryokakuNode = HokkaidoAct1Route.nodes.firstOrNull { it.name.contains("五稜郭") } ?: HokkaidoAct1Route.startNode
         composeTestRule.setContent {
@@ -98,6 +118,122 @@ class SugorokuMapScreenshotTest {
         }
         composeTestRule.waitForIdle()
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step10.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step31_shin_hakodate_hokuto() {
+        val shinkansenNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "shin_hakodate_hokuto_station" }
+            ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = shinkansenNode.stepIndex),
+                    currentNode = shinkansenNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step31_shin_hakodate_hokuto.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step36_onuma_komagatake() {
+        val higureNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "mt_higure" }
+            ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = higureNode.stepIndex),
+                    currentNode = higureNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step36_onuma_komagatake.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step37_komagatake_onsen() {
+        val akaigawaNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "akaigawa_station" }
+            ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = akaigawaNode.stepIndex),
+                    currentNode = akaigawaNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step37_komagatake_onsen.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step43_washinoki_coast() {
+        val washinokiNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "anchor_797ebdbf" }
+            ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = washinokiNode.stepIndex),
+                    currentNode = washinokiNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step43_washinoki_coast.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step50_funkawan_yakumo() {
+        val yakumoNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "funkawan_panorama_park" }
+            ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = yakumoNode.stepIndex),
+                    currentNode = yakumoNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step50_funkawan_yakumo.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_roadsideLandmark_cow_and_reaction() {
+        val startNode = HokkaidoAct1Route.startNode
+        val warehouseLandmark = com.aidomari.app.domain.model.RoadsideLandmark.ACT1_LANDMARKS.first { it.id == "kanemori_warehouse_row" }
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = startNode.stepIndex),
+                    currentNode = startNode,
+                    playerWorldOffset = androidx.compose.ui.geometry.Offset(warehouseLandmark.x + 0.25f, warehouseLandmark.y + 0.14f),
+                    nearbyLandmark = warehouseLandmark,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_cow_reaction.png")
     }
 
     @Test
@@ -302,6 +438,44 @@ class SugorokuMapScreenshotTest {
         }
         composeTestRule.waitForIdle()
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step_mombetsu.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step311_otonrui_wind_farm() {
+        val otonruiNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "otonrui_wind_farm" }
+            ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = otonruiNode.stepIndex),
+                    currentNode = otonruiNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step311_otonrui_wind_farm.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_step444_rausu_whale() {
+        val whaleNode = HokkaidoAct1Route.nodes.firstOrNull { it.id == "whale_watching_hill_park" }
+            ?: HokkaidoAct1Route.goalNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = whaleNode.stepIndex),
+                    currentNode = whaleNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_step444_rausu_whale.png")
     }
 
     @Test

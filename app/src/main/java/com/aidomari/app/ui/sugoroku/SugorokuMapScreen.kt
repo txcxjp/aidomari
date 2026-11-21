@@ -1,7 +1,11 @@
 package com.aidomari.app.ui.sugoroku
 
+import android.graphics.BitmapFactory
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.util.LruCache
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -49,8 +53,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,13 +65,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
@@ -75,16 +84,24 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aidomari.app.R
 import com.aidomari.app.core.debug.SugorokuDebugPreferences
 import com.aidomari.app.domain.model.HighwayCategory
-import com.aidomari.app.domain.model.HighwaySegment
 import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.HokkaidoRoadNetwork
+import com.aidomari.app.domain.model.RoadsideLandmark
 import com.aidomari.app.domain.model.SugorokuNode
 import com.aidomari.app.domain.model.SugorokuNodeType
+import com.aidomari.app.domain.model.TravelerCompanion
 import com.aidomari.app.domain.util.SugorokuWalkingCalculator
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,12 +135,38 @@ fun SugorokuMapContent(
     onAdvanceToNextAnchor: () -> Unit = {},
     onResetProgress: () -> Unit = {},
     onSetSpeedMultiplier: (Float) -> Unit = {},
+    theme: SugorokuMapTheme = SugorokuMapTheme.Default,
     modifier: Modifier = Modifier,
 ) {
     val allNodes = HokkaidoAct1Route.nodes
     val tileCentersDp = HokkaidoBoardTrack.tileCenters
     val density = LocalDensity.current.density
     val context = LocalContext.current
+
+    // Lazy LruCache bitmap loader for roadside landmarks so off-screen assets never decode on startup
+    val companionBitmap = remember(uiState.companion.drawableResId) {
+        BitmapFactory.decodeResource(context.resources, uiState.companion.drawableResId)?.asImageBitmap()
+    }
+    val landmarkBitmapCache = remember(context) {
+        object : LruCache<Int, ImageBitmap>(64) {}
+    }
+    val getLandmarkBitmap: (Int) -> ImageBitmap? = remember(context, landmarkBitmapCache) {
+        { resId ->
+            landmarkBitmapCache.get(resId)
+                ?: BitmapFactory.decodeResource(context.resources, resId)
+                    ?.asImageBitmap()
+                    ?.also { landmarkBitmapCache.put(resId, it) }
+        }
+    }
+    val umigarasuFrames = remember(context) {
+        listOf(
+            R.drawable.sky_umigarasu_f1,
+            R.drawable.sky_umigarasu_f2,
+            R.drawable.sky_umigarasu_f3,
+        ).mapNotNull { resId ->
+            BitmapFactory.decodeResource(context.resources, resId)?.asImageBitmap()
+        }
+    }
 
     // Pre-parse official GSI Hokkaido coastline paths
     val mainlandPath = remember { PathParser().parsePathString(HokkaidoSvgPaths.MAINLAND_D).toPath() }
@@ -141,22 +184,82 @@ fun SugorokuMapContent(
         }
     }
 
-    // Pre-load 34,000+ real GIS high-density highway network paths (built once in memory)
+    // Pre-build spatially indexed road paths + pre-merged wide/mini-map SVG paths once
     val highDensityRoadSegments = remember(context) { HokkaidoRoadNetwork.getHighDensitySegments(context) }
     val worldScaleFactor = HokkaidoBoardTrack.WORLD_SCALE * density
-    val cachedHighwayPaths = remember(highDensityRoadSegments, worldScaleFactor) {
-        highDensityRoadSegments.map { segment ->
-            val p = Path()
-            if (segment.waypoints.isNotEmpty()) {
-                p.moveTo(segment.waypoints[0].x * worldScaleFactor, segment.waypoints[0].y * worldScaleFactor)
-                for (i in 1 until segment.waypoints.size) {
-                    val pt = segment.waypoints[i]
-                    p.lineTo(pt.x * worldScaleFactor, pt.y * worldScaleFactor)
-                }
-            }
-            segment to p
+    val roadPathCache = remember(highDensityRoadSegments, worldScaleFactor) {
+        val grouped = HashMap<HighwayCategory, MutableList<CachedHighwayPath>>(4)
+        val mergedWide = HashMap<HighwayCategory, Path>(4)
+        for (cat in HighwayCategory.values()) {
+            grouped[cat] = ArrayList()
+            mergedWide[cat] = Path()
         }
+        for (segment in highDensityRoadSegments) {
+            val pts = segment.waypoints
+            if (pts.isEmpty()) continue
+            val segPath = Path()
+            val merged = mergedWide.getValue(segment.category)
+            var minX = Float.POSITIVE_INFINITY
+            var minY = Float.POSITIVE_INFINITY
+            var maxX = Float.NEGATIVE_INFINITY
+            var maxY = Float.NEGATIVE_INFINITY
+            val firstX = pts[0].x * worldScaleFactor
+            val firstY = pts[0].y * worldScaleFactor
+            segPath.moveTo(firstX, firstY)
+            merged.moveTo(firstX, firstY)
+            minX = minOf(minX, firstX)
+            minY = minOf(minY, firstY)
+            maxX = maxOf(maxX, firstX)
+            maxY = maxOf(maxY, firstY)
+            for (i in 1 until pts.size) {
+                val px = pts[i].x * worldScaleFactor
+                val py = pts[i].y * worldScaleFactor
+                segPath.lineTo(px, py)
+                merged.lineTo(px, py)
+                if (px < minX) minX = px
+                if (py < minY) minY = py
+                if (px > maxX) maxX = px
+                if (py > maxY) maxY = py
+            }
+            grouped.getValue(segment.category).add(
+                CachedHighwayPath(
+                    category = segment.category,
+                    path = segPath,
+                    minX = minX,
+                    minY = minY,
+                    maxX = maxX,
+                    maxY = maxY,
+                ),
+            )
+        }
+        Pair(grouped, mergedWide)
     }
+    val groupedHighwayPaths = roadPathCache.first
+    val mergedWideHighwayPaths = roadPathCache.second
+
+    val miniMapRoadPaths = remember(highDensityRoadSegments) {
+        val nationalPath = Path()
+        val scenicPath = Path()
+        for (segment in highDensityRoadSegments) {
+            val target = when (segment.category) {
+                HighwayCategory.NATIONAL_HIGHWAY -> nationalPath
+                HighwayCategory.SCENIC_ROAD -> scenicPath
+                else -> continue
+            }
+            val pts = segment.waypoints
+            if (pts.isEmpty()) continue
+            target.moveTo(pts[0].x, pts[0].y)
+            for (i in 1 until pts.size) {
+                target.lineTo(pts[i].x, pts[i].y)
+            }
+        }
+        nationalPath to scenicPath
+    }
+
+    val renderCache = remember(worldScaleFactor, density) {
+        SugorokuRenderCache(worldScaleFactor = worldScaleFactor, density = density)
+    }
+    val landmarkScratchPath = remember { Path() }
 
     // Unified zoom scale: applied uniformly to entire canvas via withTransform
     var zoomScale by remember { mutableFloatStateOf(1.0f) }
@@ -202,7 +305,7 @@ fun SugorokuMapContent(
                                 modifier = Modifier.testTag("DebugSpeedMultiplierButton"),
                             ) {
                                 Text(
-                                    text = "⚡${uiState.speedMultiplier.toInt()}x",
+                                    text = "${uiState.speedMultiplier.toInt()}倍速",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                 )
@@ -239,7 +342,7 @@ fun SugorokuMapContent(
                             modifier = Modifier.testTag("DebugNextAnchorButton"),
                         ) {
                             Text(
-                                text = "📍次",
+                                text = "次へ",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -250,8 +353,9 @@ fun SugorokuMapContent(
                             modifier = Modifier.testTag("DebugResetButton"),
                         ) {
                             Text(
-                                text = "🔄",
-                                fontSize = 12.sp,
+                                text = "初期化",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
                             )
                         }
 
@@ -260,18 +364,13 @@ fun SugorokuMapContent(
                             modifier = Modifier.testTag("DebugScrollLockButton"),
                         ) {
                             Text(
-                                text = if (isDebugScrollUnlocked) "🔓全域" else "🔒制限",
+                                text = if (isDebugScrollUnlocked) "全域" else "制限",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isDebugScrollUnlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                             )
                         }
                     }
-                    Text(
-                        text = "🗾",
-                        fontSize = 22.sp,
-                        modifier = Modifier.padding(end = 12.dp),
-                    )
                 },
             )
         },
@@ -280,7 +379,7 @@ fun SugorokuMapContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFF81D4FA)), // Calm blue ocean as base backdrop
+                .background(theme.oceanColor), // Calm blue ocean as base backdrop
         ) {
             val containerWidth = constraints.maxWidth.toFloat()
             val containerHeight = constraints.maxHeight.toFloat()
@@ -360,17 +459,28 @@ fun SugorokuMapContent(
                 panOffset = clampPan(targetPan, newScale)
             }
 
+            var birdPatrolCenter by remember { mutableStateOf(Offset.Unspecified) }
+            var birdPhaseOffset by remember { mutableFloatStateOf(0f) }
+            var birdEnterFromLeft by remember { mutableStateOf(true) }
+
             // Centering on initial load
             LaunchedEffect(currentStep, containerWidth, containerHeight) {
                 if (!hasCenteredInitially && containerWidth > 0 && containerHeight > 0) {
                     centerOnPlayer()
+                    val centeredWorldX = (-panOffset.x + containerWidth / 2f) / zoomScale
+                    val centeredWorldY = (-panOffset.y + containerHeight / 2f) / zoomScale
+                    birdPatrolCenter = Offset(
+                        x = centeredWorldX - 10f * density,
+                        y = centeredWorldY - 95f * density,
+                    )
+                    birdPhaseOffset = 0f
                     hasCenteredInitially = true
                 }
             }
 
-            // Floating breathing animation for player piece
+            // Floating breathing animation & 12s cycle read ONLY inside draw scopes (zero 60fps recomposition!)
             val infiniteTransition = rememberInfiniteTransition(label = "player_piece_anim")
-            val playerFloatY by infiniteTransition.animateFloat(
+            val playerFloatYState = infiniteTransition.animateFloat(
                 initialValue = -3f,
                 targetValue = 3f,
                 animationSpec = infiniteRepeatable(
@@ -379,9 +489,105 @@ fun SugorokuMapContent(
                 ),
                 label = "player_float_y",
             )
+            val animPhaseState = infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 12000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+                label = "living_map_phase",
+            )
 
-            // 2D Sugoroku Board Canvas
-            Canvas(
+            val coroutineScope = rememberCoroutineScope()
+            var tappedLandmark by remember { mutableStateOf<RoadsideLandmark?>(null) }
+            var tapSequence by remember { mutableIntStateOf(0) }
+            val tapPopAnim = remember { Animatable(0f) }
+
+            fun triggerLandmarkTap(landmark: RoadsideLandmark) {
+                tappedLandmark = landmark
+                val currentSeq = ++tapSequence
+                coroutineScope.launch {
+                    tapPopAnim.snapTo(0f)
+                    tapPopAnim.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 480),
+                    )
+                    tapPopAnim.snapTo(0f)
+                    delay(1800)
+                    if (tapSequence == currentSeq) {
+                        tappedLandmark = null
+                    }
+                }
+            }
+
+            val visibleTrackStep = if (isDebugScrollUnlocked) {
+                allNodes.lastIndex
+            } else {
+                (currentStep + 40).coerceAtMost(allNodes.lastIndex)
+            }
+
+            // Viewport in world coordinates for Frustum Culling & world-space Umigarasu patrol
+            val viewLeft = -panOffset.x / zoomScale
+            val viewTop = -panOffset.y / zoomScale
+            val viewRight = (containerWidth - panOffset.x) / zoomScale
+            val viewBottom = (containerHeight - panOffset.y) / zoomScale
+            val viewportWorld = Rect(viewLeft, viewTop, viewRight, viewBottom)
+
+            val activeBirdPatrolCenter = if (birdPatrolCenter == Offset.Unspecified) {
+                Offset(
+                    x = viewportWorld.center.x - 10f * density,
+                    y = viewportWorld.center.y - 95f * density,
+                )
+            } else {
+                birdPatrolCenter
+            }
+
+            LaunchedEffect(viewportWorld, hasCenteredInitially, containerWidth, containerHeight) {
+                if (hasCenteredInitially && containerWidth > 0f && containerHeight > 0f) {
+                    // Debounce while scrolling/zooming so an Umigarasu never materializes mid-screen
+                    delay(900L)
+                    val zoomComp = if (zoomScale < 1.0f) {
+                        zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
+                    } else {
+                        1.0f
+                    }
+                    val offscreenPad = 210f * density * zoomComp
+                    val effectivePhase = (animPhaseState.value + birdPhaseOffset).mod(1f)
+                    val curBird = computeWorldUmigarasu(effectivePhase)
+                    val isCenterOffscreen = birdPatrolCenter == Offset.Unspecified ||
+                        birdPatrolCenter.x < viewportWorld.left - offscreenPad ||
+                        birdPatrolCenter.x > viewportWorld.right + offscreenPad ||
+                        birdPatrolCenter.y < viewportWorld.top - offscreenPad ||
+                        birdPatrolCenter.y > viewportWorld.bottom + offscreenPad
+                    val isBirdOffscreen = if (birdPatrolCenter == Offset.Unspecified) {
+                        true
+                    } else {
+                        val bx = birdPatrolCenter.x + curBird.offsetXDp * density
+                        val by = birdPatrolCenter.y + curBird.offsetYDp * density
+                        bx < viewportWorld.left - offscreenPad * 0.7f ||
+                            bx > viewportWorld.right + offscreenPad * 0.7f ||
+                            by < viewportWorld.top - offscreenPad * 0.7f ||
+                            by > viewportWorld.bottom + offscreenPad * 0.7f
+                    }
+                    if (isCenterOffscreen && isBirdOffscreen) {
+                        val placement = computeEdgeEntryPatrolCenter(
+                            viewportWorld = viewportWorld,
+                            currentPhase = animPhaseState.value,
+                            density = density,
+                            zoomScale = zoomScale,
+                            enterFromLeft = birdEnterFromLeft,
+                        )
+                        birdPatrolCenter = placement.patrolCenterWorld
+                        birdPhaseOffset = placement.phaseOffset
+                        birdEnterFromLeft = !birdEnterFromLeft
+                    }
+                }
+            }
+
+            // Performance-isolated layered Canvas stack:
+            // static terrain/roads & tiles never redraw during 60fps landmark/bird animations.
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag("SugorokuCanvas")
@@ -390,7 +596,14 @@ fun SugorokuMapContent(
                             zoomAt(centroid, zoom, pan)
                         }
                     }
-                    .pointerInput(tileCentersDp, zoomScale, panOffset, currentStep, isDebugScrollUnlocked) {
+                    .pointerInput(
+                        tileCentersDp,
+                        zoomScale,
+                        panOffset,
+                        currentStep,
+                        isDebugScrollUnlocked,
+                        uiState.roadsideLandmarks,
+                    ) {
                         detectTapGestures { tapOffset ->
                             val worldX = (tapOffset.x - panOffset.x) / zoomScale
                             val worldY = (tapOffset.y - panOffset.y) / zoomScale
@@ -401,6 +614,7 @@ fun SugorokuMapContent(
                             } else {
                                 (currentStep + 40).coerceAtMost(allNodes.lastIndex)
                             }
+                            var hitTile = false
                             for (i in 0..maxVisibleTrackStep) {
                                 val ptDp = tileCentersDp[i]
                                 val sx = ptDp.x * density
@@ -409,111 +623,189 @@ fun SugorokuMapContent(
                                 val dy = worldY - sy
                                 if (dx * dx + dy * dy <= threshold * threshold) {
                                     onSelectNode(allNodes[i])
+                                    hitTile = true
                                     break
+                                }
+                            }
+
+                            if (!hitTile && zoomScale >= 0.06f) {
+                                val zoomComp = if (zoomScale < 1.0f) {
+                                    zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
+                                } else {
+                                    1.0f
+                                }
+                                for (landmark in uiState.roadsideLandmarks.sortedByDescending { it.y }) {
+                                    val cx = landmark.x * worldScaleFactor
+                                    val cy = landmark.y * worldScaleFactor
+                                    val halfW = landmark.type.baseDisplayWidthDp.dp.toPx() *
+                                        landmark.scale * zoomComp * 0.5f
+                                    val halfH = landmark.type.baseDisplayHeightDp.dp.toPx() *
+                                        landmark.scale * zoomComp * 0.5f
+                                    if (worldX in (cx - halfW)..(cx + halfW) &&
+                                        worldY in (cy - halfH)..(cy + halfH)
+                                    ) {
+                                        triggerLandmarkTap(landmark)
+                                        break
+                                    }
                                 }
                             }
                         }
                     },
             ) {
-                val visibleTrackStep = if (isDebugScrollUnlocked) {
-                    allNodes.lastIndex
-                } else {
-                    (currentStep + 40).coerceAtMost(allNodes.lastIndex)
+                // Layer 1 (Static Geography + Culled GIS Roads): only invalidates on pan/zoom
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    withTransform({
+                        translate(panOffset.x, panOffset.y)
+                        scale(zoomScale, zoomScale, Offset.Zero)
+                    }) {
+                        drawHokkaidoRealLandscape(
+                            paths = hokkaidoPaths,
+                            lakesPath = lakesPath,
+                            renderCache = renderCache,
+                            zoomScale = zoomScale,
+                            theme = theme,
+                        )
+                        drawHokkaidoRoadNetwork(
+                            groupedHighwayPaths = groupedHighwayPaths,
+                            mergedWideHighwayPaths = mergedWideHighwayPaths,
+                            viewportWorld = viewportWorld,
+                            renderCache = renderCache,
+                            zoomScale = zoomScale,
+                            theme = theme,
+                        )
+                    }
                 }
 
-                // Viewport in world coordinates for Frustum Culling
-                val viewLeft = -panOffset.x / zoomScale
-                val viewTop = -panOffset.y / zoomScale
-                val viewRight = (containerWidth - panOffset.x) / zoomScale
-                val viewBottom = (containerHeight - panOffset.y) / zoomScale
-                val viewportWorld = Rect(viewLeft, viewTop, viewRight, viewBottom)
-
-                // Unified transform: scale and translate applied equally to landscape and tiles
-                withTransform({
-                    translate(panOffset.x, panOffset.y)
-                    scale(zoomScale, zoomScale, Offset.Zero)
-                }) {
-                    // 1. Natural real Hokkaido geography traced directly from official GSI silhouette:
-                    // Land interior is grass green, outside is calm blue sea, with realistic beach & wave coastline.
-                    // Inland major lakes (Saroma, Toya, Shikotsu, Kussharo, etc.) are carved out with blue lake water and sandy shores.
-                    drawHokkaidoRealLandscape(
-                        paths = hokkaidoPaths,
-                        lakesPath = lakesPath,
-                        worldScale = HokkaidoBoardTrack.WORLD_SCALE,
-                        density = density,
-                    )
-
-                    // 2. Real Highway Network: actual national and prefectural roads drawn directly onto land
-                    drawHokkaidoRoadNetwork(
-                        highwayPaths = cachedHighwayPaths,
-                        zoomScale = zoomScale,
-                    )
-
-                    // 3. Equidistant Square Sugoroku Tiles
-                    drawSugorokuTiles(
-                        nodes = allNodes,
-                        tileCentersDp = tileCentersDp,
-                        currentStep = currentStep,
-                        visibleStepCount = visibleTrackStep + 1,
-                        density = density,
-                        zoomScale = zoomScale,
-                        viewportWorld = viewportWorld,
-                    )
+                // Layer 2 (Animated Roadside Landmarks & Ambient Effects): reads animPhase ONLY at draw time
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("SugorokuLandmarkAnimCanvas"),
+                ) {
+                    withTransform({
+                        translate(panOffset.x, panOffset.y)
+                        scale(zoomScale, zoomScale, Offset.Zero)
+                    }) {
+                        drawAnimatedRoadsideLandmarks(
+                            landmarks = uiState.roadsideLandmarks,
+                            getBitmap = getLandmarkBitmap,
+                            ropewayGondolaResId = R.drawable.landmark_ropeway_gondola,
+                            worldScaleFactor = worldScaleFactor,
+                            viewportWorld = viewportWorld,
+                            zoomScale = zoomScale,
+                            animPhase = animPhaseState.value,
+                            tappedLandmarkId = tappedLandmark?.id,
+                            tapPopProgress = tapPopAnim.value,
+                            scratchPath = landmarkScratchPath,
+                        )
+                    }
                 }
-            }
 
-            // Animated Player Marker Overlay Canvas
-            // Isolated from the heavy map Canvas so the 1-second breathing animation
-            // invalidates ONLY this lightweight overlay, maintaining 60-120 FPS smoothly.
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("SugorokuPlayerOverlayCanvas"),
-            ) {
-                withTransform({
-                    translate(panOffset.x, panOffset.y)
-                    scale(zoomScale, zoomScale, Offset.Zero)
-                }) {
-                    val playerWorldOffset = uiState.playerWorldOffset
-                    val curX = playerWorldOffset.x * worldScaleFactor
-                    val curY = playerWorldOffset.y * worldScaleFactor
+                // Layer 3 (Sugoroku Square Tiles): static above landmarks, invalidates on pan/zoom/step
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    withTransform({
+                        translate(panOffset.x, panOffset.y)
+                        scale(zoomScale, zoomScale, Offset.Zero)
+                    }) {
+                        drawSugorokuTiles(
+                            nodes = allNodes,
+                            tileCentersDp = tileCentersDp,
+                            currentStep = currentStep,
+                            visibleStepCount = visibleTrackStep + 1,
+                            density = density,
+                            zoomScale = zoomScale,
+                            viewportWorld = viewportWorld,
+                            renderCache = renderCache,
+                        )
+                    }
+                }
 
-                    if (zoomScale < 0.05f) {
-                        // Wide view: draw a single prominent player position beacon at current step
-                        val beaconRadius = 7.dp.toPx() / zoomScale
-                        val ringWidth = 2.dp.toPx() / zoomScale
-                        val haloRadius = 12.dp.toPx() / zoomScale
+                // Layer 4 (Animated Player Marker, Speech Bubbles & World-Space 1.0x Umigarasu)
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("SugorokuPlayerOverlayCanvas"),
+                ) {
+                    val playerFloatY = playerFloatYState.value
+                    val animPhase = animPhaseState.value
+                    withTransform({
+                        translate(panOffset.x, panOffset.y)
+                        scale(zoomScale, zoomScale, Offset.Zero)
+                    }) {
+                        val playerWorldOffset = uiState.playerWorldOffset
+                        val curX = playerWorldOffset.x * worldScaleFactor
+                        val curY = playerWorldOffset.y * worldScaleFactor
 
-                        // Outer soft halo
-                        drawCircle(
-                            color = Color(0xFFFF9800).copy(alpha = 0.35f),
-                            radius = haloRadius,
-                            center = Offset(curX, curY),
-                        )
-                        // Outer white ring
-                        drawCircle(
-                            color = Color.White,
-                            radius = beaconRadius + ringWidth,
-                            center = Offset(curX, curY),
-                        )
-                        // Primary player marker (vibrant warm orange matching traveler theme)
-                        drawCircle(
-                            color = Color(0xFFE65100),
-                            radius = beaconRadius,
-                            center = Offset(curX, curY),
-                        )
-                        // Center crisp ivory core
-                        drawCircle(
-                            color = Color(0xFFFFF3E0),
-                            radius = beaconRadius * 0.45f,
-                            center = Offset(curX, curY),
-                        )
-                    } else {
-                        // Detailed view: Cute Traveler Avatar Piece
-                        drawTravelerPiece(
-                            x = curX,
-                            y = curY + 10.dp.toPx() + playerFloatY * 1.5f,
-                            shadowY = curY + 24.dp.toPx(),
+                        if (zoomScale < 0.05f) {
+                            val beaconRadius = 7.dp.toPx() / zoomScale
+                            val ringWidth = 2.dp.toPx() / zoomScale
+                            val haloRadius = 12.dp.toPx() / zoomScale
+
+                            drawCircle(
+                                color = Color(0xFFFF9800).copy(alpha = 0.35f),
+                                radius = haloRadius,
+                                center = Offset(curX, curY),
+                            )
+                            drawCircle(
+                                color = Color.White,
+                                radius = beaconRadius + ringWidth,
+                                center = Offset(curX, curY),
+                            )
+                            drawCircle(
+                                color = Color(0xFFE65100),
+                                radius = beaconRadius,
+                                center = Offset(curX, curY),
+                            )
+                            drawCircle(
+                                color = Color(0xFFFFF3E0),
+                                radius = beaconRadius * 0.45f,
+                                center = Offset(curX, curY),
+                            )
+                        } else {
+                            drawCompanionPiece(
+                                x = curX,
+                                y = curY + 12.dp.toPx() + playerFloatY * 1.5f,
+                                shadowY = curY + 14.dp.toPx(),
+                                companionBitmap = companionBitmap,
+                                companion = uiState.companion,
+                            )
+
+                            uiState.nearbyLandmark?.let { landmark ->
+                                drawSpeechBubble(
+                                    text = landmark.reactionDialogue,
+                                    x = curX,
+                                    bubbleY = curY - 26.dp.toPx() + playerFloatY * 1.5f,
+                                    renderCache = renderCache,
+                                )
+                            }
+
+                            tappedLandmark?.let { tapped ->
+                                if (tapped.id != uiState.nearbyLandmark?.id) {
+                                    val zoomComp = if (zoomScale < 1.0f) {
+                                        zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
+                                    } else {
+                                        1.0f
+                                    }
+                                    val tappedCx = tapped.x * worldScaleFactor
+                                    val tappedCy = tapped.y * worldScaleFactor
+                                    val halfH = tapped.type.baseDisplayHeightDp.dp.toPx() *
+                                        tapped.scale * zoomComp * 0.5f
+                                    drawSpeechBubble(
+                                        text = tapped.reactionDialogue,
+                                        x = tappedCx,
+                                        bubbleY = tappedCy - halfH * 0.85f,
+                                        renderCache = renderCache,
+                                    )
+                                }
+                            }
+                        }
+
+                        // Single world-space Umigarasu gliding at 1.0x map rate with shadow directly underneath
+                        drawWorldSpaceUmigarasu(
+                            birdFrames = umigarasuFrames,
+                            patrolCenterWorld = activeBirdPatrolCenter,
+                            phase = (animPhase + birdPhaseOffset).mod(1f),
+                            zoomScale = zoomScale,
                         )
                     }
                 }
@@ -541,10 +833,13 @@ fun SugorokuMapContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "📍",
-                                fontSize = 16.sp,
-                                modifier = Modifier.padding(end = 4.dp),
+                            Icon(
+                                imageVector = Icons.Default.MyLocation,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .padding(end = 4.dp),
+                                tint = MaterialTheme.colorScheme.primary,
                             )
                             Text(
                                 text = currentNode.name,
@@ -593,7 +888,8 @@ fun SugorokuMapContent(
                 totalSteps = allNodes.size,
                 hokkaidoPaths = hokkaidoPaths,
                 lakesPath = lakesPath,
-                highwayPaths = cachedHighwayPaths,
+                miniMapNationalRoadPath = miniMapRoadPaths.first,
+                miniMapScenicRoadPath = miniMapRoadPaths.second,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(start = 16.dp, bottom = 20.dp),
@@ -666,18 +962,23 @@ fun SugorokuMapContent(
             onDismissRequest = onDismissDialog,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = when {
-                            node.type == SugorokuNodeType.START_HAKODATE -> "🎌 "
-                            node.type == SugorokuNodeType.GOAL_AIDOMARI -> "🏁 "
-                            node.isAnchor -> "⚓ [アンカー] "
-                            node.type == SugorokuNodeType.SCENIC_SPOT -> "✨ "
-                            node.type == SugorokuNodeType.TOWN_CENTER -> "🏘️ "
-                            node.type == SugorokuNodeType.REST_AREA -> "☕ "
-                            node.type == SugorokuNodeType.NORMAL -> "👣 "
-                            else -> "・ "
-                        },
-                    )
+                    val badge = when {
+                        node.type == SugorokuNodeType.START_HAKODATE -> "[出発] "
+                        node.type == SugorokuNodeType.GOAL_AIDOMARI -> "[終着] "
+                        node.isAnchor -> "[アンカー] "
+                        node.type == SugorokuNodeType.SCENIC_SPOT -> "[名所] "
+                        node.type == SugorokuNodeType.TOWN_CENTER -> "[街] "
+                        node.type == SugorokuNodeType.REST_AREA -> "[休憩] "
+                        else -> ""
+                    }
+                    if (badge.isNotEmpty()) {
+                        Text(
+                            text = badge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontSize = 13.sp,
+                        )
+                    }
                     Text(
                         text = node.name,
                         fontWeight = FontWeight.Bold,
@@ -697,7 +998,7 @@ fun SugorokuMapContent(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = if (isReached) "✅ 到達済み（足跡が刻まれています）" else "🌱 未踏の地（これから進む道）",
+                        text = if (isReached) "到達済み（足跡が刻まれています）" else "未踏の地（これから進む道）",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isReached) Color(0xFF2E7D32) else Color(0xFF757575),
                     )
@@ -717,6 +1018,105 @@ fun SugorokuMapContent(
     }
 }
 
+internal data class CachedHighwayPath(
+    val category: HighwayCategory,
+    val path: Path,
+    val minX: Float,
+    val minY: Float,
+    val maxX: Float,
+    val maxY: Float,
+)
+
+internal fun CachedHighwayPath.intersects(rect: Rect): Boolean =
+    maxX >= rect.left && minX <= rect.right && maxY >= rect.top && minY <= rect.bottom
+
+private class SugorokuRenderCache(
+    val worldScaleFactor: Float,
+    val density: Float,
+) {
+    private val cornerRadiusWorld = 3.5f * density / worldScaleFactor
+    private val coastCornerEffect = PathEffect.cornerPathEffect(cornerRadiusWorld)
+
+    val landBeachStroke = Stroke(width = 3.5f * density / worldScaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect)
+    val landWaveStroke = Stroke(width = 1.5f * density / worldScaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect)
+    val landBorderStroke = Stroke(width = 0.8f * density / worldScaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect)
+
+    val lakeBeachStroke = Stroke(width = 2.0f * density / worldScaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect)
+    val lakeWaveStroke = Stroke(width = 1.0f * density / worldScaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect)
+    val lakeBorderStroke = Stroke(width = 0.6f * density / worldScaleFactor, join = StrokeJoin.Round, pathEffect = coastCornerEffect)
+
+    val ridgePath = Path()
+
+    val roadBorderStrokes: Map<HighwayCategory, Stroke> = mapOf(
+        HighwayCategory.TRAVEL_ROUTE to Stroke(width = 18f * density, cap = StrokeCap.Round, join = StrokeJoin.Round),
+        HighwayCategory.NATIONAL_HIGHWAY to Stroke(width = 5.5f * density, cap = StrokeCap.Round, join = StrokeJoin.Round),
+        HighwayCategory.SCENIC_ROAD to Stroke(width = 4.8f * density, cap = StrokeCap.Round, join = StrokeJoin.Round),
+        HighwayCategory.PREFECTURAL_ROAD to Stroke(width = 4.0f * density, cap = StrokeCap.Round, join = StrokeJoin.Round),
+    )
+    val roadSurfaceStrokes: Map<HighwayCategory, Stroke> = mapOf(
+        HighwayCategory.TRAVEL_ROUTE to Stroke(width = 14f * density, cap = StrokeCap.Round, join = StrokeJoin.Round),
+        HighwayCategory.NATIONAL_HIGHWAY to Stroke(width = 4.0f * density, cap = StrokeCap.Round, join = StrokeJoin.Round),
+        HighwayCategory.SCENIC_ROAD to Stroke(width = 3.3f * density, cap = StrokeCap.Round, join = StrokeJoin.Round),
+        HighwayCategory.PREFECTURAL_ROAD to Stroke(width = 2.7f * density, cap = StrokeCap.Round, join = StrokeJoin.Round),
+    )
+    val highwayDashStroke = Stroke(
+        width = 0.6f * density,
+        cap = StrokeCap.Round,
+        join = StrokeJoin.Round,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f * density, 4f * density)),
+    )
+    val travelDashStroke = Stroke(
+        width = 2.0f * density,
+        cap = StrokeCap.Round,
+        join = StrokeJoin.Round,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f * density, 8f * density)),
+    )
+
+    val labelPaint = Paint().apply {
+        color = android.graphics.Color.rgb(33, 33, 33)
+        textSize = 10f * density
+        isAntiAlias = true
+        typeface = Typeface.DEFAULT_BOLD
+        textAlign = Paint.Align.CENTER
+    }
+    val stepNumberPaint = Paint().apply {
+        color = android.graphics.Color.rgb(120, 144, 156)
+        textSize = 8.5f * density
+        isAntiAlias = true
+        typeface = Typeface.DEFAULT_BOLD
+        textAlign = Paint.Align.CENTER
+    }
+    val badgePaint = Paint().apply {
+        color = android.graphics.Color.rgb(33, 33, 33)
+        textSize = 10f * density
+        isAntiAlias = true
+        typeface = Typeface.DEFAULT_BOLD
+        textAlign = Paint.Align.CENTER
+    }
+
+    val bubbleTextPaint = Paint().apply {
+        color = android.graphics.Color.rgb(33, 33, 33)
+        textSize = 9.5f * density
+        isAntiAlias = true
+        typeface = Typeface.DEFAULT_BOLD
+        textAlign = Paint.Align.CENTER
+    }
+    val bubbleFillPaint = Paint().apply {
+        color = android.graphics.Color.rgb(255, 255, 255)
+        isAntiAlias = true
+        style = Paint.Style.FILL
+    }
+    val bubbleBorderPaint = Paint().apply {
+        color = android.graphics.Color.rgb(255, 183, 77)
+        isAntiAlias = true
+        style = Paint.Style.STROKE
+        strokeWidth = 1.2f * density
+    }
+    val bubbleTextBounds = android.graphics.Rect()
+    val bubbleRectF = android.graphics.RectF()
+    val bubbleTailPath = android.graphics.Path()
+}
+
 /**
  * Draws real Hokkaido landmass and inland lakes traced directly from official GSI and MLIT data.
  * Outer area remains ocean backdrop; inner paths become lush land with sand beach & coastal surf.
@@ -725,52 +1125,129 @@ fun SugorokuMapContent(
 private fun DrawScope.drawHokkaidoRealLandscape(
     paths: List<Path>,
     lakesPath: Path,
-    worldScale: Float,
-    density: Float,
+    renderCache: SugorokuRenderCache,
+    zoomScale: Float,
+    theme: SugorokuMapTheme = SugorokuMapTheme.Default,
 ) {
-    val landColor = Color(0xFFA5D6A7) // Natural Hokkaido grass green
-    val beachColor = Color(0xFFFFE082) // Sandy beach
-    val waveColor = Color(0xFFE1F5FE) // Shoreline surf
-    val borderColor = Color(0xFF66BB6A) // Coastline contour
-    val lakeWaterColor = Color(0xFF81D4FA) // Calm blue ocean & lake water
-
-    val scaleFactor = worldScale * density
+    val scaleFactor = renderCache.worldScaleFactor
     scale(scaleFactor, scaleFactor, pivot = Offset.Zero) {
-        // 1. Hokkaido landmasses
         paths.forEach { path ->
-            // 1. Solid land polygon
-            drawPath(path = path, color = landColor)
-            // 2. Sand beach perimeter
-            drawPath(path = path, color = beachColor, style = Stroke(width = 3.5.dp.toPx() / scaleFactor))
-            // 3. Shoreline ocean wave foam
-            drawPath(path = path, color = waveColor, style = Stroke(width = 1.5.dp.toPx() / scaleFactor))
-            // 4. Clean coastline border
-            drawPath(path = path, color = borderColor, style = Stroke(width = 0.8.dp.toPx() / scaleFactor))
+            drawPath(path = path, color = theme.landColor)
         }
 
-        // 2. Major inland lakes
-        // Solid lake water polygon (carving out land)
-        drawPath(path = lakesPath, color = lakeWaterColor)
-        // Sand beach perimeter around lake shorelines
-        drawPath(path = lakesPath, color = beachColor, style = Stroke(width = 2.0.dp.toPx() / scaleFactor))
-        // Shoreline wave foam along lake shores
-        drawPath(path = lakesPath, color = waveColor, style = Stroke(width = 1.0.dp.toPx() / scaleFactor))
-        // Lake perimeter contour border
-        drawPath(path = lakesPath, color = borderColor, style = Stroke(width = 0.6.dp.toPx() / scaleFactor))
+        paths.firstOrNull()?.let { mainland ->
+            clipPath(mainland) {
+                drawRegionalTerrainWashes(renderCache = renderCache, zoomScale = zoomScale)
+            }
+        }
+
+        paths.forEach { path ->
+            drawPath(path = path, color = theme.beachColor, style = renderCache.landBeachStroke)
+            drawPath(path = path, color = theme.waveColor, style = renderCache.landWaveStroke)
+            drawPath(path = path, color = theme.borderColor, style = renderCache.landBorderStroke)
+        }
+
+        drawPath(path = lakesPath, color = theme.lakeWaterColor)
+        drawPath(path = lakesPath, color = theme.beachColor, style = renderCache.lakeBeachStroke)
+        drawPath(path = lakesPath, color = theme.waveColor, style = renderCache.lakeWaveStroke)
+        drawPath(path = lakesPath, color = theme.borderColor, style = renderCache.lakeBorderStroke)
     }
 }
 
 /**
- * Draws the real highway network across Hokkaido directly on the landmass.
- * Uses two-pass layered rendering (all roadbeds first, then all asphalt surfaces)
- * so that intersections, T-junctions, and connecting branches merge seamlessly
- * without dark borders cutting across connecting road surfaces.
+ * Paints soft watercolor woodland and pastoral washes plus hand-drawn brush-pen mountain ridges
+ * across Hokkaido's real geographic zones so zoomed-out maps keep rich picture-book texture.
  */
-private fun DrawScope.drawHokkaidoRoadNetwork(
-    highwayPaths: List<Pair<HighwaySegment, Path>>,
+private fun DrawScope.drawRegionalTerrainWashes(
+    renderCache: SugorokuRenderCache,
     zoomScale: Float,
 ) {
-    if (highwayPaths.isEmpty()) return
+    val scaleFactor = renderCache.worldScaleFactor
+    val woodlandWash = Color(0xFFC4ECA8).copy(alpha = 0.34f)
+    val pastureWash = Color(0xFFDEF6C8).copy(alpha = 0.34f)
+    val ridgeInk = Color(0xFF5FA374).copy(alpha = 0.25f)
+
+    // Woodland & mountain zones (cx, cy, rx, ry in Hokkaido SVG space 0..612 x 0..387)
+    val woodlandZones = listOf(
+        // Local corridor hills & parks
+        floatArrayOf(184.0f, 345.3f, 1.3f, 1.4f), // Mt. Hakodate
+        floatArrayOf(187.8f, 340.8f, 1.2f, 1.1f), // Goryokaku Park
+        floatArrayOf(180.5f, 323.5f, 6.5f, 5.5f), // Onuma / Komagatake woods
+        // Broad regional mountain & forest belts
+        floatArrayOf(155.0f, 322.0f, 17.0f, 24.0f), // Oshima Peninsula interior hills
+        floatArrayOf(161.0f, 266.0f, 12.0f, 14.0f), // Kuromatsunai beech forest
+        floatArrayOf(172.0f, 219.0f, 14.0f, 12.0f), // Shakotan Mountains
+        floatArrayOf(190.0f, 250.0f, 20.0f, 17.0f), // Niseko / Mt. Yotei range
+        floatArrayOf(212.0f, 240.0f, 16.0f, 14.0f), // Sapporo / Shikotsu massif
+        floatArrayOf(316.0f, 178.0f, 36.0f, 30.0f), // Daisetsuzan central highlands
+        floatArrayOf(318.0f, 266.0f, 20.0f, 38.0f), // Hidaka mountain spine
+        floatArrayOf(302.0f, 94.0f, 26.0f, 32.0f), // Kitami Mountains
+        floatArrayOf(412.0f, 186.0f, 24.0f, 20.0f), // Akan / Mashu highlands
+        floatArrayOf(465.0f, 141.0f, 18.0f, 14.0f), // Shiretoko range
+    )
+    for (z in woodlandZones) {
+        drawOval(
+            color = woodlandWash,
+            topLeft = Offset(z[0] - z[2], z[1] - z[3]),
+            size = Size(z[2] * 2f, z[3] * 2f),
+        )
+    }
+
+    // Pastoral & meadow plains
+    val pastureZones = listOf(
+        floatArrayOf(182.5f, 331.4f, 2.4f, 2.0f), // Nanae Dairy Ranch
+        floatArrayOf(251.0f, 217.0f, 20.0f, 22.0f), // Ishikari Plain
+        floatArrayOf(254.0f, 58.0f, 14.0f, 24.0f), // Teshio / Sarobetsu Plain
+        floatArrayOf(348.0f, 245.0f, 30.0f, 24.0f), // Tokachi Plain
+        floatArrayOf(440.0f, 214.0f, 30.0f, 22.0f), // Konsen Plateau
+    )
+    for (z in pastureZones) {
+        drawOval(
+            color = pastureWash,
+            topLeft = Offset(z[0] - z[2], z[1] - z[3]),
+            size = Size(z[2] * 2f, z[3] * 2f),
+        )
+    }
+
+    // Subtle hand-drawn brush-pen mountain peak arcs on major highlands
+    val ridgeStrokeWidth = (1.6.dp.toPx() / zoomScale.coerceIn(0.05f, 1.2f)) / scaleFactor
+    val ridgeStroke = Stroke(width = ridgeStrokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
+    val ridgePeaks = listOf(
+        floatArrayOf(154f, 324f, 6.0f),
+        floatArrayOf(189f, 251f, 7.0f), // Yotei
+        floatArrayOf(312f, 174f, 10.0f), // Asahidake
+        floatArrayOf(325f, 185f, 8.5f),
+        floatArrayOf(318f, 256f, 8.0f), // Hidaka north
+        floatArrayOf(322f, 276f, 7.5f), // Hidaka south
+        floatArrayOf(301f, 92f, 8.0f), // Kitami
+        floatArrayOf(414f, 185f, 7.5f), // Akan
+        floatArrayOf(464f, 141f, 6.0f), // Rausudake
+    )
+    val ridgePath = renderCache.ridgePath
+    for (pk in ridgePeaks) {
+        val px = pk[0]
+        val py = pk[1]
+        val s = pk[2]
+        ridgePath.reset()
+        ridgePath.moveTo(px - s, py + s * 0.35f)
+        ridgePath.quadraticTo(px, py - s * 0.55f, px + s, py + s * 0.35f)
+        drawPath(path = ridgePath, color = ridgeInk, style = ridgeStroke)
+    }
+}
+
+/**
+ * Draws the real highway network across Hokkaido using pre-merged wide-view paths and
+ * viewport frustum culling for detailed zoom so panning remains fast across all 18,981 segments.
+ */
+private fun DrawScope.drawHokkaidoRoadNetwork(
+    groupedHighwayPaths: Map<HighwayCategory, List<CachedHighwayPath>>,
+    mergedWideHighwayPaths: Map<HighwayCategory, Path>,
+    viewportWorld: Rect,
+    renderCache: SugorokuRenderCache,
+    zoomScale: Float,
+    theme: SugorokuMapTheme = SugorokuMapTheme.Default,
+) {
+    if (groupedHighwayPaths.isEmpty()) return
 
     val hierarchy = listOf(
         HighwayCategory.PREFECTURAL_ROAD,
@@ -780,96 +1257,65 @@ private fun DrawScope.drawHokkaidoRoadNetwork(
     )
 
     if (zoomScale < 0.05f) {
-        // Wide view: draw minor roads first, major highways on top for clean hierarchy
-        // Non-orange roads are scaled down to ~1/3 width to keep the map sleek and highlight the travel route
+        // Wide overview: 4 single merged Path draw calls instead of 18,981 individual paths
         for (targetCat in hierarchy) {
+            val merged = mergedWideHighwayPaths[targetCat] ?: continue
             val strokeWidth = when (targetCat) {
                 HighwayCategory.TRAVEL_ROUTE -> 3.5.dp.toPx() / zoomScale
                 HighwayCategory.NATIONAL_HIGHWAY -> 0.8.dp.toPx() / zoomScale
                 HighwayCategory.SCENIC_ROAD -> 0.7.dp.toPx() / zoomScale
                 HighwayCategory.PREFECTURAL_ROAD -> 0.5.dp.toPx() / zoomScale
             }
-            val roadColor = when (targetCat) {
-                HighwayCategory.TRAVEL_ROUTE -> Color(0xFFFF9800) // Vibrant orange travel route
-                HighwayCategory.NATIONAL_HIGHWAY -> Color(0xFF1565C0) // Crisp blue highway
-                HighwayCategory.SCENIC_ROAD -> Color(0xFF00897B) // Scenic teal
-                HighwayCategory.PREFECTURAL_ROAD -> Color(0xFF546E7A) // Slate grey
-            }
-            val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
-            for ((segment, roadPath) in highwayPaths) {
-                if (segment.category == targetCat) {
-                    drawPath(path = roadPath, color = roadColor, style = stroke)
-                }
-            }
+            drawPath(
+                path = merged,
+                color = theme.roadColor(targetCat),
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
         }
-    } else {
-        // Detailed view: Two-Pass Layered Rendering
-        // PASS 1: Draw all roadbeds/borders into a continuous dark base
-        for (targetCat in hierarchy) {
-            val borderWidth = when (targetCat) {
-                HighwayCategory.TRAVEL_ROUTE -> 18.dp.toPx()
-                HighwayCategory.NATIONAL_HIGHWAY -> 5.5.dp.toPx()
-                HighwayCategory.SCENIC_ROAD -> 4.8.dp.toPx()
-                HighwayCategory.PREFECTURAL_ROAD -> 4.0.dp.toPx()
-            }
-            val borderStroke = Stroke(width = borderWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
-            val borderColor = when (targetCat) {
-                HighwayCategory.TRAVEL_ROUTE -> Color(0xFFE65100) // Deep warm orange border
-                else -> Color(0xFF37474F) // Dark slate roadbed
-            }
-            for ((segment, roadPath) in highwayPaths) {
-                if (segment.category == targetCat) {
-                    drawPath(path = roadPath, color = borderColor, style = borderStroke)
-                }
-            }
-        }
+        return
+    }
 
-        // PASS 2: Draw all asphalt surfaces seamlessly OVER all borders
-        for (targetCat in hierarchy) {
-            val surfaceWidth = when (targetCat) {
-                HighwayCategory.TRAVEL_ROUTE -> 14.dp.toPx()
-                HighwayCategory.NATIONAL_HIGHWAY -> 4.0.dp.toPx()
-                HighwayCategory.SCENIC_ROAD -> 3.3.dp.toPx()
-                HighwayCategory.PREFECTURAL_ROAD -> 2.7.dp.toPx()
-            }
-            val surfaceStroke = Stroke(width = surfaceWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
-            val surfaceColor = when (targetCat) {
-                HighwayCategory.TRAVEL_ROUTE -> Color(0xFFFFF3E0) // Warm ivory travel route
-                else -> Color(0xFFCFD8DC) // Cool grey asphalt
-            }
-            for ((segment, roadPath) in highwayPaths) {
-                if (segment.category == targetCat) {
-                    drawPath(path = roadPath, color = surfaceColor, style = surfaceStroke)
-                }
-            }
-        }
+    val pad = 32.dp.toPx()
+    val culledRect = Rect(
+        left = viewportWorld.left - pad,
+        top = viewportWorld.top - pad,
+        right = viewportWorld.right + pad,
+        bottom = viewportWorld.bottom + pad,
+    )
 
-        // PASS 3: Dashed centerlines for National Highways and Travel Route
-        val dashStroke = Stroke(
-            width = 0.6.dp.toPx(),
-            cap = StrokeCap.Round,
-            join = StrokeJoin.Round,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
-        )
-        val dashColor = Color.White.copy(alpha = 0.85f)
-        for ((segment, roadPath) in highwayPaths) {
-            if (segment.category == HighwayCategory.NATIONAL_HIGHWAY) {
-                drawPath(path = roadPath, color = dashColor, style = dashStroke)
-            }
-        }
+    val visibleByCategory = HashMap<HighwayCategory, List<CachedHighwayPath>>(4)
+    for (targetCat in hierarchy) {
+        val list = groupedHighwayPaths[targetCat].orEmpty()
+        visibleByCategory[targetCat] = list.filter { it.intersects(culledRect) }
+    }
 
-        val travelDashStroke = Stroke(
-            width = 2.0.dp.toPx(),
-            cap = StrokeCap.Round,
-            join = StrokeJoin.Round,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(12.dp.toPx(), 8.dp.toPx())),
-        )
-        val travelDashColor = Color(0xFFFF9800).copy(alpha = 0.90f)
-        for ((segment, roadPath) in highwayPaths) {
-            if (segment.category == HighwayCategory.TRAVEL_ROUTE) {
-                drawPath(path = roadPath, color = travelDashColor, style = travelDashStroke)
-            }
+    // PASS 1: Roadbeds / borders
+    for (targetCat in hierarchy) {
+        val borderStroke = renderCache.roadBorderStrokes.getValue(targetCat)
+        val borderColor = theme.roadBorderColor(targetCat)
+        for (seg in visibleByCategory.getValue(targetCat)) {
+            drawPath(path = seg.path, color = borderColor, style = borderStroke)
         }
+    }
+
+    // PASS 2: Seamless asphalt surfaces over all borders
+    for (targetCat in hierarchy) {
+        val surfaceStroke = renderCache.roadSurfaceStrokes.getValue(targetCat)
+        val surfaceColor = theme.roadBedColor(targetCat)
+        for (seg in visibleByCategory.getValue(targetCat)) {
+            drawPath(path = seg.path, color = surfaceColor, style = surfaceStroke)
+        }
+    }
+
+    // PASS 3: Dashed centerlines for visible National Highways & Travel Route
+    val dashColor = Color.White.copy(alpha = 0.85f)
+    for (seg in visibleByCategory.getValue(HighwayCategory.NATIONAL_HIGHWAY)) {
+        drawPath(path = seg.path, color = dashColor, style = renderCache.highwayDashStroke)
+    }
+
+    val travelDashColor = Color(0xFFFF9800).copy(alpha = 0.90f)
+    for (seg in visibleByCategory.getValue(HighwayCategory.TRAVEL_ROUTE)) {
+        drawPath(path = seg.path, color = travelDashColor, style = renderCache.travelDashStroke)
     }
 }
 
@@ -886,6 +1332,7 @@ private fun DrawScope.drawSugorokuTiles(
     density: Float,
     zoomScale: Float,
     viewportWorld: Rect,
+    renderCache: SugorokuRenderCache,
 ) {
     val count = visibleStepCount.coerceAtMost(tileCentersDp.size)
 
@@ -898,35 +1345,9 @@ private fun DrawScope.drawSugorokuTiles(
     val halfTile = tileSizePx / 2f
     val cornerRadius = CornerRadius(11.dp.toPx(), 11.dp.toPx())
 
-    val labelPaint = Paint().apply {
-        color = android.graphics.Color.rgb(33, 33, 33)
-        textSize = 10.dp.toPx()
-        isAntiAlias = true
-        typeface = Typeface.DEFAULT_BOLD
-        textAlign = Paint.Align.CENTER
-    }
-
-    val stepNumberPaint = Paint().apply {
-        color = android.graphics.Color.rgb(120, 144, 156)
-        textSize = 8.5.dp.toPx()
-        isAntiAlias = true
-        typeface = Typeface.DEFAULT_BOLD
-        textAlign = Paint.Align.CENTER
-    }
-
-    val iconPaint = Paint().apply {
-        textSize = 13.dp.toPx()
-        isAntiAlias = true
-        textAlign = Paint.Align.CENTER
-    }
-
-    val badgePaint = Paint().apply {
-        color = android.graphics.Color.rgb(33, 33, 33)
-        textSize = 10.dp.toPx()
-        isAntiAlias = true
-        typeface = Typeface.DEFAULT_BOLD
-        textAlign = Paint.Align.CENTER
-    }
+    val labelPaint = renderCache.labelPaint
+    val stepNumberPaint = renderCache.stepNumberPaint
+    val badgePaint = renderCache.badgePaint
 
     // Viewport bounds with padding
     val pad = tileSizePx * 2f
@@ -1030,33 +1451,24 @@ private fun DrawScope.drawSugorokuTiles(
                 badgePaint,
             )
         } else {
-            // Normal tile: name in center
+            // Normal tile: name cleanly centered vertically
             drawTileLabel(
                 text = node.name,
                 cx = cx,
-                cy = top + 27.dp.toPx(),
+                cy = top + 29.dp.toPx(),
                 maxTextWidthPx = 48.dp.toPx(),
                 baseTextSizePx = 10.dp.toPx(),
                 paint = labelPaint,
             )
 
-            // Tile Contents: Icon on bottom
-            val iconStr = when {
-                node.type == SugorokuNodeType.START_HAKODATE -> "🎌"
-                node.type == SugorokuNodeType.GOAL_AIDOMARI -> "🏁"
-                node.isAnchor -> "⚓"
-                node.type == SugorokuNodeType.SCENIC_SPOT -> "⭐"
-                node.type == SugorokuNodeType.TOWN_CENTER -> "🏘️"
-                node.type == SugorokuNodeType.REST_AREA -> "♨️"
-                node.type == SugorokuNodeType.NORMAL -> if (isVisited) "👣" else "・"
-                else -> "・"
+            // Subtle anchor indicator (elegant diamond/dot without preset emojis)
+            if (node.isAnchor) {
+                drawCircle(
+                    color = if (isVisited) Color(0xFF8E24AA) else Color(0xFFAB47BC),
+                    radius = 2.2.dp.toPx(),
+                    center = Offset(cx, top + 41.5.dp.toPx()),
+                )
             }
-            drawContext.canvas.nativeCanvas.drawText(
-                iconStr,
-                cx,
-                top + 45.dp.toPx(),
-                iconPaint,
-            )
         }
     }
 }
@@ -1142,74 +1554,88 @@ private fun splitJapaneseTileName(text: String): Pair<String, String> {
 }
 
 /**
- * Draws the cute traveler avatar piece with backpack and soft shadow.
+ * Draws the cute traveler companion piece (Shima-enaga etc.) with soft shadow.
  */
-private fun DrawScope.drawTravelerPiece(
+private fun DrawScope.drawCompanionPiece(
     x: Float,
     y: Float,
     shadowY: Float,
+    companionBitmap: ImageBitmap?,
+    companion: TravelerCompanion,
 ) {
-    // 1. Soft oval shadow on the ground
+    val sizeDp = 34.dp.toPx() * companion.defaultScale
+
+    // 1. Soft oval shadow on the road
     drawOval(
         color = Color(0x38000000),
-        topLeft = Offset(x - 14.dp.toPx(), shadowY - 5.dp.toPx()),
-        size = Size(28.dp.toPx(), 10.dp.toPx()),
+        topLeft = Offset(x - sizeDp * 0.42f, shadowY - 4.dp.toPx()),
+        size = Size(sizeDp * 0.84f, 8.dp.toPx()),
     )
 
-    // 2. Backpack (Red)
-    drawRoundRect(
-        color = Color(0xFFD32F2F),
-        topLeft = Offset(x - 13.dp.toPx(), y - 10.dp.toPx()),
-        size = Size(10.dp.toPx(), 16.dp.toPx()),
-        cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx()),
-    )
-
-    // 3. Body (Blue Shirt)
-    drawRoundRect(
-        color = Color(0xFF1976D2),
-        topLeft = Offset(x - 8.dp.toPx(), y - 6.dp.toPx()),
-        size = Size(16.dp.toPx(), 17.dp.toPx()),
-        cornerRadius = CornerRadius(5.dp.toPx(), 5.dp.toPx()),
-    )
-
-    // 4. Head / Face (Warm skin tone)
-    val headRadius = 9.dp.toPx()
-    val headCenter = Offset(x, y - 14.dp.toPx())
-    drawCircle(
-        color = Color(0xFFFFCC80),
-        radius = headRadius,
-        center = headCenter,
-    )
-
-    // 5. Yellow Travel Hat
-    val hatColor = Color(0xFFFFB300)
-    drawCircle(
-        color = hatColor,
-        radius = headRadius * 0.9f,
-        center = Offset(headCenter.x, headCenter.y - 4.dp.toPx()),
-    )
-    // Hat brim
-    drawOval(
-        color = hatColor,
-        topLeft = Offset(headCenter.x - 12.dp.toPx(), headCenter.y - 8.dp.toPx()),
-        size = Size(24.dp.toPx(), 7.dp.toPx()),
-    )
-
-    // 6. Eyes (Happy traveler)
-    val eyePaint = Paint().apply {
-        color = android.graphics.Color.DKGRAY
-        isAntiAlias = true
+    // 2. Storybook companion sprite
+    if (companionBitmap != null) {
+        val wPx = (sizeDp * 0.88f).roundToInt()
+        val hPx = sizeDp.roundToInt()
+        drawImage(
+            image = companionBitmap,
+            dstOffset = IntOffset(
+                x = (x - wPx / 2f).roundToInt(),
+                y = (y - hPx).roundToInt(),
+            ),
+            dstSize = IntSize(wPx, hPx),
+        )
+    } else {
+        // Fallback placeholder
+        drawCircle(
+            color = Color(0xFFFFF9C4),
+            radius = sizeDp * 0.35f,
+            center = Offset(x, y - sizeDp * 0.4f),
+        )
     }
-    drawContext.canvas.nativeCanvas.drawCircle(
-        headCenter.x - 3.5f.dp.toPx(),
-        headCenter.y + 1f.dp.toPx(),
-        1.5f.dp.toPx(),
-        eyePaint,
-    )
-    drawContext.canvas.nativeCanvas.drawCircle(
-        headCenter.x + 3.5f.dp.toPx(),
-        headCenter.y + 1f.dp.toPx(),
-        1.5f.dp.toPx(),
-        eyePaint,
-    )
+}
+
+/**
+ * Draws a charming storybook speech bubble above the companion's head when near a landmark.
+ */
+private fun DrawScope.drawSpeechBubble(
+    text: String,
+    x: Float,
+    bubbleY: Float,
+    renderCache: SugorokuRenderCache,
+) {
+    val textPaint = renderCache.bubbleTextPaint
+    val bubblePaint = renderCache.bubbleFillPaint
+    val borderPaint = renderCache.bubbleBorderPaint
+    val textBounds = renderCache.bubbleTextBounds
+
+    textPaint.getTextBounds(text, 0, text.length, textBounds)
+    val textWidth = textBounds.width().toFloat()
+    val textHeight = textBounds.height().toFloat()
+
+    val padH = 8.dp.toPx()
+    val padV = 5.dp.toPx()
+    val bubbleWidth = textWidth + padH * 2
+    val bubbleHeight = textHeight + padV * 2
+
+    val left = x - bubbleWidth / 2f
+    val top = bubbleY - bubbleHeight
+    val right = x + bubbleWidth / 2f
+    val bottom = bubbleY
+
+    val bubbleRect = renderCache.bubbleRectF
+    bubbleRect.set(left, top, right, bottom)
+    drawContext.canvas.nativeCanvas.drawRoundRect(bubbleRect, 8.dp.toPx(), 8.dp.toPx(), bubblePaint)
+    drawContext.canvas.nativeCanvas.drawRoundRect(bubbleRect, 8.dp.toPx(), 8.dp.toPx(), borderPaint)
+
+    val tailPath = renderCache.bubbleTailPath
+    tailPath.reset()
+    tailPath.moveTo(x - 3.dp.toPx(), bottom)
+    tailPath.lineTo(x, bottom + 4.dp.toPx())
+    tailPath.lineTo(x + 3.dp.toPx(), bottom)
+    tailPath.close()
+    drawContext.canvas.nativeCanvas.drawPath(tailPath, bubblePaint)
+    drawContext.canvas.nativeCanvas.drawPath(tailPath, borderPaint)
+
+    val textY = top + padV + textHeight
+    drawContext.canvas.nativeCanvas.drawText(text, x, textY, textPaint)
 }
