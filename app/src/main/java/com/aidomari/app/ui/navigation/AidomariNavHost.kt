@@ -53,11 +53,12 @@ fun AidomariNavHost(
     themePreferences: ThemePreferences? = null,
     sugorokuDebugPreferences: SugorokuDebugPreferences? = null,
     sourceArticleRepository: SourceArticleRepository? = null,
+    initialRoute: String? = null,
 ) {
     val context = LocalContext.current
     NavHost(
         navController = navController,
-        startDestination = "subjects",
+        startDestination = initialRoute ?: "subjects",
         modifier = modifier,
         enterTransition = {
             slideIntoContainer(

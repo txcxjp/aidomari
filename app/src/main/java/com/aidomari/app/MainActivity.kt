@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
         }
         ttsManager = TtsManager(this)
         val themePreferences = app.themePreferences
+        val initialRoute = intent.getStringExtra("navigate_to")
 
         setContent {
             val themeConfig by themePreferences.themeConfig.collectAsState()
@@ -44,6 +45,7 @@ class MainActivity : ComponentActivity() {
                         themePreferences = themePreferences,
                         sugorokuDebugPreferences = app.sugorokuDebugPreferences,
                         sourceArticleRepository = app.sourceArticleRepository,
+                        initialRoute = initialRoute,
                     )
                 }
             }
