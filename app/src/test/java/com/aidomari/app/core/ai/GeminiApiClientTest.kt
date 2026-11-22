@@ -98,7 +98,7 @@ class GeminiApiClientTest {
               "content": {
                 "parts": [
                   {
-                    "text": "[{\"front\":\"Kotlin Coroutinesとは何か？\",\"back\":\"非同期・ノンブロッキング処理を簡潔に書くための軽量スレッド機構。\",\"userSupplement\":\"Jetpack Composeと親和性が高い\"},{\"front\":\"StateFlowの特徴は？\",\"back\":\"常に最新の値を保持し、購読者に状態変化を通知するホットなデータフロー。\",\"userSupplement\":\"LiveDataの代替として推奨される\"}]"
+                    "text": "[{\"front\":\"Kotlin Coroutines\",\"back\":\"非同期処理を簡潔に書く軽量スレッド機構。\",\"userSupplement\":\"Jetpack ComposeやStateFlowと親和性が高い\"},{\"front\":\"StateFlow\",\"back\":\"最新の値を保持するホットなデータフロー。\",\"userSupplement\":\"LiveDataの代替として推奨される\"}]"
                   }
                 ]
               }
@@ -122,13 +122,16 @@ class GeminiApiClientTest {
         assertTrue(result.isSuccess)
         val cards = result.getOrNull() ?: emptyList()
         assertEquals(2, cards.size)
-        assertEquals("Kotlin Coroutinesとは何か？", cards[0].front)
-        assertEquals("非同期・ノンブロッキング処理を簡潔に書くための軽量スレッド機構。", cards[0].back)
-        assertEquals("Jetpack Composeと親和性が高い", cards[0].userSupplement)
+        assertEquals("Kotlin Coroutines", cards[0].front)
+        assertEquals("非同期処理を簡潔に書く軽量スレッド機構。", cards[0].back)
+        assertEquals("Jetpack ComposeやStateFlowと親和性が高い", cards[0].userSupplement)
         assertEquals("https://example.com/kotlin", cards[0].sourceUrl)
         assertEquals("Kotlin入門", cards[0].sourceTitle)
 
-        assertEquals("StateFlowの特徴は？", cards[1].front)
+        assertEquals("StateFlow", cards[1].front)
+
+        // Verify prompt specifies flashcard rules
+        assertTrue(fakeTransport.lastBody.contains("単語帳"))
     }
 
     @Test
