@@ -7,6 +7,7 @@ import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.Subject
+import com.aidomari.app.domain.model.ai.CardExtractionDepth
 import com.aidomari.app.domain.model.article.ArticleStatus
 import com.aidomari.app.domain.model.article.SourceArticle
 import com.aidomari.app.domain.repository.SourceArticleRepository
@@ -62,11 +63,15 @@ class BrowsingDigestViewModel(
         _uiState.update { it.copy(selectedSubjectId = subjectId) }
     }
 
+    fun selectDepth(depth: CardExtractionDepth) {
+        _uiState.update { it.copy(selectedDepth = depth) }
+    }
+
     fun updateNewDeckName(name: String) {
         _uiState.update { it.copy(newDeckName = name) }
     }
 
-    fun generateCards(article: SourceArticle) {
+    fun generateCards(article: SourceArticle, depth: CardExtractionDepth = _uiState.value.selectedDepth) {
         val config = geminiPreferences.config.value
         if (!config.isConfigured) {
             _uiState.update {
@@ -79,6 +84,7 @@ class BrowsingDigestViewModel(
             it.copy(
                 isGenerating = true,
                 generatingArticleId = article.id,
+                selectedDepth = depth,
                 errorMessage = null,
             )
         }
@@ -91,6 +97,7 @@ class BrowsingDigestViewModel(
                 apiKey = config.apiKey,
                 model = config.modelName,
                 temperature = config.temperature,
+                depth = depth,
             )
 
             result.fold(

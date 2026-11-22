@@ -1,5 +1,6 @@
 package com.aidomari.app.core.ai
 
+import com.aidomari.app.domain.model.ai.CardExtractionDepth
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -130,8 +131,74 @@ class GeminiApiClientTest {
 
         assertEquals("StateFlow", cards[1].front)
 
-        // Verify prompt specifies flashcard rules
+        // Verify prompt specifies flashcard rules and standard depth
         assertTrue(fakeTransport.lastBody.contains("単語帳"))
+        assertTrue(fakeTransport.lastBody.contains("主要論点を網羅"))
+        assertFalse(fakeTransport.lastBody.contains("3〜10"))
+    }
+
+    @Test
+    fun generateCardsFromArticle_withEssenceDepth_includesEssenceInstruction() = runTest {
+        val mockGeminiBody = """
+        {
+          "candidates": [
+            {
+              "content": {
+                "parts": [
+                  { "text": "[{\"front\":\"要点語\",\"back\":\"要点解説。\",\"userSupplement\":\"補足\"}]" }
+                ]
+              }
+            }
+          ]
+        }
+        """.trimIndent()
+
+        val fakeTransport = FakeHttpTransport { _, _ -> HttpResponse(200, mockGeminiBody) }
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+
+        val result = client.generateCardsFromArticle(
+            title = "テスト",
+            url = "https://example.com",
+            content = "本文",
+            apiKey = "key",
+            depth = CardExtractionDepth.ESSENCE,
+        )
+
+        assertTrue(result.isSuccess)
+        assertTrue(fakeTransport.lastBody.contains("エッセンスのみ厳選"))
+        assertTrue(fakeTransport.lastBody.contains("中心命題"))
+    }
+
+    @Test
+    fun generateCardsFromArticle_withDetailedDepth_includesDetailedInstruction() = runTest {
+        val mockGeminiBody = """
+        {
+          "candidates": [
+            {
+              "content": {
+                "parts": [
+                  { "text": "[{\"front\":\"詳細語\",\"back\":\"詳細解説。\",\"userSupplement\":\"補足\"}]" }
+                ]
+              }
+            }
+          ]
+        }
+        """.trimIndent()
+
+        val fakeTransport = FakeHttpTransport { _, _ -> HttpResponse(200, mockGeminiBody) }
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+
+        val result = client.generateCardsFromArticle(
+            title = "テスト",
+            url = "https://example.com",
+            content = "本文",
+            apiKey = "key",
+            depth = CardExtractionDepth.DETAILED,
+        )
+
+        assertTrue(result.isSuccess)
+        assertTrue(fakeTransport.lastBody.contains("文中の知見を余さず拾う"))
+        assertTrue(fakeTransport.lastBody.contains("枝葉に至るまで"))
     }
 
     @Test

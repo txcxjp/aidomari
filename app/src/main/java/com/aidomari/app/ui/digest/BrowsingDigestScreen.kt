@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,8 +43,12 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +72,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.aidomari.app.core.ai.GeminiApiClientImpl
 import com.aidomari.app.core.ai.GeminiPreferences
+import com.aidomari.app.domain.model.ai.CardExtractionDepth
 import com.aidomari.app.domain.model.article.ArticleStatus
 import com.aidomari.app.domain.model.article.SourceArticle
 import com.aidomari.app.ui.settings.GeminiSettingsDialog
@@ -209,6 +215,32 @@ fun BrowsingDigestScreen(
                 }
             }
 
+            // 抽出の深さ（解像度）セレクター
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "抽出の深さ",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                SingleChoiceSegmentedButtonRow {
+                    CardExtractionDepth.entries.forEachIndexed { index, depth ->
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = CardExtractionDepth.entries.size),
+                            onClick = { viewModel.selectDepth(depth) },
+                            selected = uiState.selectedDepth == depth,
+                            label = { Text(depth.label, fontSize = 11.sp) },
+                        )
+                    }
+                }
+            }
+
             // 記事リスト
             val articles = uiState.filteredArticles
             if (articles.isEmpty()) {
@@ -259,11 +291,14 @@ fun BrowsingDigestScreen(
             subjects = uiState.subjects,
             selectedSubjectId = uiState.selectedSubjectId,
             newDeckName = uiState.newDeckName,
+            selectedDepth = uiState.selectedDepth,
+            isGenerating = uiState.isGenerating,
             onSubjectSelect = { viewModel.selectSubject(it) },
             onDeckNameChange = { viewModel.updateNewDeckName(it) },
             onToggleSelect = { viewModel.toggleCardSelection(it) },
             onSelectAll = { viewModel.selectAllCandidates(it) },
             onCandidateChange = { id, f, b, s -> viewModel.updateCandidate(id, f, b, s) },
+            onRegenerateWithDepth = { depth -> viewModel.generateCards(uiState.reviewArticle!!, depth) },
             onSave = { viewModel.saveSelectedCards() },
             onDismiss = { viewModel.closeReview() },
         )
@@ -441,11 +476,14 @@ fun CardReviewDialog(
     subjects: List<com.aidomari.app.domain.model.Subject>,
     selectedSubjectId: String?,
     newDeckName: String,
+    selectedDepth: CardExtractionDepth,
+    isGenerating: Boolean = false,
     onSubjectSelect: (String) -> Unit,
     onDeckNameChange: (String) -> Unit,
     onToggleSelect: (String) -> Unit,
     onSelectAll: (Boolean) -> Unit,
     onCandidateChange: (String, String, String, String) -> Unit,
+    onRegenerateWithDepth: (CardExtractionDepth) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -550,7 +588,7 @@ fun CardReviewDialog(
                     // 承認・保存ボタン
                     Button(
                         onClick = onSave,
-                        enabled = selectedCount > 0,
+                        enabled = selectedCount > 0 && !isGenerating,
                         modifier = Modifier.fillMaxWidth().height(44.dp),
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -560,20 +598,73 @@ fun CardReviewDialog(
                 }
             },
         ) { padding ->
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                    .padding(padding),
             ) {
-                items(candidates, key = { it.id }) { candidate ->
-                    CandidateCardItem(
-                        candidate = candidate,
-                        onToggle = { onToggleSelect(candidate.id) },
-                        onChange = { f, b, s -> onCandidateChange(candidate.id, f, b, s) },
-                    )
+                // 抽出の深さの切り替え & 再生成バー
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = "抽出: ${selectedDepth.label}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            CardExtractionDepth.entries.forEach { depth ->
+                                if (depth != selectedDepth) {
+                                    AssistChip(
+                                        onClick = { onRegenerateWithDepth(depth) },
+                                        enabled = !isGenerating,
+                                        label = { Text("${depth.label}で再生成", fontSize = 10.5.sp) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (isGenerating) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                            Spacer(Modifier.height(8.dp))
+                            Text("カードを再生成中...", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(horizontal = 16.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(candidates, key = { it.id }) { candidate ->
+                            CandidateCardItem(
+                                candidate = candidate,
+                                onToggle = { onToggleSelect(candidate.id) },
+                                onChange = { f, b, s -> onCandidateChange(candidate.id, f, b, s) },
+                            )
+                        }
+                    }
                 }
             }
         }

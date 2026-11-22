@@ -8,6 +8,7 @@ import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
+import com.aidomari.app.domain.model.ai.CardExtractionDepth
 import com.aidomari.app.domain.model.ai.GeneratedCardProposal
 import com.aidomari.app.domain.model.article.ArticleStatus
 import com.aidomari.app.domain.model.article.SourceArticle
@@ -149,6 +150,32 @@ class BrowsingDigestViewModelTest {
         assertEquals("解答1", state.candidateCards[0].back)
         assertTrue(state.candidateCards[0].isSelected)
         assertTrue(state.candidateCards[1].isSelected)
+        assertEquals(CardExtractionDepth.STANDARD, fakeGeminiApiClient.lastDepth)
+    }
+
+    @Test
+    fun selectDepth_and_generateCards_passesSpecifiedDepth() = runTest {
+        geminiPreferences.setApiKey("valid_api_key")
+        val article = SourceArticle(id = "1", url = "https://example.com", domain = "example.com", title = "記事", extractedText = "本文", status = ArticleStatus.PENDING)
+
+        // デフォルトは STANDARD
+        assertEquals(CardExtractionDepth.STANDARD, viewModel.uiState.value.selectedDepth)
+
+        // DETAILEDに変更
+        viewModel.selectDepth(CardExtractionDepth.DETAILED)
+        assertEquals(CardExtractionDepth.DETAILED, viewModel.uiState.value.selectedDepth)
+
+        viewModel.generateCards(article)
+        advanceUntilIdle()
+
+        assertEquals(CardExtractionDepth.DETAILED, fakeGeminiApiClient.lastDepth)
+
+        // ダイアログ内で ESSENCE に変更して再生成
+        viewModel.generateCards(article, depth = CardExtractionDepth.ESSENCE)
+        advanceUntilIdle()
+
+        assertEquals(CardExtractionDepth.ESSENCE, fakeGeminiApiClient.lastDepth)
+        assertEquals(CardExtractionDepth.ESSENCE, viewModel.uiState.value.selectedDepth)
     }
 
     @Test
@@ -357,6 +384,7 @@ private class FakeWordsRepository : WordsRepository {
 
 private class FakeGeminiApiClient : GeminiApiClient {
     var stubbedProposals: List<GeneratedCardProposal> = emptyList()
+    var lastDepth: CardExtractionDepth? = null
 
     override suspend fun testConnection(apiKey: String, model: String): Result<Boolean> = Result.success(true)
 
@@ -367,5 +395,9 @@ private class FakeGeminiApiClient : GeminiApiClient {
         apiKey: String,
         model: String,
         temperature: Float,
-    ): Result<List<GeneratedCardProposal>> = Result.success(stubbedProposals)
+        depth: CardExtractionDepth,
+    ): Result<List<GeneratedCardProposal>> {
+        lastDepth = depth
+        return Result.success(stubbedProposals)
+    }
 }
