@@ -391,6 +391,26 @@ private class FakeGeminiApiClient : GeminiApiClient {
     override suspend fun fetchAvailableModels(apiKey: String): Result<List<String>> =
         Result.success(listOf("gemini-3.8-flash", "gemini-2.5-flash"))
 
+    override suspend fun extractThemes(
+        title: String,
+        url: String,
+        content: String,
+        apiKey: String,
+        model: String,
+        depth: CardExtractionDepth,
+    ): Result<List<String>> = Result.success(listOf("主要テーマ"))
+
+    override suspend fun generateCardsForTheme(
+        title: String,
+        url: String,
+        content: String,
+        theme: String,
+        apiKey: String,
+        model: String,
+        temperature: Float,
+        depth: CardExtractionDepth,
+    ): Result<List<GeneratedCardProposal>> = Result.success(stubbedProposals)
+
     override suspend fun generateCardsFromArticle(
         title: String,
         url: String,
@@ -399,8 +419,12 @@ private class FakeGeminiApiClient : GeminiApiClient {
         model: String,
         temperature: Float,
         depth: CardExtractionDepth,
+        onProgress: (com.aidomari.app.core.ai.GenerationProgress) -> Unit,
     ): Result<List<GeneratedCardProposal>> {
         lastDepth = depth
+        onProgress(com.aidomari.app.core.ai.GenerationProgress.AnalyzingThemes())
+        onProgress(com.aidomari.app.core.ai.GenerationProgress.GeneratingThemeCards(1, 1, "主要テーマ", 0))
+        onProgress(com.aidomari.app.core.ai.GenerationProgress.Deduplicating(stubbedProposals.size))
         return Result.success(stubbedProposals)
     }
 }

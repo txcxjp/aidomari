@@ -321,4 +321,166 @@ class GeminiApiClientTest {
         assertFalse(result.isSuccess)
         assertTrue(result.exceptionOrNull() is IllegalArgumentException)
     }
+
+    @Test
+    fun extractThemes_withValidJson_parsesThemesCorrectly() = runTest {
+        val fakeTransport = FakeHttpTransport { _, _ ->
+            HttpResponse(
+                statusCode = 200,
+                body = """
+                {
+                  "candidates": [
+                    {
+                      "content": {
+                        "parts": [
+                          { "text": "[\"地理・自然環境\", \"歴史とアイヌ文化\", \"産業と農業\"]" }
+                        ]
+                      }
+                    }
+                  ]
+                }
+                """.trimIndent(),
+            )
+        }
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+
+        val result = client.extractThemes(
+            title = "北海道",
+            url = "https://example.com/hokkaido",
+            content = "北海道の自然と歴史と産業の解説です。",
+            apiKey = "valid_key",
+        )
+
+        assertTrue(result.isSuccess)
+        val themes = result.getOrNull() ?: emptyList()
+        assertEquals(3, themes.size)
+        assertEquals("地理・自然環境", themes[0])
+        assertEquals("歴史とアイヌ文化", themes[1])
+        assertEquals("産業と農業", themes[2])
+    }
+
+    @Test
+    fun deduplicateCardProposals_mergesDuplicateFronts_andCombinesSupplements() {
+        val client = GeminiApiClientImpl(httpTransport = FakeHttpTransport())
+
+        val card1 = com.aidomari.app.domain.model.ai.GeneratedCardProposal(
+            front = "大雪山",
+            back = "北海道の中央部にある山群",
+            userSupplement = "最高峰は旭岳（標高2,291m）。",
+            sourceUrl = "https://example.com",
+            sourceTitle = "北海道",
+        )
+        val card2 = com.aidomari.app.domain.model.ai.GeneratedCardProposal(
+            front = "「大雪山」",
+            back = "北海道の屋根と呼ばれる山岳地帯",
+            userSupplement = "日本最大の国立公園に指定されている。",
+            sourceUrl = "https://example.com",
+            sourceTitle = "北海道",
+        )
+        val card3 = com.aidomari.app.domain.model.ai.GeneratedCardProposal(
+            front = "知床半島",
+            back = "オホーツク海に面した世界自然遺産",
+            userSupplement = "手付かずの原生自然が残る。",
+            sourceUrl = "https://example.com",
+            sourceTitle = "北海道",
+        )
+
+        val deduplicated = client.deduplicateCardProposals(listOf(card1, card2, card3))
+
+        assertEquals(2, deduplicated.size)
+        val daisetuzan = deduplicated.first { it.front == "大雪山" }
+        assertTrue(daisetuzan.userSupplement.contains("旭岳"))
+        assertTrue(daisetuzan.userSupplement.contains("国立公園"))
+    }
+
+    @Test
+    fun generateCardsFromArticle_withMultiStage_orchestratesThemesAndDeduplicates() = runTest {
+        var callCount = 0
+        val fakeTransport = FakeHttpTransport { _, jsonBody ->
+            callCount++
+            when (callCount) {
+                1 -> {
+                    // Call 1: Theme extraction
+                    HttpResponse(
+                        statusCode = 200,
+                        body = """
+                        {
+                          "candidates": [
+                            {
+                              "content": {
+                                "parts": [
+                                  { "text": "[\"自然環境\", \"歴史文化\"]" }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                        """.trimIndent(),
+                    )
+                }
+                2 -> {
+                    // Call 2: Cards for "自然環境"
+                    HttpResponse(
+                        statusCode = 200,
+                        body = """
+                        {
+                          "candidates": [
+                            {
+                              "content": {
+                                "parts": [
+                                  { "text": "[{\"front\": \"大雪山\", \"back\": \"北海道中央の山群\", \"userSupplement\": \"旭岳がある\"}]" }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                        """.trimIndent(),
+                    )
+                }
+                3 -> {
+                    // Call 3: Cards for "歴史文化"
+                    HttpResponse(
+                        statusCode = 200,
+                        body = """
+                        {
+                          "candidates": [
+                            {
+                              "content": {
+                                "parts": [
+                                  { "text": "[{\"front\": \"大雪山\", \"back\": \"アイヌ語でヌタクカムシュペ\", \"userSupplement\": \"神々の遊ぶ庭と呼ばれる\"}, {\"front\": \"松前藩\", \"back\": \"蝦夷地を統治した藩\", \"userSupplement\": \"城下町が栄えた\"}]" }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                        """.trimIndent(),
+                    )
+                }
+                else -> HttpResponse(statusCode = 200, body = "{}")
+            }
+        }
+
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+        val progressEvents = mutableListOf<GenerationProgress>()
+
+        val result = client.generateCardsFromArticle(
+            title = "北海道",
+            url = "https://example.com/hokkaido",
+            content = "北海道の自然と歴史についての総合記事です。",
+            apiKey = "valid_key",
+            depth = CardExtractionDepth.DETAILED,
+            onProgress = { progressEvents.add(it) },
+        )
+
+        assertTrue(result.isSuccess)
+        val cards = result.getOrNull() ?: emptyList()
+        assertEquals(2, cards.size) // "大雪山" (deduplicated) and "松前藩"
+        assertEquals(3, callCount) // 1 theme call + 2 theme card calls
+
+        // Verify progress sequence
+        assertTrue(progressEvents.any { it is GenerationProgress.AnalyzingThemes })
+        assertTrue(progressEvents.any { it is GenerationProgress.GeneratingThemeCards && it.currentThemeName == "自然環境" })
+        assertTrue(progressEvents.any { it is GenerationProgress.GeneratingThemeCards && it.currentThemeName == "歴史文化" })
+        assertTrue(progressEvents.any { it is GenerationProgress.Deduplicating })
+    }
 }

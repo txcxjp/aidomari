@@ -13,10 +13,46 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
+sealed interface GenerationProgress {
+    data class AnalyzingThemes(val message: String = "記事の構成と主要テーマを分析中...") : GenerationProgress
+    data class GeneratingThemeCards(
+        val currentThemeIndex: Int,
+        val totalThemes: Int,
+        val currentThemeName: String,
+        val generatedCardsSoFar: Int,
+    ) : GenerationProgress {
+        val fraction: Float get() = if (totalThemes > 0) currentThemeIndex.toFloat() / totalThemes.toFloat() else 0f
+        val displayMessage: String get() = "テーマ ($currentThemeIndex/$totalThemes) を生成中: $currentThemeName (${generatedCardsSoFar}問抽出済)"
+    }
+    data class Deduplicating(val totalExtracted: Int) : GenerationProgress {
+        val displayMessage: String get() = "重複チェック & 統合中... (計${totalExtracted}問)"
+    }
+}
+
 interface GeminiApiClient {
     suspend fun testConnection(apiKey: String, model: String = GeminiConfig.DEFAULT_MODEL): Result<Boolean>
 
     suspend fun fetchAvailableModels(apiKey: String): Result<List<String>>
+
+    suspend fun extractThemes(
+        title: String,
+        url: String,
+        content: String,
+        apiKey: String,
+        model: String = GeminiConfig.DEFAULT_MODEL,
+        depth: CardExtractionDepth = CardExtractionDepth.STANDARD,
+    ): Result<List<String>>
+
+    suspend fun generateCardsForTheme(
+        title: String,
+        url: String,
+        content: String,
+        theme: String,
+        apiKey: String,
+        model: String = GeminiConfig.DEFAULT_MODEL,
+        temperature: Float = GeminiConfig.DEFAULT_TEMPERATURE,
+        depth: CardExtractionDepth = CardExtractionDepth.STANDARD,
+    ): Result<List<GeneratedCardProposal>>
 
     suspend fun generateCardsFromArticle(
         title: String,
@@ -26,6 +62,7 @@ interface GeminiApiClient {
         model: String = GeminiConfig.DEFAULT_MODEL,
         temperature: Float = GeminiConfig.DEFAULT_TEMPERATURE,
         depth: CardExtractionDepth = CardExtractionDepth.STANDARD,
+        onProgress: (GenerationProgress) -> Unit = {},
     ): Result<List<GeneratedCardProposal>>
 }
 
@@ -113,10 +150,50 @@ class GeminiApiClientImpl(
         }
     }
 
-    override suspend fun generateCardsFromArticle(
+    override suspend fun extractThemes(
         title: String,
         url: String,
         content: String,
+        apiKey: String,
+        model: String,
+        depth: CardExtractionDepth,
+    ): Result<List<String>> = runCatching {
+        require(apiKey.isNotBlank()) { "APIキーが設定されていません" }
+        require(content.isNotBlank()) { "解析対象の記事本文が空です" }
+
+        val endpoint = "$BASE_URL/$model:generateContent?key=$apiKey"
+        val prompt = buildThemeExtractionPrompt(title = title, url = url, content = content, depth = depth)
+
+        val requestBody = buildJsonObject {
+            putJsonArray("contents") {
+                add(
+                    buildJsonObject {
+                        putJsonArray("parts") {
+                            add(buildJsonObject { put("text", prompt) })
+                        }
+                    },
+                )
+            }
+            putJsonObject("generationConfig") {
+                put("temperature", 0.2f)
+                put("responseMimeType", "application/json")
+            }
+        }.toString()
+
+        val response = httpTransport.post(endpoint, requestBody)
+        if (!response.isSuccessful) {
+            val errorMsg = parseErrorMessage(response.body, response.statusCode)
+            throw IllegalStateException(errorMsg)
+        }
+
+        parseThemesFromGeminiResponse(response.body)
+    }
+
+    override suspend fun generateCardsForTheme(
+        title: String,
+        url: String,
+        content: String,
+        theme: String,
         apiKey: String,
         model: String,
         temperature: Float,
@@ -124,20 +201,23 @@ class GeminiApiClientImpl(
     ): Result<List<GeneratedCardProposal>> = runCatching {
         require(apiKey.isNotBlank()) { "APIキーが設定されていません" }
         require(content.isNotBlank()) { "解析対象の記事本文が空です" }
+        require(theme.isNotBlank()) { "対象テーマが空です" }
 
         val endpoint = "$BASE_URL/$model:generateContent?key=$apiKey"
-        val prompt = buildKnowledgeExtractionPrompt(title = title, url = url, content = content, depth = depth)
+        val prompt = buildThemeCardExtractionPrompt(
+            title = title,
+            url = url,
+            content = content,
+            theme = theme,
+            depth = depth,
+        )
 
         val requestBody = buildJsonObject {
             putJsonArray("contents") {
                 add(
                     buildJsonObject {
                         putJsonArray("parts") {
-                            add(
-                                buildJsonObject {
-                                    put("text", prompt)
-                                },
-                            )
+                            add(buildJsonObject { put("text", prompt) })
                         }
                     },
                 )
@@ -155,6 +235,200 @@ class GeminiApiClientImpl(
         }
 
         parseCardsFromGeminiResponse(response.body, sourceUrl = url, sourceTitle = title)
+    }
+
+    override suspend fun generateCardsFromArticle(
+        title: String,
+        url: String,
+        content: String,
+        apiKey: String,
+        model: String,
+        temperature: Float,
+        depth: CardExtractionDepth,
+        onProgress: (GenerationProgress) -> Unit,
+    ): Result<List<GeneratedCardProposal>> = runCatching {
+        require(apiKey.isNotBlank()) { "APIキーが設定されていません" }
+        require(content.isNotBlank()) { "解析対象の記事本文が空です" }
+
+        // If ESSENCE, direct single-turn generation is optimal (concise backbone)
+        if (depth == CardExtractionDepth.ESSENCE) {
+            onProgress(GenerationProgress.AnalyzingThemes("エッセンス抽出中..."))
+            return@runCatching generateCardsDirectly(title, url, content, apiKey, model, temperature, depth)
+        }
+
+        // Multi-stage extraction for STANDARD and DETAILED
+        onProgress(GenerationProgress.AnalyzingThemes())
+        val themesResult = extractThemes(title, url, content, apiKey, model, depth)
+        val rawThemes = themesResult.getOrNull().orEmpty()
+        val themes = if (rawThemes.isNotEmpty()) {
+            rawThemes
+        } else {
+            listOf(title.ifBlank { "主要論点" })
+        }
+
+        val allProposals = mutableListOf<GeneratedCardProposal>()
+        for ((index, theme) in themes.withIndex()) {
+            onProgress(
+                GenerationProgress.GeneratingThemeCards(
+                    currentThemeIndex = index + 1,
+                    totalThemes = themes.size,
+                    currentThemeName = theme,
+                    generatedCardsSoFar = allProposals.size,
+                ),
+            )
+
+            val themeCardsResult = generateCardsForTheme(
+                title = title,
+                url = url,
+                content = content,
+                theme = theme,
+                apiKey = apiKey,
+                model = model,
+                temperature = temperature,
+                depth = depth,
+            )
+
+            val cards = themeCardsResult.getOrNull().orEmpty()
+            allProposals.addAll(cards)
+        }
+
+        // Deduplicate across themes
+        onProgress(GenerationProgress.Deduplicating(allProposals.size))
+        val deduplicated = deduplicateCardProposals(allProposals)
+
+        if (deduplicated.isEmpty()) {
+            generateCardsDirectly(title, url, content, apiKey, model, temperature, depth)
+        } else {
+            deduplicated
+        }
+    }
+
+    private suspend fun generateCardsDirectly(
+        title: String,
+        url: String,
+        content: String,
+        apiKey: String,
+        model: String,
+        temperature: Float,
+        depth: CardExtractionDepth,
+    ): List<GeneratedCardProposal> {
+        val endpoint = "$BASE_URL/$model:generateContent?key=$apiKey"
+        val prompt = buildKnowledgeExtractionPrompt(title = title, url = url, content = content, depth = depth)
+
+        val requestBody = buildJsonObject {
+            putJsonArray("contents") {
+                add(
+                    buildJsonObject {
+                        putJsonArray("parts") {
+                            add(buildJsonObject { put("text", prompt) })
+                        }
+                    },
+                )
+            }
+            putJsonObject("generationConfig") {
+                put("temperature", temperature)
+                put("responseMimeType", "application/json")
+            }
+        }.toString()
+
+        val response = httpTransport.post(endpoint, requestBody)
+        if (!response.isSuccessful) {
+            val errorMsg = parseErrorMessage(response.body, response.statusCode)
+            throw IllegalStateException(errorMsg)
+        }
+
+        return parseCardsFromGeminiResponse(response.body, sourceUrl = url, sourceTitle = title)
+    }
+
+    internal fun buildThemeExtractionPrompt(
+        title: String,
+        url: String,
+        content: String,
+        depth: CardExtractionDepth,
+    ): String {
+        val scaleGuidance = when (depth) {
+            CardExtractionDepth.ESSENCE -> "記事の最も根幹となる中核テーマを1つ（最大でも2つ）特定してください。"
+            CardExtractionDepth.STANDARD -> "記事の規模や内容に応じて、主要なトピック・テーマを1つないし複数（標準的な記事なら2〜4個）特定してください。"
+            CardExtractionDepth.DETAILED -> "記事全体を余さず網羅するため、扱われている主要な章・トピック・テーマを1つないし複数（網羅的な大作記事なら3〜7個程度）漏れなくリストアップしてください。"
+        }
+
+        return """
+            あなたは教材作成と文章分析の専門家です。
+            以下のWeb記事を読み、フラッシュカード（単語帳）を網羅的に生成するための【主要テーマ（章・トピック）】を1つないし複数挙げてください。
+
+            【記事情報】
+            タイトル: $title
+            URL: $url
+            本文:
+            $content
+
+            【テーマ特定のルール】
+            1. 記事の規模や内容に応じて、単一の話題なら1つ、多岐にわたる記事なら複数の独立したテーマを特定してください。
+            2. $scaleGuidance
+            3. 各テーマ名は、その領域の知識が想起しやすい具体的で簡潔な名前（例:「地理・自然環境」「歴史とアイヌ文化」「産業と農業」「交通インフラ」など）にしてください。
+            4. 出力は必ず以下のJSON配列形式のみを出力してください（Markdownコードブロックは不要です）：
+            [
+              "テーマ名1",
+              "テーマ名2"
+            ]
+        """.trimIndent()
+    }
+
+    internal fun buildThemeCardExtractionPrompt(
+        title: String,
+        url: String,
+        content: String,
+        theme: String,
+        depth: CardExtractionDepth,
+    ): String {
+        val depthInstruction = when (depth) {
+            CardExtractionDepth.ESSENCE -> """
+                4. 抽出の姿勢（エッセンスのみ厳選）:
+                   - この記事・テーマの最も中核的な中心命題・不可欠な基本概念（幹）のみを厳選してください。
+            """.trimIndent()
+            CardExtractionDepth.STANDARD -> """
+                4. 抽出の姿勢（主要論点を網羅）:
+                   - このテーマを理解するために重要な専門用語・キーワード（幹と枝）を過不足なく抽出してください。
+            """.trimIndent()
+            CardExtractionDepth.DETAILED -> """
+                4. 抽出の姿勢（文中の知見を余さず拾う）:
+                   - このテーマに関連する文中の用語・固有名称・背景データ・付随エピソード（枝葉に至るまで）を余さず徹底的に拾い上げてください。
+            """.trimIndent()
+        }
+
+        return """
+            あなたは効率的な暗記・学習（単語帳・フラッシュカード）を支援する専門のアシスタントです。
+            以下のWeb記事の中から、【指定されたテーマ】に属する重要用語・知識を抽出し、Aidomari単語帳カード形式のリストを作成してください。
+
+            【記事情報】
+            タイトル: $title
+            URL: $url
+            本文:
+            $content
+
+            【抽出対象のテーマ】
+            $theme
+
+            【単語帳カード生成ルール】
+            1. 表面 (front):
+               - このテーマにおいて中核となる重要キーワード・専門用語・概念（見出し語名詞、3〜15文字程度）。
+               - 疑問文や長文（「〜とは何か？」等）は禁止です。
+            2. 裏面 (back):
+               - その用語の核となる簡潔な定義・意味・要点（20〜30文字程度の極めて簡潔かつシャープな短文、1文以内）。
+               - パッと見て想起できる文章にしてください。
+            3. 補足メモ (userSupplement):
+               - このテーマにおける具体的な文脈、詳細な背景・理由・付随データ（1〜3文程度）。
+            $depthInstruction
+               - 指定テーマ【$theme】に関する知識に集中し、他の無関係な話題は含めないでください。
+            5. 出力は必ず以下のJSON配列形式のみを出力してください（Markdownコードブロックは不要です）：
+            [
+              {
+                "front": "重要キーワード",
+                "back": "簡潔な定義・要点（20〜30文字）",
+                "userSupplement": "文脈・背景・詳細解説"
+              }
+            ]
+        """.trimIndent()
     }
 
     private fun buildKnowledgeExtractionPrompt(
@@ -210,6 +484,71 @@ class GeminiApiClientImpl(
               }
             ]
         """.trimIndent()
+    }
+
+    internal fun parseThemesFromGeminiResponse(responseJson: String): List<String> {
+        val root = json.parseToJsonElement(responseJson).jsonObject
+        val candidates = root["candidates"]?.jsonArray ?: return emptyList()
+        if (candidates.isEmpty()) return emptyList()
+
+        val firstCandidate = candidates[0].jsonObject
+        val contentObj = firstCandidate["content"]?.jsonObject ?: return emptyList()
+        val parts = contentObj["parts"]?.jsonArray ?: return emptyList()
+        if (parts.isEmpty()) return emptyList()
+
+        val rawText = parts[0].jsonObject["text"]?.jsonPrimitive?.content ?: ""
+        val cleaned = cleanJsonCodeFence(rawText)
+
+        val arrayElement = runCatching { json.parseToJsonElement(cleaned) }.getOrNull()
+        if (arrayElement !is JsonArray) return emptyList()
+
+        return arrayElement.mapNotNull {
+            val str = runCatching { it.jsonPrimitive.content.trim() }.getOrNull()
+            if (!str.isNullOrBlank()) str else null
+        }
+    }
+
+    internal fun deduplicateCardProposals(cards: List<GeneratedCardProposal>): List<GeneratedCardProposal> {
+        val seenNormalized = mutableMapOf<String, GeneratedCardProposal>()
+        val result = mutableListOf<GeneratedCardProposal>()
+
+        for (card in cards) {
+            val normalized = normalizeFront(card.front)
+            if (normalized.isBlank()) continue
+
+            val existing = seenNormalized[normalized]
+            if (existing == null) {
+                seenNormalized[normalized] = card
+                result.add(card)
+            } else {
+                val index = result.indexOf(existing)
+                if (index >= 0) {
+                    val merged = mergeDuplicateCards(existing, card)
+                    result[index] = merged
+                    seenNormalized[normalized] = merged
+                }
+            }
+        }
+        return result
+    }
+
+    internal fun normalizeFront(front: String): String = front.trim()
+        .removePrefix("「").removeSuffix("」")
+        .removePrefix("『").removeSuffix("』")
+        .removePrefix("\"").removeSuffix("\"")
+        .lowercase()
+        .trim()
+
+    internal fun mergeDuplicateCards(a: GeneratedCardProposal, b: GeneratedCardProposal): GeneratedCardProposal {
+        val bestBack = if (b.back.length > a.back.length) b.back else a.back
+        val combinedSupplement = when {
+            a.userSupplement.isBlank() -> b.userSupplement
+            b.userSupplement.isBlank() -> a.userSupplement
+            a.userSupplement.contains(b.userSupplement) -> a.userSupplement
+            b.userSupplement.contains(a.userSupplement) -> b.userSupplement
+            else -> "${a.userSupplement}\n${b.userSupplement}"
+        }
+        return a.copy(back = bestBack, userSupplement = combinedSupplement)
     }
 
     private fun parseCardsFromGeminiResponse(
