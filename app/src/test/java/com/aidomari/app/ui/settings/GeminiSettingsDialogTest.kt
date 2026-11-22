@@ -5,7 +5,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.aidomari.app.core.ai.GeminiConfig
 import org.junit.Assert.assertEquals
@@ -102,7 +101,7 @@ class GeminiSettingsDialogTest {
     }
 
     @Test
-    fun dialog_allowsCustomModelInput() {
+    fun dialog_selectsModelFromDropdown() {
         var savedConfig: GeminiConfig? = null
 
         composeTestRule.setContent {
@@ -114,11 +113,42 @@ class GeminiSettingsDialogTest {
             )
         }
 
-        // Custom model input
-        composeTestRule.onNodeWithTag("GeminiModelSelector").performTextClearance()
-        composeTestRule.onNodeWithTag("GeminiModelSelector").performTextInput("gemini-3.8-custom")
+        // Open dropdown
+        composeTestRule.onNodeWithTag("GeminiModelSelector").performClick()
+        composeTestRule.waitForIdle()
+
+        // Click a model from menu
+        composeTestRule.onNodeWithText("gemini-2.5-flash").performClick()
+        composeTestRule.waitForIdle()
+
         composeTestRule.onNodeWithTag("GeminiSaveButton").performClick()
 
-        assertEquals("gemini-3.8-custom", savedConfig?.modelName)
+        assertEquals("gemini-2.5-flash", savedConfig?.modelName)
+    }
+
+    @Test
+    fun dialog_withFetchModels_populatesDynamicModels() {
+        var savedConfig: GeminiConfig? = null
+
+        composeTestRule.setContent {
+            GeminiSettingsDialog(
+                config = GeminiConfig(apiKey = "key123", modelName = "gemini-test-a"),
+                onConfigChanged = { savedConfig = it },
+                onTestConnection = { _, _ -> Result.success(true) },
+                onFetchModels = { Result.success(listOf("gemini-test-a", "gemini-test-b")) },
+                onDismissRequest = {},
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Open dropdown
+        composeTestRule.onNodeWithTag("GeminiModelSelector").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("gemini-test-b").performClick()
+        composeTestRule.onNodeWithTag("GeminiSaveButton").performClick()
+
+        assertEquals("gemini-test-b", savedConfig?.modelName)
     }
 }

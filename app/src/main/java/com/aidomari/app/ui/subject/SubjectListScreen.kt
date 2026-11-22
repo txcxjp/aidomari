@@ -574,6 +574,7 @@ fun SubjectListScreen(
             config = geminiConfig,
             onConfigChanged = { geminiPrefs.updateConfig(it) },
             onTestConnection = { key, model -> geminiClient.testConnection(key, model) },
+            onFetchModels = { key -> geminiClient.fetchAvailableModels(key) },
             onDismissRequest = { showGeminiDialog = false },
         )
     }

@@ -10,10 +10,15 @@ import org.junit.Test
 class GeminiApiClientTest {
 
     private class FakeHttpTransport(
-        var responseHandler: (url: String, jsonBody: String) -> HttpResponse,
+        var postHandler: (url: String, jsonBody: String) -> HttpResponse = { _, _ -> HttpResponse(200, "{}") },
+        var getHandler: (url: String) -> HttpResponse = { _ -> HttpResponse(200, "{}") },
     ) : HttpTransport {
         var lastUrl: String = ""
         var lastBody: String = ""
+
+        constructor(responseHandler: (url: String, jsonBody: String) -> HttpResponse) : this(
+            postHandler = responseHandler,
+        )
 
         override suspend fun post(
             url: String,
@@ -22,7 +27,15 @@ class GeminiApiClientTest {
         ): HttpResponse {
             lastUrl = url
             lastBody = jsonBody
-            return responseHandler(url, jsonBody)
+            return postHandler(url, jsonBody)
+        }
+
+        override suspend fun get(
+            url: String,
+            headers: Map<String, String>,
+        ): HttpResponse {
+            lastUrl = url
+            return getHandler(url)
         }
     }
 
@@ -251,6 +264,60 @@ class GeminiApiClientTest {
             apiKey = "key",
         )
 
+        assertFalse(result.isSuccess)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test
+    fun fetchAvailableModels_withValidResponse_parsesAndFiltersModels() = runTest {
+        val fakeTransport = FakeHttpTransport(
+            getHandler = { url ->
+                assertEquals("https://generativelanguage.googleapis.com/v1beta/models?key=valid_key", url)
+                HttpResponse(
+                    statusCode = 200,
+                    body = """
+                    {
+                      "models": [
+                        {
+                          "name": "models/gemini-2.5-flash",
+                          "supportedGenerationMethods": ["generateContent", "countTokens"]
+                        },
+                        {
+                          "name": "models/gemini-2.5-pro",
+                          "supportedGenerationMethods": ["generateContent"]
+                        },
+                        {
+                          "name": "models/text-embedding-004",
+                          "supportedGenerationMethods": ["embedContent"]
+                        },
+                        {
+                          "name": "models/imagen-3.0",
+                          "supportedGenerationMethods": ["imageGeneration"]
+                        }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+            },
+        )
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+
+        val result = client.fetchAvailableModels("valid_key")
+        assertTrue(result.isSuccess)
+        val models = result.getOrNull() ?: emptyList()
+        assertEquals(2, models.size)
+        assertTrue(models.contains("gemini-2.5-flash"))
+        assertTrue(models.contains("gemini-2.5-pro"))
+        assertFalse(models.contains("text-embedding-004"))
+        assertFalse(models.contains("imagen-3.0"))
+    }
+
+    @Test
+    fun fetchAvailableModels_withBlankKey_failsFast() = runTest {
+        val fakeTransport = FakeHttpTransport()
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+
+        val result = client.fetchAvailableModels("   ")
         assertFalse(result.isSuccess)
         assertTrue(result.exceptionOrNull() is IllegalArgumentException)
     }

@@ -16,6 +16,8 @@ import kotlinx.serialization.json.putJsonObject
 interface GeminiApiClient {
     suspend fun testConnection(apiKey: String, model: String = GeminiConfig.DEFAULT_MODEL): Result<Boolean>
 
+    suspend fun fetchAvailableModels(apiKey: String): Result<List<String>>
+
     suspend fun generateCardsFromArticle(
         title: String,
         url: String,
@@ -64,6 +66,50 @@ class GeminiApiClientImpl(
         } else {
             val errorMsg = parseErrorMessage(response.body, response.statusCode)
             throw IllegalArgumentException(errorMsg)
+        }
+    }
+
+    override suspend fun fetchAvailableModels(apiKey: String): Result<List<String>> = runCatching {
+        require(apiKey.isNotBlank()) { "APIキーが入力されていません" }
+
+        val endpoint = "$BASE_URL?key=$apiKey"
+        val response = httpTransport.get(endpoint)
+        if (!response.isSuccessful) {
+            val errorMsg = parseErrorMessage(response.body, response.statusCode)
+            throw IllegalArgumentException(errorMsg)
+        }
+
+        val root = json.parseToJsonElement(response.body).jsonObject
+        val modelsArray = root["models"]?.jsonArray ?: emptyList()
+
+        val extracted = modelsArray.mapNotNull { element ->
+            val obj = element as? JsonObject ?: return@mapNotNull null
+            val name = obj["name"]?.jsonPrimitive?.content?.removePrefix("models/") ?: return@mapNotNull null
+            val methods = obj["supportedGenerationMethods"]?.jsonArray?.mapNotNull {
+                it.jsonPrimitive.content
+            } ?: emptyList()
+
+            if ("generateContent" in methods && name.startsWith("gemini-")) {
+                name
+            } else {
+                null
+            }
+        }
+
+        if (extracted.isEmpty()) {
+            GeminiConfig.AVAILABLE_MODELS
+        } else {
+            extracted.distinct().sortedWith(
+                Comparator { a, b ->
+                    when {
+                        a == GeminiConfig.DEFAULT_MODEL -> -1
+                        b == GeminiConfig.DEFAULT_MODEL -> 1
+                        a.contains("flash") && !b.contains("flash") -> -1
+                        !a.contains("flash") && b.contains("flash") -> 1
+                        else -> b.compareTo(a)
+                    }
+                },
+            )
         }
     }
 

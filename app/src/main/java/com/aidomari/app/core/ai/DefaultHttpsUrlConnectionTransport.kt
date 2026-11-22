@@ -50,4 +50,34 @@ class DefaultHttpsUrlConnectionTransport(
             conn.disconnect()
         }
     }
+
+    override suspend fun get(
+        url: String,
+        headers: Map<String, String>,
+    ): HttpResponse = withContext(Dispatchers.IO) {
+        val targetUrl = URL(url)
+        val conn = (targetUrl.openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = connectTimeoutMs
+            readTimeout = readTimeoutMs
+            instanceFollowRedirects = true
+            headers.forEach { (k, v) -> setRequestProperty(k, v) }
+        }
+
+        try {
+            val statusCode = conn.responseCode
+            val isSuccess = statusCode in 200..299
+            val stream = if (isSuccess) conn.inputStream else (conn.errorStream ?: conn.inputStream)
+
+            val body = stream?.use { s ->
+                BufferedReader(InputStreamReader(s, Charsets.UTF_8)).use { br ->
+                    br.readText()
+                }
+            } ?: ""
+
+            HttpResponse(statusCode = statusCode, body = body)
+        } finally {
+            conn.disconnect()
+        }
+    }
 }

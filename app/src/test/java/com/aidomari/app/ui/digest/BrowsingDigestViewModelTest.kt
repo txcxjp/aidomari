@@ -388,6 +388,9 @@ private class FakeGeminiApiClient : GeminiApiClient {
 
     override suspend fun testConnection(apiKey: String, model: String): Result<Boolean> = Result.success(true)
 
+    override suspend fun fetchAvailableModels(apiKey: String): Result<List<String>> =
+        Result.success(listOf("gemini-3.8-flash", "gemini-2.5-flash"))
+
     override suspend fun generateCardsFromArticle(
         title: String,
         url: String,

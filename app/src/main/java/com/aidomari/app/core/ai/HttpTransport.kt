@@ -13,4 +13,9 @@ interface HttpTransport {
         jsonBody: String,
         headers: Map<String, String> = emptyMap(),
     ): HttpResponse
+
+    suspend fun get(
+        url: String,
+        headers: Map<String, String> = emptyMap(),
+    ): HttpResponse
 }
