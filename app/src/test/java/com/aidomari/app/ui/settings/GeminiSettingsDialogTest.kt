@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import com.aidomari.app.core.ai.GeminiConfig
 import org.junit.Assert.assertEquals
@@ -24,7 +25,7 @@ class GeminiSettingsDialogTest {
 
     @Test
     fun dialog_rendersFields_andSavesUpdatedConfig() {
-        var latestConfig = GeminiConfig(apiKey = "", modelName = "gemini-1.5-flash")
+        var latestConfig = GeminiConfig(apiKey = "", modelName = GeminiConfig.DEFAULT_MODEL)
         var dismissed = false
 
         composeTestRule.setContent {
@@ -54,7 +55,7 @@ class GeminiSettingsDialogTest {
 
     @Test
     fun dialog_testConnection_displaysSuccessBadge() {
-        val config = GeminiConfig(apiKey = "valid_key", modelName = "gemini-1.5-flash")
+        val config = GeminiConfig(apiKey = "valid_key", modelName = GeminiConfig.DEFAULT_MODEL)
         var connectionTested = false
 
         composeTestRule.setContent {
@@ -64,7 +65,7 @@ class GeminiSettingsDialogTest {
                 onTestConnection = { key, model ->
                     connectionTested = true
                     assertEquals("valid_key", key)
-                    assertEquals("gemini-1.5-flash", model)
+                    assertEquals(GeminiConfig.DEFAULT_MODEL, model)
                     Result.success(true)
                 },
                 onDismissRequest = {},
@@ -80,7 +81,7 @@ class GeminiSettingsDialogTest {
 
     @Test
     fun dialog_testConnection_displaysErrorBadgeOnFailure() {
-        val config = GeminiConfig(apiKey = "invalid_key", modelName = "gemini-1.5-flash")
+        val config = GeminiConfig(apiKey = "invalid_key", modelName = GeminiConfig.DEFAULT_MODEL)
 
         composeTestRule.setContent {
             GeminiSettingsDialog(
@@ -98,5 +99,26 @@ class GeminiSettingsDialogTest {
 
         composeTestRule.onNodeWithText("接続失敗").assertExists()
         composeTestRule.onNodeWithText("無効なAPIキーです").assertExists()
+    }
+
+    @Test
+    fun dialog_allowsCustomModelInput() {
+        var savedConfig: GeminiConfig? = null
+
+        composeTestRule.setContent {
+            GeminiSettingsDialog(
+                config = GeminiConfig(apiKey = "key123", modelName = GeminiConfig.DEFAULT_MODEL),
+                onConfigChanged = { savedConfig = it },
+                onTestConnection = { _, _ -> Result.success(true) },
+                onDismissRequest = {},
+            )
+        }
+
+        // Custom model input
+        composeTestRule.onNodeWithTag("GeminiModelSelector").performTextClearance()
+        composeTestRule.onNodeWithTag("GeminiModelSelector").performTextInput("gemini-3.8-custom")
+        composeTestRule.onNodeWithTag("GeminiSaveButton").performClick()
+
+        assertEquals("gemini-3.8-custom", savedConfig?.modelName)
     }
 }

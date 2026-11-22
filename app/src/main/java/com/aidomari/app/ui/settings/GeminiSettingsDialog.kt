@@ -134,13 +134,15 @@ fun GeminiSettingsDialog(
                 ) {
                     OutlinedTextField(
                         value = selectedModel,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("使用モデル") },
+                        onValueChange = {
+                            selectedModel = it
+                            testState = ConnectionTestState.Idle
+                        },
+                        label = { Text("使用モデル（直接入力可）") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isModelMenuExpanded) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                            .menuAnchor(MenuAnchorType.PrimaryEditable)
                             .testTag("GeminiModelSelector"),
                     )
                     ExposedDropdownMenu(
@@ -290,7 +292,7 @@ fun GeminiSettingsDialog(
                     onConfigChanged(
                         config.copy(
                             apiKey = apiKey.trim(),
-                            modelName = selectedModel,
+                            modelName = selectedModel.trim().ifBlank { GeminiConfig.DEFAULT_MODEL },
                         ),
                     )
                     onDismissRequest()

@@ -16,19 +16,21 @@ class GeminiPreferences(context: Context) {
 
     private fun loadConfig(): GeminiConfig {
         val key = prefs.getString(KEY_API_KEY, "") ?: ""
-        val model = prefs.getString(KEY_MODEL_NAME, GeminiConfig.DEFAULT_MODEL) ?: GeminiConfig.DEFAULT_MODEL
+        val savedModel = prefs.getString(KEY_MODEL_NAME, GeminiConfig.DEFAULT_MODEL) ?: GeminiConfig.DEFAULT_MODEL
+        val model = if (savedModel in GeminiConfig.DEPRECATED_MODELS) GeminiConfig.DEFAULT_MODEL else savedModel
         val temp = prefs.getFloat(KEY_TEMPERATURE, GeminiConfig.DEFAULT_TEMPERATURE)
         return GeminiConfig(apiKey = key, modelName = model, temperature = temp)
     }
 
     fun updateConfig(config: GeminiConfig) {
         val trimmedKey = config.apiKey.trim()
+        val effectiveModel = config.modelName.trim().ifBlank { GeminiConfig.DEFAULT_MODEL }
         prefs.edit()
             .putString(KEY_API_KEY, trimmedKey)
-            .putString(KEY_MODEL_NAME, config.modelName)
+            .putString(KEY_MODEL_NAME, effectiveModel)
             .putFloat(KEY_TEMPERATURE, config.temperature)
             .apply()
-        _config.value = config.copy(apiKey = trimmedKey)
+        _config.value = config.copy(apiKey = trimmedKey, modelName = effectiveModel)
     }
 
     fun setApiKey(apiKey: String) {

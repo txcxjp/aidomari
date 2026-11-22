@@ -32,9 +32,20 @@ class GeminiPreferencesTest {
     fun defaultValues_areBlankKeyAndDefaultFlashModel() {
         val config = preferences.config.value
         assertEquals("", config.apiKey)
-        assertEquals("gemini-1.5-flash", config.modelName)
+        assertEquals(GeminiConfig.DEFAULT_MODEL, config.modelName)
         assertEquals(0.2f, config.temperature, 0.001f)
         assertFalse(config.isConfigured)
+    }
+
+    @Test
+    fun loadConfig_migratesDeprecatedModelsToDefault() {
+        context.getSharedPreferences("aidomari_gemini_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putString("gemini_model_name", "gemini-2.0-flash")
+            .commit()
+
+        val migratedPrefs = GeminiPreferences(context)
+        assertEquals(GeminiConfig.DEFAULT_MODEL, migratedPrefs.config.value.modelName)
     }
 
     @Test
@@ -51,20 +62,20 @@ class GeminiPreferencesTest {
         preferences.updateConfig(
             GeminiConfig(
                 apiKey = "mock_key",
-                modelName = "gemini-2.0-flash",
+                modelName = "gemini-2.5-pro",
                 temperature = 0.5f,
             ),
         )
 
         val config = preferences.config.value
         assertEquals("mock_key", config.apiKey)
-        assertEquals("gemini-2.0-flash", config.modelName)
+        assertEquals("gemini-2.5-pro", config.modelName)
         assertEquals(0.5f, config.temperature, 0.001f)
 
         // Re-instantiate from prefs
         val reloaded = GeminiPreferences(context)
         assertEquals("mock_key", reloaded.config.value.apiKey)
-        assertEquals("gemini-2.0-flash", reloaded.config.value.modelName)
+        assertEquals("gemini-2.5-pro", reloaded.config.value.modelName)
         assertEquals(0.5f, reloaded.config.value.temperature, 0.001f)
     }
 
