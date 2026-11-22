@@ -72,10 +72,14 @@ object PrivacyFilter {
 
         // 2. 検索エンジンホスト (Google各ドメイン、Bing、Yahoo検索、DuckDuckGo等)
         if (SEARCH_ENGINE_HOSTS.contains(domain) ||
-            domain == "google.com" || domain.endsWith(".google.com") ||
-            domain == "google.co.jp" || domain.endsWith(".google.co.jp") ||
-            domain == "bing.com" || domain.endsWith(".bing.com") ||
-            domain == "search.yahoo.co.jp" || domain == "search.yahoo.com"
+            domain == "google.com" ||
+            domain.endsWith(".google.com") ||
+            domain == "google.co.jp" ||
+            domain.endsWith(".google.co.jp") ||
+            domain == "bing.com" ||
+            domain.endsWith(".bing.com") ||
+            domain == "search.yahoo.co.jp" ||
+            domain == "search.yahoo.com"
         ) {
             return true
         }
