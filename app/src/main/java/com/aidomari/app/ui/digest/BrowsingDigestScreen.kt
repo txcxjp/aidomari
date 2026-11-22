@@ -38,6 +38,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
@@ -274,6 +275,8 @@ fun BrowsingDigestScreen(
                         ArticleItemCard(
                             article = article,
                             isGenerating = uiState.isGenerating && uiState.generatingArticleId == article.id,
+                            progressMessage = if (uiState.generatingArticleId == article.id) uiState.generationProgressMessage else null,
+                            progressFraction = if (uiState.generatingArticleId == article.id) uiState.generationProgressFraction else null,
                             onGenerateClick = { viewModel.generateCards(article) },
                             onDeleteClick = { viewModel.deleteArticle(article.id) },
                         )
@@ -293,6 +296,8 @@ fun BrowsingDigestScreen(
             newDeckName = uiState.newDeckName,
             selectedDepth = uiState.selectedDepth,
             isGenerating = uiState.isGenerating,
+            progressMessage = uiState.generationProgressMessage,
+            progressFraction = uiState.generationProgressFraction,
             onSubjectSelect = { viewModel.selectSubject(it) },
             onDeckNameChange = { viewModel.updateNewDeckName(it) },
             onToggleSelect = { viewModel.toggleCardSelection(it) },
@@ -323,6 +328,8 @@ fun BrowsingDigestScreen(
 fun ArticleItemCard(
     article: SourceArticle,
     isGenerating: Boolean,
+    progressMessage: String? = null,
+    progressFraction: Float? = null,
     onGenerateClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -381,6 +388,55 @@ fun ArticleItemCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 16.sp,
                 )
+            }
+
+            // 進捗バー表示
+            if (isGenerating && progressMessage != null) {
+                Spacer(Modifier.height(8.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = progressMessage,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        if (progressFraction != null) {
+                            Text(
+                                text = "${(progressFraction * 100).toInt()}%",
+                                fontSize = 10.5.sp,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    if (progressFraction != null) {
+                        LinearProgressIndicator(
+                            progress = { progressFraction },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp)),
+                        )
+                    } else {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp)),
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(10.dp))
@@ -479,6 +535,8 @@ fun CardReviewDialog(
     newDeckName: String,
     selectedDepth: CardExtractionDepth,
     isGenerating: Boolean = false,
+    progressMessage: String? = null,
+    progressFraction: Float? = null,
     onSubjectSelect: (String) -> Unit,
     onDeckNameChange: (String) -> Unit,
     onToggleSelect: (String) -> Unit,
@@ -643,10 +701,35 @@ fun CardReviewDialog(
                             .weight(1f),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                            Spacer(Modifier.height(8.dp))
-                            Text("カードを再生成中...", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(24.dp),
+                        ) {
+                            if (progressFraction != null) {
+                                LinearProgressIndicator(
+                                    progress = { progressFraction },
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.7f)
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                )
+                            } else {
+                                CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = progressMessage ?: "カードを再生成中...",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (progressFraction != null) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "${(progressFraction * 100).toInt()}%",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
                         }
                     }
                 } else {

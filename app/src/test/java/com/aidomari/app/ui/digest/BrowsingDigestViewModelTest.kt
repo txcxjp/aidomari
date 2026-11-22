@@ -206,6 +206,46 @@ class BrowsingDigestViewModelTest {
     }
 
     @Test
+    fun generateCards_updatesProgressMessageAndFractionDuringExecution() = runTest {
+        geminiPreferences.setApiKey("valid_api_key")
+        val article = SourceArticle(id = "1", url = "https://example.com", domain = "example.com", title = "記事", extractedText = "本文", status = ArticleStatus.PENDING)
+
+        var capturedProgressMessage: String? = null
+        var capturedProgressFraction: Float? = null
+
+        fakeGeminiApiClient.onProgressInvoked = {
+            capturedProgressMessage = viewModel.uiState.value.generationProgressMessage
+            capturedProgressFraction = viewModel.uiState.value.generationProgressFraction
+        }
+
+        viewModel.generateCards(article)
+        advanceUntilIdle()
+
+        assertNotNull(capturedProgressMessage)
+        assertTrue(capturedProgressMessage!!.contains("主要テーマ"))
+        assertNotNull(capturedProgressFraction)
+        assertTrue(capturedProgressFraction!! > 0f)
+        assertNull(viewModel.uiState.value.generationProgressMessage)
+        assertNull(viewModel.uiState.value.generationProgressFraction)
+        assertFalse(viewModel.uiState.value.isGenerating)
+    }
+
+    @Test
+    fun generateCards_clearsProgressOnFailure() = runTest {
+        geminiPreferences.setApiKey("valid_api_key")
+        fakeGeminiApiClient.shouldFail = true
+        val article = SourceArticle(id = "1", url = "https://example.com", domain = "example.com", title = "記事", extractedText = "本文", status = ArticleStatus.PENDING)
+
+        viewModel.generateCards(article)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isGenerating)
+        assertNull(viewModel.uiState.value.generationProgressMessage)
+        assertNull(viewModel.uiState.value.generationProgressFraction)
+        assertNotNull(viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
     fun updateCandidate_updatesContent() = runTest {
         geminiPreferences.setApiKey("valid_api_key")
         fakeGeminiApiClient.stubbedProposals = listOf(
@@ -385,6 +425,8 @@ private class FakeWordsRepository : WordsRepository {
 private class FakeGeminiApiClient : GeminiApiClient {
     var stubbedProposals: List<GeneratedCardProposal> = emptyList()
     var lastDepth: CardExtractionDepth? = null
+    var shouldFail: Boolean = false
+    var onProgressInvoked: (() -> Unit)? = null
 
     override suspend fun testConnection(apiKey: String, model: String): Result<Boolean> = Result.success(true)
 
@@ -422,8 +464,12 @@ private class FakeGeminiApiClient : GeminiApiClient {
         onProgress: (com.aidomari.app.core.ai.GenerationProgress) -> Unit,
     ): Result<List<GeneratedCardProposal>> {
         lastDepth = depth
+        if (shouldFail) {
+            return Result.failure(RuntimeException("Gemini API error"))
+        }
         onProgress(com.aidomari.app.core.ai.GenerationProgress.AnalyzingThemes())
         onProgress(com.aidomari.app.core.ai.GenerationProgress.GeneratingThemeCards(1, 1, "主要テーマ", 0))
+        onProgressInvoked?.invoke()
         onProgress(com.aidomari.app.core.ai.GenerationProgress.Deduplicating(stubbedProposals.size))
         return Result.success(stubbedProposals)
     }

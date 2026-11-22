@@ -84,6 +84,8 @@ class BrowsingDigestViewModel(
             it.copy(
                 isGenerating = true,
                 generatingArticleId = article.id,
+                generationProgressMessage = "生成準備中...",
+                generationProgressFraction = 0.05f,
                 selectedDepth = depth,
                 errorMessage = null,
             )
@@ -98,6 +100,24 @@ class BrowsingDigestViewModel(
                 model = config.modelName,
                 temperature = config.temperature,
                 depth = depth,
+                onProgress = { progress ->
+                    val (message, fraction) = when (progress) {
+                        is com.aidomari.app.core.ai.GenerationProgress.AnalyzingThemes -> Pair(progress.message, 0.15f)
+                        is com.aidomari.app.core.ai.GenerationProgress.GeneratingThemeCards -> {
+                            val base = 0.15f
+                            val step = 0.75f / progress.totalThemes.coerceAtLeast(1)
+                            val frac = (base + step * progress.currentThemeIndex).coerceIn(0.15f, 0.90f)
+                            Pair(progress.displayMessage, frac)
+                        }
+                        is com.aidomari.app.core.ai.GenerationProgress.Deduplicating -> Pair(progress.displayMessage, 0.95f)
+                    }
+                    _uiState.update {
+                        it.copy(
+                            generationProgressMessage = message,
+                            generationProgressFraction = fraction,
+                        )
+                    }
+                },
             )
 
             result.fold(
@@ -121,6 +141,8 @@ class BrowsingDigestViewModel(
                         it.copy(
                             isGenerating = false,
                             generatingArticleId = null,
+                            generationProgressMessage = null,
+                            generationProgressFraction = null,
                             reviewArticle = article,
                             candidateCards = candidates,
                             newDeckName = defaultDeckName,
@@ -133,6 +155,8 @@ class BrowsingDigestViewModel(
                         it.copy(
                             isGenerating = false,
                             generatingArticleId = null,
+                            generationProgressMessage = null,
+                            generationProgressFraction = null,
                             errorMessage = "カード生成に失敗しました: ${error.localizedMessage ?: "不明なエラー"}",
                         )
                     }

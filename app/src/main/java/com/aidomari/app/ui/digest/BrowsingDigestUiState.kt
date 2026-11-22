@@ -27,6 +27,8 @@ data class BrowsingDigestUiState(
     val selectedDepth: CardExtractionDepth = CardExtractionDepth.STANDARD,
     val isGenerating: Boolean = false,
     val generatingArticleId: String? = null,
+    val generationProgressMessage: String? = null,
+    val generationProgressFraction: Float? = null,
     val reviewArticle: SourceArticle? = null,
     val candidateCards: List<CardCandidateItem> = emptyList(),
     val subjects: List<Subject> = emptyList(),
