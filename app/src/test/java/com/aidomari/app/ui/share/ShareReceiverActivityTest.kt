@@ -7,6 +7,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import com.aidomari.app.core.share.FetchedArticle
 import com.aidomari.app.core.share.ParsedShareContent
 import com.aidomari.app.core.share.ShareArticleFetcher
@@ -18,6 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.IOException
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -159,5 +162,110 @@ class ShareReceiverActivityTest {
         composeTestRule.onNodeWithText("プライバシー保護のため、除外対象のドメイン/ページです（保存されません）").assertIsDisplayed()
         composeTestRule.onNodeWithTag("ShareSaveButton").assertIsNotEnabled()
         composeTestRule.onNodeWithTag("ShareDeckifyButton").assertIsNotEnabled()
+    }
+
+    @Test
+    fun screen_fetchError_displaysErrorBanner_disablesDeckify_enablesUrlOnlySave() {
+        var savedUrl = ""
+        var savedTitle = ""
+        var savedContent = ""
+        var navigateToDigest = true
+
+        val failingFetcher = object : ShareArticleFetcher {
+            override suspend fun fetchArticle(url: String): Result<FetchedArticle> =
+                Result.failure(IOException("非暗号化通信(HTTP)のサイトのため、セキュリティ保護により自動取得できません"))
+        }
+
+        val parsed = ParsedShareContent(
+            url = "http://www.110kz.com/033/",
+            title = "度胸だめし",
+            content = "",
+            isUrlOnly = true,
+        )
+
+        composeTestRule.setContent {
+            ShareReceiverScreen(
+                parsed = parsed,
+                fetcher = failingFetcher,
+                onSave = { u, t, c, n ->
+                    savedUrl = u
+                    savedTitle = t
+                    savedContent = c
+                    navigateToDigest = n
+                },
+                onDismiss = {},
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Error banner should be visible
+        composeTestRule.onNodeWithTag("ShareFetchErrorBanner", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("本文の自動取得に失敗しました").assertIsDisplayed()
+        composeTestRule.onNodeWithText("非暗号化通信(HTTP)のサイトのため、セキュリティ保護により自動取得できません").assertIsDisplayed()
+
+        // Deckify button must be disabled because content is blank
+        composeTestRule.onNodeWithTag("ShareDeckifyButton").performScrollTo().assertIsNotEnabled()
+
+        // Save button must display "URLのみ保存" and be enabled
+        composeTestRule.onNodeWithTag("ShareSaveButton").performScrollTo().assertIsEnabled()
+        composeTestRule.onNodeWithText("URLのみ保存").assertIsDisplayed()
+
+        // Click URL-only save
+        composeTestRule.onNodeWithTag("ShareSaveButton").performClick()
+
+        assertEquals("http://www.110kz.com/033/", savedUrl)
+        assertEquals("度胸だめし", savedTitle)
+        assertEquals("(URL: http://www.110kz.com/033/)", savedContent)
+        assertFalse(navigateToDigest)
+    }
+
+    @Test
+    fun screen_fetchError_manualContentInput_enablesDeckifyButton() {
+        var onSaveCount = 0
+        var savedContent = ""
+        var navigateToDigest = false
+
+        val failingFetcher = object : ShareArticleFetcher {
+            override suspend fun fetchArticle(url: String): Result<FetchedArticle> =
+                Result.failure(IOException("非暗号化通信(HTTP)のサイトのため、セキュリティ保護により自動取得できません"))
+        }
+
+        val parsed = ParsedShareContent(
+            url = "http://www.110kz.com/033/",
+            title = "度胸だめし",
+            content = "",
+            isUrlOnly = true,
+        )
+
+        composeTestRule.setContent {
+            ShareReceiverScreen(
+                parsed = parsed,
+                fetcher = failingFetcher,
+                onSave = { _, _, c, n ->
+                    onSaveCount++
+                    savedContent = c
+                    navigateToDigest = n
+                },
+                onDismiss = {},
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Input text manually into ShareContentInput
+        composeTestRule.onNodeWithTag("ShareContentInput").performScrollTo().performTextReplacement("手動でコピー＆ペーストした怪談話の本文です。")
+        composeTestRule.waitForIdle()
+
+        // Now deckify button should become enabled!
+        composeTestRule.onNodeWithTag("ShareDeckifyButton").performScrollTo().assertIsEnabled()
+        composeTestRule.onNodeWithTag("ShareDeckifyButton").performClick()
+        composeTestRule.waitForIdle()
+
+        println("DEBUG: onSaveCount = $onSaveCount, savedContent = '$savedContent'")
+
+        assertEquals(1, onSaveCount)
+        assertEquals("手動でコピー＆ペーストした怪談話の本文です。", savedContent)
+        assertTrue(navigateToDigest)
     }
 }
