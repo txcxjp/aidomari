@@ -1,7 +1,7 @@
 package com.aidomari.app.ui.digest
 
 import com.aidomari.app.domain.model.Subject
-import com.aidomari.app.domain.model.ai.CardExtractionDepth
+import com.aidomari.app.domain.model.ai.CardExtractionMode
 import com.aidomari.app.domain.model.article.ArticleStatus
 import com.aidomari.app.domain.model.article.SourceArticle
 import java.util.UUID
@@ -24,7 +24,7 @@ data class BrowsingDigestUiState(
     val articles: List<SourceArticle> = emptyList(),
     val pendingCount: Int = 0,
     val selectedTab: ArticleFilterTab = ArticleFilterTab.PENDING,
-    val selectedDepth: CardExtractionDepth = CardExtractionDepth.STANDARD,
+    val selectedMode: CardExtractionMode = CardExtractionMode.SMART,
     val isGenerating: Boolean = false,
     val generatingArticleId: String? = null,
     val generationProgressMessage: String? = null,

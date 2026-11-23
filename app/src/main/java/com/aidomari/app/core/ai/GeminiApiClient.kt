@@ -1,6 +1,6 @@
 package com.aidomari.app.core.ai
 
-import com.aidomari.app.domain.model.ai.CardExtractionDepth
+import com.aidomari.app.domain.model.ai.CardExtractionMode
 import com.aidomari.app.domain.model.ai.GeneratedCardProposal
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -40,7 +40,7 @@ interface GeminiApiClient {
         content: String,
         apiKey: String,
         model: String = GeminiConfig.DEFAULT_MODEL,
-        depth: CardExtractionDepth = CardExtractionDepth.STANDARD,
+        mode: CardExtractionMode = CardExtractionMode.SMART,
     ): Result<List<String>>
 
     suspend fun generateCardsForTheme(
@@ -51,7 +51,7 @@ interface GeminiApiClient {
         apiKey: String,
         model: String = GeminiConfig.DEFAULT_MODEL,
         temperature: Float = GeminiConfig.DEFAULT_TEMPERATURE,
-        depth: CardExtractionDepth = CardExtractionDepth.STANDARD,
+        mode: CardExtractionMode = CardExtractionMode.SMART,
     ): Result<List<GeneratedCardProposal>>
 
     suspend fun generateCardsFromArticle(
@@ -61,7 +61,7 @@ interface GeminiApiClient {
         apiKey: String,
         model: String = GeminiConfig.DEFAULT_MODEL,
         temperature: Float = GeminiConfig.DEFAULT_TEMPERATURE,
-        depth: CardExtractionDepth = CardExtractionDepth.STANDARD,
+        mode: CardExtractionMode = CardExtractionMode.SMART,
         onProgress: (GenerationProgress) -> Unit = {},
     ): Result<List<GeneratedCardProposal>>
 }
@@ -156,13 +156,13 @@ class GeminiApiClientImpl(
         content: String,
         apiKey: String,
         model: String,
-        depth: CardExtractionDepth,
+        mode: CardExtractionMode,
     ): Result<List<String>> = runCatching {
         require(apiKey.isNotBlank()) { "APIキーが設定されていません" }
         require(content.isNotBlank()) { "解析対象の記事本文が空です" }
 
         val endpoint = "$BASE_URL/$model:generateContent?key=$apiKey"
-        val prompt = buildThemeExtractionPrompt(title = title, url = url, content = content, depth = depth)
+        val prompt = buildThemeExtractionPrompt(title = title, url = url, content = content, mode = mode)
 
         val requestBody = buildJsonObject {
             putJsonArray("contents") {
@@ -197,7 +197,7 @@ class GeminiApiClientImpl(
         apiKey: String,
         model: String,
         temperature: Float,
-        depth: CardExtractionDepth,
+        mode: CardExtractionMode,
     ): Result<List<GeneratedCardProposal>> = runCatching {
         require(apiKey.isNotBlank()) { "APIキーが設定されていません" }
         require(content.isNotBlank()) { "解析対象の記事本文が空です" }
@@ -209,7 +209,7 @@ class GeminiApiClientImpl(
             url = url,
             content = content,
             theme = theme,
-            depth = depth,
+            mode = mode,
         )
 
         val requestBody = buildJsonObject {
@@ -244,21 +244,21 @@ class GeminiApiClientImpl(
         apiKey: String,
         model: String,
         temperature: Float,
-        depth: CardExtractionDepth,
+        mode: CardExtractionMode,
         onProgress: (GenerationProgress) -> Unit,
     ): Result<List<GeneratedCardProposal>> = runCatching {
         require(apiKey.isNotBlank()) { "APIキーが設定されていません" }
         require(content.isNotBlank()) { "解析対象の記事本文が空です" }
 
-        // If ESSENCE, direct single-turn generation is optimal (concise backbone)
-        if (depth == CardExtractionDepth.ESSENCE) {
-            onProgress(GenerationProgress.AnalyzingThemes("エッセンス抽出中..."))
-            return@runCatching generateCardsDirectly(title, url, content, apiKey, model, temperature, depth)
+        // If CORE, direct single-turn generation is optimal (concise backbone)
+        if (mode == CardExtractionMode.CORE) {
+            onProgress(GenerationProgress.AnalyzingThemes("コア概念を抽出中..."))
+            return@runCatching generateCardsDirectly(title, url, content, apiKey, model, temperature, mode)
         }
 
-        // Multi-stage extraction for STANDARD and DETAILED
+        // Multi-stage extraction for SMART and KNOWLEDGE
         onProgress(GenerationProgress.AnalyzingThemes())
-        val themesResult = extractThemes(title, url, content, apiKey, model, depth)
+        val themesResult = extractThemes(title, url, content, apiKey, model, mode)
         val rawThemes = themesResult.getOrThrow()
         val themes = if (rawThemes.isNotEmpty()) {
             rawThemes
@@ -285,7 +285,7 @@ class GeminiApiClientImpl(
                 apiKey = apiKey,
                 model = model,
                 temperature = temperature,
-                depth = depth,
+                mode = mode,
             )
 
             val cards = themeCardsResult.getOrThrow()
@@ -297,7 +297,7 @@ class GeminiApiClientImpl(
         val deduplicated = deduplicateCardProposals(allProposals)
 
         if (deduplicated.isEmpty()) {
-            generateCardsDirectly(title, url, content, apiKey, model, temperature, depth)
+            generateCardsDirectly(title, url, content, apiKey, model, temperature, mode)
         } else {
             deduplicated
         }
@@ -310,10 +310,10 @@ class GeminiApiClientImpl(
         apiKey: String,
         model: String,
         temperature: Float,
-        depth: CardExtractionDepth,
+        mode: CardExtractionMode,
     ): List<GeneratedCardProposal> {
         val endpoint = "$BASE_URL/$model:generateContent?key=$apiKey"
-        val prompt = buildKnowledgeExtractionPrompt(title = title, url = url, content = content, depth = depth)
+        val prompt = buildKnowledgeExtractionPrompt(title = title, url = url, content = content, mode = mode)
 
         val requestBody = buildJsonObject {
             putJsonArray("contents") {
@@ -344,12 +344,12 @@ class GeminiApiClientImpl(
         title: String,
         url: String,
         content: String,
-        depth: CardExtractionDepth,
+        mode: CardExtractionMode,
     ): String {
-        val scaleGuidance = when (depth) {
-            CardExtractionDepth.ESSENCE -> "記事の最も根幹となる中核テーマを1つ（最大でも2つ）特定してください。"
-            CardExtractionDepth.STANDARD -> "記事の規模や内容に応じて、主要なトピック・テーマを1つないし複数（標準的な記事なら2〜4個）特定してください。"
-            CardExtractionDepth.DETAILED -> "記事全体を余さず網羅するため、扱われている主要な章・トピック・テーマを1つないし複数（網羅的な大作記事なら3〜7個程度）漏れなくリストアップしてください。"
+        val scaleGuidance = when (mode) {
+            CardExtractionMode.CORE -> "記事の最も根幹となる中核テーマを1つ（最大でも2つ）特定してください。"
+            CardExtractionMode.SMART -> "記事の性質（事典解説、論説エッセイ、ニュース等）を見極め、読者が最も効率的に暗記・復習できるテーマ構成（単一の話題なら1〜2個、多岐にわたる解説記事なら3〜5個程度）を柔軟に特定してください。"
+            CardExtractionMode.KNOWLEDGE -> "記事全体を余さず体系的に網羅するため、扱われている主要な章・トピック・テーマ（大作記事なら3〜7個程度）を漏れなくリストアップしてください。"
         }
 
         return """
@@ -379,20 +379,23 @@ class GeminiApiClientImpl(
         url: String,
         content: String,
         theme: String,
-        depth: CardExtractionDepth,
+        mode: CardExtractionMode,
     ): String {
-        val depthInstruction = when (depth) {
-            CardExtractionDepth.ESSENCE -> """
-                4. 抽出の姿勢（エッセンスのみ厳選）:
-                   - この記事・テーマの最も中核的な中心命題・不可欠な基本概念（幹）のみを厳選してください。
+        val modeInstruction = when (mode) {
+            CardExtractionMode.CORE -> """
+                4. 抽出の姿勢（コア概念・要旨の凝縮）:
+                   - この記事・テーマの最も中核的な中心命題・思考の枠組み・不可欠な基本概念（コア）のみを厳選してください。
+                   - 単なる具体例や固有名詞・付随エピソード（トリビア）は除外してください。
             """.trimIndent()
-            CardExtractionDepth.STANDARD -> """
-                4. 抽出の姿勢（主要論点を網羅）:
-                   - このテーマを理解するために重要な専門用語・キーワード（幹と枝）を過不足なく抽出してください。
+            CardExtractionMode.SMART -> """
+                4. 抽出の姿勢（スマート自動最適化）:
+                   - 記事の性質に応じ、事典・解説文であれば専門用語を網羅的に、論説・エッセイであれば筆者の主張・キー概念を中心に、読者が最も暗記・復習すべき知識を最適に抽出してください。
+                   - その分野の基本概念・中核用語を押さえつつ、理解に必要な重要キーワードを過不足なく抽出してください。
             """.trimIndent()
-            CardExtractionDepth.DETAILED -> """
-                4. 抽出の姿勢（文中の知見を余さず拾う）:
-                   - このテーマに関連する文中の用語・固有名称・背景データ・付随エピソード（枝葉に至るまで）を余さず徹底的に拾い上げてください。
+            CardExtractionMode.KNOWLEDGE -> """
+                4. 抽出の姿勢（ナレッジ徹底網羅）:
+                   - このテーマの根幹となる最重要用語（幹）を確実に含めた上で、文中に登場する専門用語・固有名称・背景データ・付随エピソードなどの細部に至るまで、単語帳として学習価値のある知識を余さず徹底的に拾い上げてください。
+                   - 【重要】基本概念を省略してマニアックな枝葉だけにしてはいけません。幹から枝葉まで網羅してください。
             """.trimIndent()
         }
 
@@ -418,7 +421,7 @@ class GeminiApiClientImpl(
                - パッと見て想起できる文章にしてください。
             3. 補足メモ (userSupplement):
                - このテーマにおける具体的な文脈、詳細な背景・理由・付随データ（1〜3文程度）。
-            $depthInstruction
+            $modeInstruction
                - 指定テーマ【$theme】に関する知識に集中し、他の無関係な話題は含めないでください。
             5. 出力は必ず以下のJSON配列形式のみを出力してください（Markdownコードブロックは不要です）：
             [
@@ -435,22 +438,22 @@ class GeminiApiClientImpl(
         title: String,
         url: String,
         content: String,
-        depth: CardExtractionDepth,
+        mode: CardExtractionMode,
     ): String {
-        val depthInstruction = when (depth) {
-            CardExtractionDepth.ESSENCE -> """
-                4. 抽出の姿勢（エッセンスのみ厳選）:
-                   - この記事を成立させている最も中核的な中心命題・不可欠な基本概念（幹）のみを厳選してください。
-                   - 派生的な論点や枝葉の知識・背景データはすべて削ぎ落とし、記事の背骨となる用語のみに絞り込んでください。
+        val modeInstruction = when (mode) {
+            CardExtractionMode.CORE -> """
+                4. 抽出の姿勢（コア概念・要旨の凝縮）:
+                   - この記事を成立させている最も中核的な中心命題・思考の枠組み・不可欠な基本概念（コア）のみを厳選してください。
+                   - 派生的な論点や単なる具体例・固有名詞などのトリビアは削ぎ落とし、記事の背骨となる用語のみに絞り込んでください。
             """.trimIndent()
-            CardExtractionDepth.STANDARD -> """
-                4. 抽出の姿勢（主要論点を網羅）:
-                   - 記事を十分に理解するために必要な、各章・各トピックの主要な専門用語・重要概念（幹と枝）をバランスよく抽出してください。
-                   - 無意味な細部や浅いトリビアは含めず、記事の骨格となる知識を過不足なく網羅してください。
+            CardExtractionMode.SMART -> """
+                4. 抽出の姿勢（スマート自動最適化）:
+                   - 記事の性質（事典解説、論説エッセイ、ニュース等）を見極め、事典であれば重要用語・専門用語を網羅し、エッセイであれば筆者の主張・キー概念を中心に、読者がその文章から得るべき最適な知識を過不足なく抽出してください。
             """.trimIndent()
-            CardExtractionDepth.DETAILED -> """
-                4. 抽出の姿勢（文中の知見を余さず拾う）:
-                   - 記事の中核概念にとどまらず、文中に登場する固有の名称・付随データ・背景エピソード・派生概念などの枝葉に至るまで、単語帳として学習価値のある知識を余さず拾い上げてください。
+            CardExtractionMode.KNOWLEDGE -> """
+                4. 抽出の姿勢（ナレッジ徹底網羅）:
+                   - 記事の根幹となる最重要概念（幹）を確実に含めた上で、文中に登場する固有名称・専門用語・付随データ・背景エピソードなどの細部に至るまで、単語帳として学習価値のある知識を余さず徹底的に拾い上げてください。
+                   - 【重要】基本概念を省略してマニアックな枝葉だけにしてはいけません。幹から枝葉まで網羅してください。
             """.trimIndent()
         }
 
@@ -474,7 +477,7 @@ class GeminiApiClientImpl(
             3. 補足メモ (userSupplement):
                - 記事内での具体的な文脈、詳細な背景・理由・因果関係・付随データ（1〜3文程度）。
                - 詳しい解説や引用はすべてここに記述してください。
-            $depthInstruction
+            $modeInstruction
             5. 出力は必ず以下のJSON配列形式のみを出力してください（Markdownコードブロックは不要です）：
             [
               {

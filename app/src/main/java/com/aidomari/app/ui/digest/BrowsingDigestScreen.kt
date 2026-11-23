@@ -73,7 +73,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.aidomari.app.core.ai.GeminiApiClientImpl
 import com.aidomari.app.core.ai.GeminiPreferences
-import com.aidomari.app.domain.model.ai.CardExtractionDepth
+import com.aidomari.app.domain.model.ai.CardExtractionMode
 import com.aidomari.app.domain.model.article.ArticleStatus
 import com.aidomari.app.domain.model.article.SourceArticle
 import com.aidomari.app.ui.settings.GeminiSettingsDialog
@@ -216,7 +216,7 @@ fun BrowsingDigestScreen(
                 }
             }
 
-            // 抽出の深さ（解像度）セレクター
+            // 抽出モードセレクター
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -225,18 +225,18 @@ fun BrowsingDigestScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = "抽出の深さ",
+                    text = "抽出モード",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 SingleChoiceSegmentedButtonRow {
-                    CardExtractionDepth.entries.forEachIndexed { index, depth ->
+                    CardExtractionMode.entries.forEachIndexed { index, mode ->
                         SegmentedButton(
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = CardExtractionDepth.entries.size),
-                            onClick = { viewModel.selectDepth(depth) },
-                            selected = uiState.selectedDepth == depth,
-                            label = { Text(depth.label, fontSize = 11.sp) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = CardExtractionMode.entries.size),
+                            onClick = { viewModel.selectMode(mode) },
+                            selected = uiState.selectedMode == mode,
+                            label = { Text(mode.label, fontSize = 11.sp) },
                         )
                     }
                 }
@@ -294,7 +294,7 @@ fun BrowsingDigestScreen(
             subjects = uiState.subjects,
             selectedSubjectId = uiState.selectedSubjectId,
             newDeckName = uiState.newDeckName,
-            selectedDepth = uiState.selectedDepth,
+            selectedMode = uiState.selectedMode,
             isGenerating = uiState.isGenerating,
             progressMessage = uiState.generationProgressMessage,
             progressFraction = uiState.generationProgressFraction,
@@ -303,7 +303,7 @@ fun BrowsingDigestScreen(
             onToggleSelect = { viewModel.toggleCardSelection(it) },
             onSelectAll = { viewModel.selectAllCandidates(it) },
             onCandidateChange = { id, f, b, s -> viewModel.updateCandidate(id, f, b, s) },
-            onRegenerateWithDepth = { depth -> viewModel.generateCards(uiState.reviewArticle!!, depth) },
+            onRegenerateWithMode = { mode -> viewModel.generateCards(uiState.reviewArticle!!, mode) },
             onSave = { viewModel.saveSelectedCards() },
             onDismiss = { viewModel.closeReview() },
         )
@@ -533,7 +533,7 @@ fun CardReviewDialog(
     subjects: List<com.aidomari.app.domain.model.Subject>,
     selectedSubjectId: String?,
     newDeckName: String,
-    selectedDepth: CardExtractionDepth,
+    selectedMode: CardExtractionMode,
     isGenerating: Boolean = false,
     progressMessage: String? = null,
     progressFraction: Float? = null,
@@ -542,7 +542,7 @@ fun CardReviewDialog(
     onToggleSelect: (String) -> Unit,
     onSelectAll: (Boolean) -> Unit,
     onCandidateChange: (String, String, String, String) -> Unit,
-    onRegenerateWithDepth: (CardExtractionDepth) -> Unit,
+    onRegenerateWithMode: (CardExtractionMode) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -675,18 +675,18 @@ fun CardReviewDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = "抽出: ${selectedDepth.label}",
+                            text = "モード: ${selectedMode.label}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            CardExtractionDepth.entries.forEach { depth ->
-                                if (depth != selectedDepth) {
+                            CardExtractionMode.entries.forEach { mode ->
+                                if (mode != selectedMode) {
                                     AssistChip(
-                                        onClick = { onRegenerateWithDepth(depth) },
+                                        onClick = { onRegenerateWithMode(mode) },
                                         enabled = !isGenerating,
-                                        label = { Text("${depth.label}で再生成", fontSize = 10.5.sp) },
+                                        label = { Text("${mode.label}で再生成", fontSize = 10.5.sp) },
                                     )
                                 }
                             }

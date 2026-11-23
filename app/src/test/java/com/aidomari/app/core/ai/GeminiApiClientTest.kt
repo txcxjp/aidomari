@@ -1,6 +1,6 @@
 package com.aidomari.app.core.ai
 
-import com.aidomari.app.domain.model.ai.CardExtractionDepth
+import com.aidomari.app.domain.model.ai.CardExtractionMode
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -144,14 +144,14 @@ class GeminiApiClientTest {
 
         assertEquals("StateFlow", cards[1].front)
 
-        // Verify prompt specifies flashcard rules and standard depth
+        // Verify prompt specifies flashcard rules and smart mode
         assertTrue(fakeTransport.lastBody.contains("単語帳"))
-        assertTrue(fakeTransport.lastBody.contains("主要論点を網羅"))
+        assertTrue(fakeTransport.lastBody.contains("スマート自動最適化"))
         assertFalse(fakeTransport.lastBody.contains("3〜10"))
     }
 
     @Test
-    fun generateCardsFromArticle_withEssenceDepth_includesEssenceInstruction() = runTest {
+    fun generateCardsFromArticle_withCoreMode_includesCoreInstruction() = runTest {
         val mockGeminiBody = """
         {
           "candidates": [
@@ -174,16 +174,16 @@ class GeminiApiClientTest {
             url = "https://example.com",
             content = "本文",
             apiKey = "key",
-            depth = CardExtractionDepth.ESSENCE,
+            mode = CardExtractionMode.CORE,
         )
 
         assertTrue(result.isSuccess)
-        assertTrue(fakeTransport.lastBody.contains("エッセンスのみ厳選"))
+        assertTrue(fakeTransport.lastBody.contains("コア概念・要旨の凝縮"))
         assertTrue(fakeTransport.lastBody.contains("中心命題"))
     }
 
     @Test
-    fun generateCardsFromArticle_withDetailedDepth_includesDetailedInstruction() = runTest {
+    fun generateCardsFromArticle_withKnowledgeMode_includesKnowledgeInstruction() = runTest {
         val mockGeminiBody = """
         {
           "candidates": [
@@ -206,12 +206,12 @@ class GeminiApiClientTest {
             url = "https://example.com",
             content = "本文",
             apiKey = "key",
-            depth = CardExtractionDepth.DETAILED,
+            mode = CardExtractionMode.KNOWLEDGE,
         )
 
         assertTrue(result.isSuccess)
-        assertTrue(fakeTransport.lastBody.contains("文中の知見を余さず拾う"))
-        assertTrue(fakeTransport.lastBody.contains("枝葉に至るまで"))
+        assertTrue(fakeTransport.lastBody.contains("ナレッジ徹底網羅"))
+        assertTrue(fakeTransport.lastBody.contains("幹から枝葉まで網羅"))
     }
 
     @Test
@@ -468,7 +468,7 @@ class GeminiApiClientTest {
             url = "https://example.com/hokkaido",
             content = "北海道の自然と歴史についての総合記事です。",
             apiKey = "valid_key",
-            depth = CardExtractionDepth.DETAILED,
+            mode = CardExtractionMode.KNOWLEDGE,
             onProgress = { progressEvents.add(it) },
         )
 
@@ -534,7 +534,7 @@ class GeminiApiClientTest {
             url = "https://example.com/hokkaido",
             content = "本文",
             apiKey = "valid_key",
-            depth = CardExtractionDepth.DETAILED,
+            mode = CardExtractionMode.KNOWLEDGE,
             onProgress = {},
         )
 

@@ -7,7 +7,7 @@ import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.Subject
-import com.aidomari.app.domain.model.ai.CardExtractionDepth
+import com.aidomari.app.domain.model.ai.CardExtractionMode
 import com.aidomari.app.domain.model.article.ArticleStatus
 import com.aidomari.app.domain.model.article.SourceArticle
 import com.aidomari.app.domain.repository.SourceArticleRepository
@@ -63,15 +63,15 @@ class BrowsingDigestViewModel(
         _uiState.update { it.copy(selectedSubjectId = subjectId) }
     }
 
-    fun selectDepth(depth: CardExtractionDepth) {
-        _uiState.update { it.copy(selectedDepth = depth) }
+    fun selectMode(mode: CardExtractionMode) {
+        _uiState.update { it.copy(selectedMode = mode) }
     }
 
     fun updateNewDeckName(name: String) {
         _uiState.update { it.copy(newDeckName = name) }
     }
 
-    fun generateCards(article: SourceArticle, depth: CardExtractionDepth = _uiState.value.selectedDepth) {
+    fun generateCards(article: SourceArticle, mode: CardExtractionMode = _uiState.value.selectedMode) {
         val config = geminiPreferences.config.value
         if (!config.isConfigured) {
             _uiState.update {
@@ -86,7 +86,7 @@ class BrowsingDigestViewModel(
                 generatingArticleId = article.id,
                 generationProgressMessage = "生成準備中...",
                 generationProgressFraction = 0.05f,
-                selectedDepth = depth,
+                selectedMode = mode,
                 errorMessage = null,
             )
         }
@@ -99,7 +99,7 @@ class BrowsingDigestViewModel(
                 apiKey = config.apiKey,
                 model = config.modelName,
                 temperature = config.temperature,
-                depth = depth,
+                mode = mode,
                 onProgress = { progress ->
                     val (message, fraction) = when (progress) {
                         is com.aidomari.app.core.ai.GenerationProgress.AnalyzingThemes -> Pair(progress.message, 0.15f)
