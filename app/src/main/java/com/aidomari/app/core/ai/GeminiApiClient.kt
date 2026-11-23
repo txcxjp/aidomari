@@ -259,7 +259,7 @@ class GeminiApiClientImpl(
         // Multi-stage extraction for STANDARD and DETAILED
         onProgress(GenerationProgress.AnalyzingThemes())
         val themesResult = extractThemes(title, url, content, apiKey, model, depth)
-        val rawThemes = themesResult.getOrNull().orEmpty()
+        val rawThemes = themesResult.getOrThrow()
         val themes = if (rawThemes.isNotEmpty()) {
             rawThemes
         } else {
@@ -288,7 +288,7 @@ class GeminiApiClientImpl(
                 depth = depth,
             )
 
-            val cards = themeCardsResult.getOrNull().orEmpty()
+            val cards = themeCardsResult.getOrThrow()
             allProposals.addAll(cards)
         }
 

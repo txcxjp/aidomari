@@ -483,4 +483,63 @@ class GeminiApiClientTest {
         assertTrue(progressEvents.any { it is GenerationProgress.GeneratingThemeCards && it.currentThemeName == "歴史文化" })
         assertTrue(progressEvents.any { it is GenerationProgress.Deduplicating })
     }
+
+    @Test
+    fun generateCardsFromArticle_whenThemeCardCallFails_failsFastWithoutContinuing() = runTest {
+        var callCount = 0
+        val fakeTransport = FakeHttpTransport { _, _ ->
+            callCount++
+            when (callCount) {
+                1 -> {
+                    // Call 1: Theme extraction succeeds with 2 themes
+                    HttpResponse(
+                        statusCode = 200,
+                        body = """
+                        {
+                          "candidates": [
+                            {
+                              "content": {
+                                "parts": [
+                                  { "text": "[\"テーマ1\", \"テーマ2\"]" }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                        """.trimIndent(),
+                    )
+                }
+                2 -> {
+                    // Call 2: First theme fails with 503 Overloaded
+                    HttpResponse(
+                        statusCode = 503,
+                        body = """
+                        {
+                          "error": {
+                            "code": 503,
+                            "message": "The model is overloaded. Please try again later.",
+                            "status": "UNAVAILABLE"
+                          }
+                        }
+                        """.trimIndent(),
+                    )
+                }
+                else -> HttpResponse(statusCode = 200, body = "{}")
+            }
+        }
+
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+        val result = client.generateCardsFromArticle(
+            title = "北海道",
+            url = "https://example.com/hokkaido",
+            content = "本文",
+            apiKey = "valid_key",
+            depth = CardExtractionDepth.DETAILED,
+            onProgress = {},
+        )
+
+        assertTrue(result.isFailure)
+        assertEquals(2, callCount) // Stopped immediately at Call 2, never called Call 3
+        assertTrue(result.exceptionOrNull()?.message?.contains("503") == true)
+    }
 }
