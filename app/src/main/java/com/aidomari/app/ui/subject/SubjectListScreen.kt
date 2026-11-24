@@ -774,7 +774,7 @@ fun SubjectListContent(
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(text = "AI設定 (Gemini)") },
+                                    text = { Text(text = "Gemini API設定") },
                                     modifier = Modifier.testTag("MenuAiSettingsItem"),
                                     leadingIcon = {
                                         Icon(
@@ -1073,7 +1073,7 @@ fun SubjectListContent(
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                             )
                                             Text(
-                                                text = "${pendingArticlesCount}件の新着記事が待機中・タップしてAI生成",
+                                                text = "${pendingArticlesCount}件の新着記事が待機中・タップしてデッキ化",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                                             )

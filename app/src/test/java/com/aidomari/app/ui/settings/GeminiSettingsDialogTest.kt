@@ -37,7 +37,7 @@ class GeminiSettingsDialogTest {
         }
 
         // Verify title & info
-        composeTestRule.onNodeWithText("AIデッキ化設定 (Gemini)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("自動デッキ化設定 (Gemini)").assertIsDisplayed()
         composeTestRule.onNodeWithTag("GeminiApiKeyInput").assertIsDisplayed()
         composeTestRule.onNodeWithTag("GeminiTestConnectionButton").assertIsDisplayed()
         composeTestRule.onNodeWithTag("GeminiSaveButton").assertIsDisplayed()

@@ -182,7 +182,7 @@ fun BrowsingDigestScreen(
                                 fontSize = 13.sp,
                             )
                             Text(
-                                "AIカード生成を利用するには、Google AI StudioのAPIキーを登録してください。",
+                                "カードの自動生成を利用するには、Google AI StudioのAPIキーを登録してください。",
                                 fontSize = 11.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -640,7 +640,7 @@ fun ArticleItemCard(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                if (article.status == ArticleStatus.GENERATED) "再生成" else "AIカード生成",
+                                if (article.status == ArticleStatus.GENERATED) "再生成" else "カード生成",
                                 fontSize = 12.sp,
                             )
                         }

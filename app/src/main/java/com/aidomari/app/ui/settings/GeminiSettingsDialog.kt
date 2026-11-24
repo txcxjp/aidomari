@@ -106,7 +106,7 @@ fun GeminiSettingsDialog(
         },
         title = {
             Text(
-                text = "AIデッキ化設定 (Gemini)",
+                text = "自動デッキ化設定 (Gemini)",
                 fontWeight = FontWeight.Bold,
             )
         },
