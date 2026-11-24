@@ -26,7 +26,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -72,11 +74,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.aidomari.app.core.ai.GeminiApiClientImpl
 import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.domain.model.ai.CardExtractionMode
@@ -656,6 +663,7 @@ fun CardReviewDialog(
     var isSubjectDropdownExpanded by remember { mutableStateOf(false) }
     var showCreateSubjectDialog by remember { mutableStateOf(false) }
     var newSubjectNameInput by remember { mutableStateOf("") }
+    var editingCandidate by remember { mutableStateOf<CardCandidateItem?>(null) }
 
     BackHandler(onBack = onDismiss)
 
@@ -811,7 +819,7 @@ fun CardReviewDialog(
                 CandidateCardItem(
                     candidate = candidate,
                     onToggle = { onToggleSelect(candidate.id) },
-                    onChange = { f, b, s -> onCandidateChange(candidate.id, f, b, s) },
+                    onEditClick = { editingCandidate = candidate },
                 )
             }
         }
@@ -850,64 +858,232 @@ fun CardReviewDialog(
             },
         )
     }
+
+    val targetCandidate = editingCandidate
+    if (targetCandidate != null) {
+        CandidateCardEditDialog(
+            candidate = targetCandidate,
+            onDismiss = { editingCandidate = null },
+            onSave = { front, back, supplement ->
+                onCandidateChange(targetCandidate.id, front, back, supplement)
+                editingCandidate = null
+            },
+        )
+    }
 }
 
 @Composable
 fun CandidateCardItem(
     candidate: CardCandidateItem,
     onToggle: () -> Unit,
-    onChange: (front: String, back: String, supplement: String) -> Unit,
+    onEditClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val contentAlpha = if (candidate.isSelected) 1f else 0.55f
+
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onEditClick),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (candidate.isSelected) {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
             } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)
             },
         ),
         border = if (candidate.isSelected) {
-            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
         } else {
             null
         },
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.Top,
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = 12.dp, top = 8.dp, bottom = 12.dp),
         ) {
-            Checkbox(
-                checked = candidate.isSelected,
-                onCheckedChange = { onToggle() },
-            )
-            Spacer(Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                OutlinedTextField(
-                    value = candidate.front,
-                    onValueChange = { onChange(it, candidate.back, candidate.supplement) },
-                    label = { Text("表面（問題・用語）", fontSize = 10.sp) },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 3,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = candidate.isSelected,
+                    onCheckedChange = { onToggle() },
                 )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = candidate.back,
-                    onValueChange = { onChange(candidate.front, it, candidate.supplement) },
-                    label = { Text("裏面（解答・定義）", fontSize = 10.sp) },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 4,
+                Text(
+                    text = candidate.front,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 16.5.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                    modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.height(6.dp))
-                OutlinedTextField(
-                    value = candidate.supplement,
-                    onValueChange = { onChange(candidate.front, candidate.back, it) },
-                    label = { Text("補足・出典メモ", fontSize = 10.sp) },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 2,
+                IconButton(
+                    onClick = onEditClick,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "編集",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
+                        modifier = Modifier.size(19.dp),
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 10.dp),
+            ) {
+                Text(
+                    text = candidate.back,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        lineHeight = 20.sp,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
                 )
+
+                if (candidate.supplement.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(
+                            alpha = if (candidate.isSelected) 0.75f else 0.4f,
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        val primaryColor = MaterialTheme.colorScheme.primary.copy(alpha = contentAlpha)
+                        val memoText = buildAnnotatedString {
+                            withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = primaryColor)) {
+                                append("メモ: ")
+                            }
+                            append(candidate.supplement)
+                        }
+                        Text(
+                            text = memoText,
+                            fontSize = 12.5.sp,
+                            lineHeight = 18.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CandidateCardEditDialog(
+    candidate: CardCandidateItem,
+    onDismiss: () -> Unit,
+    onSave: (front: String, back: String, supplement: String) -> Unit,
+) {
+    var front by remember(candidate.id) { mutableStateOf(candidate.front) }
+    var back by remember(candidate.id) { mutableStateOf(candidate.back) }
+    var supplement by remember(candidate.id) { mutableStateOf(candidate.supplement) }
+    val canSave = front.isNotBlank() && back.isNotBlank()
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .imePadding(),
+            shape = RoundedCornerShape(20.dp),
+            tonalElevation = 6.dp,
+            color = MaterialTheme.colorScheme.surface,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "カードを編集",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "閉じる",
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    OutlinedTextField(
+                        value = front,
+                        onValueChange = { front = it },
+                        label = { Text("表面（問題・用語）") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 1,
+                        maxLines = 3,
+                    )
+                    OutlinedTextField(
+                        value = back,
+                        onValueChange = { back = it },
+                        label = { Text("裏面（解答・定義）") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        maxLines = 6,
+                    )
+                    OutlinedTextField(
+                        value = supplement,
+                        onValueChange = { supplement = it },
+                        label = { Text("補足・出典メモ") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 4,
+                        maxLines = 8,
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("キャンセル")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            if (canSave) {
+                                onSave(front.trim(), back.trim(), supplement.trim())
+                            }
+                        },
+                        enabled = canSave,
+                    ) {
+                        Text("反映", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }
