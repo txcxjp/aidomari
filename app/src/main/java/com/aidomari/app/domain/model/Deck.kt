@@ -7,7 +7,7 @@ data class Deck(
     val splitSize: Int = 50,
     val autoContinue: Boolean = false,
     val shuffleMode: Boolean = false,
-    val reverseMode: Boolean = false,
+    val studyDirection: StudyDirection = StudyDirection.TERM_TO_DESCRIPTION,
     val autoSpeak: Boolean = false,
     val speechRate: Float = 1.0f,
     val sortOrder: Int = 0,

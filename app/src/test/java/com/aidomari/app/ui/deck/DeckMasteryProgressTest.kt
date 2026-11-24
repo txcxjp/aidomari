@@ -38,10 +38,10 @@ class DeckMasteryProgressTest {
     fun deckList_displaysMasteryRateAndProgressBar_forPartialCompletion() {
         val deck = Deck(id = "d1", subjectId = "sub-1", name = "進捗テスト単語帳", splitSize = 2)
         val cards = listOf(
-            Card(id = "c1", deckId = "d1", front = "f1", back = "b1"),
-            Card(id = "c2", deckId = "d1", front = "f2", back = "b2"),
-            Card(id = "c3", deckId = "d1", front = "f3", back = "b3"),
-            Card(id = "c4", deckId = "d1", front = "f4", back = "b4"),
+            Card(id = "c1", deckId = "d1", term = "f1", description = "b1"),
+            Card(id = "c2", deckId = "d1", term = "f2", description = "b2"),
+            Card(id = "c3", deckId = "d1", term = "f3", description = "b3"),
+            Card(id = "c4", deckId = "d1", term = "f4", description = "b4"),
         )
         fakeRepository.decksList.add(deck)
         fakeRepository.cardsList.addAll(cards)
@@ -79,8 +79,8 @@ class DeckMasteryProgressTest {
     fun deckList_displaysMasteryRate100_whenAllPartsCompleted() {
         val deck = Deck(id = "d1", subjectId = "sub-1", name = "完了テスト単語帳", splitSize = 2)
         val cards = listOf(
-            Card(id = "c1", deckId = "d1", front = "f1", back = "b1"),
-            Card(id = "c2", deckId = "d1", front = "f2", back = "b2"),
+            Card(id = "c1", deckId = "d1", term = "f1", description = "b1"),
+            Card(id = "c2", deckId = "d1", term = "f2", description = "b2"),
         )
         fakeRepository.decksList.add(deck)
         fakeRepository.cardsList.addAll(cards)
@@ -117,10 +117,10 @@ class DeckMasteryProgressTest {
         // 4 cards in total, 2 cards correctly answered (c1, c2)
         val deckInitial = Deck(id = "d1", subjectId = "sub-1", name = "枚数変更テスト", splitSize = 2)
         val cards = listOf(
-            Card(id = "c1", deckId = "d1", front = "f1", back = "b1"),
-            Card(id = "c2", deckId = "d1", front = "f2", back = "b2"),
-            Card(id = "c3", deckId = "d1", front = "f3", back = "b3"),
-            Card(id = "c4", deckId = "d1", front = "f4", back = "b4"),
+            Card(id = "c1", deckId = "d1", term = "f1", description = "b1"),
+            Card(id = "c2", deckId = "d1", term = "f2", description = "b2"),
+            Card(id = "c3", deckId = "d1", term = "f3", description = "b3"),
+            Card(id = "c4", deckId = "d1", term = "f4", description = "b4"),
         )
         fakeRepository.decksList.add(deckInitial)
         fakeRepository.cardsList.addAll(cards)

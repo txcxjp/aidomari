@@ -8,8 +8,8 @@ import java.util.UUID
 
 data class CardCandidateItem(
     val id: String = UUID.randomUUID().toString(),
-    val front: String,
-    val back: String,
+    val term: String,
+    val description: String,
     val supplement: String = "",
     val isSelected: Boolean = true,
 )

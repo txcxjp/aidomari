@@ -140,8 +140,8 @@ class BrowsingDigestViewModel(
                 onSuccess = { proposals ->
                     val candidates = proposals.map { proposal ->
                         CardCandidateItem(
-                            front = proposal.front,
-                            back = proposal.back,
+                            term = proposal.term,
+                            description = proposal.description,
                             supplement = proposal.userSupplement.ifBlank {
                                 "出典: ${proposal.sourceTitle}\n${proposal.sourceUrl}"
                             },
@@ -204,10 +204,10 @@ class BrowsingDigestViewModel(
         }
     }
 
-    fun updateCandidate(candidateId: String, front: String, back: String, supplement: String) {
+    fun updateCandidate(candidateId: String, term: String, description: String, supplement: String) {
         _uiState.update { state ->
             val updated = state.candidateCards.map {
-                if (it.id == candidateId) it.copy(front = front, back = back, supplement = supplement) else it
+                if (it.id == candidateId) it.copy(term = term, description = description, supplement = supplement) else it
             }
             state.copy(candidateCards = updated)
         }
@@ -226,7 +226,7 @@ class BrowsingDigestViewModel(
     fun saveSelectedCards(createNewSubjectIfNone: Boolean = true) {
         val state = _uiState.value
         val article = state.reviewArticle ?: return
-        val selectedCandidates = state.candidateCards.filter { it.isSelected && it.front.isNotBlank() && it.back.isNotBlank() }
+        val selectedCandidates = state.candidateCards.filter { it.isSelected && it.term.isNotBlank() && it.description.isNotBlank() }
 
         if (selectedCandidates.isEmpty()) {
             _uiState.update { it.copy(errorMessage = "登録するカードが選択されていません") }
@@ -274,8 +274,8 @@ class BrowsingDigestViewModel(
                     Card(
                         id = UUID.randomUUID().toString(),
                         deckId = deckId,
-                        front = candidate.front.trim(),
-                        back = candidate.back.trim(),
+                        term = candidate.term.trim(),
+                        description = candidate.description.trim(),
                         userSupplement = candidate.supplement.trim(),
                         orderIndex = index,
                         createdAt = now,

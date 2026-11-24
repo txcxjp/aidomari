@@ -96,7 +96,7 @@ fun RelatedItemsSection(
                         onClick = { onCardClick(card) },
                         label = {
                             Text(
-                                text = card.front,
+                                text = card.term,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
                             )

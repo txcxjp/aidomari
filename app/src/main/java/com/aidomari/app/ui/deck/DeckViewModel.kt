@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.PastDayDeckType
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
@@ -326,7 +327,7 @@ class DeckViewModel(
         splitSize: Int = 50,
         autoContinue: Boolean = false,
         shuffleMode: Boolean = false,
-        reverseMode: Boolean = false,
+        studyDirection: StudyDirection = StudyDirection.TERM_TO_DESCRIPTION,
         autoSpeak: Boolean = false,
         speechRate: Float = 1.0f,
     ) {
@@ -339,7 +340,7 @@ class DeckViewModel(
                 splitSize = splitSize,
                 autoContinue = autoContinue,
                 shuffleMode = shuffleMode,
-                reverseMode = reverseMode,
+                studyDirection = studyDirection,
                 autoSpeak = autoSpeak,
                 speechRate = speechRate,
                 sortOrder = _decksWithParts.value.size,

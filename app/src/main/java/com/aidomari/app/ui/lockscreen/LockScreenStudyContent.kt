@@ -190,9 +190,10 @@ fun LockScreenStudyContent(
 
                     uiState.card != null -> {
                         val card = uiState.card
-                        val isReverse = uiState.isReverse
-                        val frontText = if (isReverse) card.back else card.front
-                        val backText = if (isReverse) card.front else card.back
+                        val studyDirection = uiState.studyDirection
+                        val isDescriptionFirst = studyDirection == com.aidomari.app.domain.model.StudyDirection.DESCRIPTION_TO_TERM
+                        val frontText = if (isDescriptionFirst) card.description else card.term
+                        val backText = if (isDescriptionFirst) card.term else card.description
                         FlippableCard(
                             isFlipped = uiState.isFlipped,
                             onFlip = onFlip,
@@ -205,7 +206,7 @@ fun LockScreenStudyContent(
                                 CardFaceFront(
                                     card = card,
                                     onSpeak = { onSpeak(frontText) },
-                                    isReverse = isReverse,
+                                    studyDirection = studyDirection,
                                 )
                             },
                             backContent = {
@@ -214,7 +215,7 @@ fun LockScreenStudyContent(
                                     onDone = onDone,
                                     onRetry = onRetry,
                                     onSpeak = { onSpeak(backText) },
-                                    isReverse = isReverse,
+                                    studyDirection = studyDirection,
                                 )
                             },
                         )

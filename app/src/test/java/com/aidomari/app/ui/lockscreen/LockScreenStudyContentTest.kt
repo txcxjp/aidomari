@@ -8,6 +8,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.model.StudyDirection
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -25,19 +26,19 @@ class LockScreenStudyContentTest {
     private val sampleCard = Card(
         id = "card-1",
         deckId = "deck-1",
-        front = "apple",
-        back = "りんご",
+        term = "apple",
+        description = "りんご",
     )
 
     @Test
-    fun lockScreenContent_displaysFrontWord_whenNormalMode() {
+    fun lockScreenContent_displaysTerm_whenTermToDescription() {
         composeTestRule.setContent {
             LockScreenStudyContent(
                 uiState = LockScreenUiState(
                     isLoading = false,
                     card = sampleCard,
                     isFlipped = false,
-                    isReverse = false,
+                    studyDirection = StudyDirection.TERM_TO_DESCRIPTION,
                 ),
                 onFlip = {},
                 onDone = {},
@@ -51,14 +52,14 @@ class LockScreenStudyContentTest {
     }
 
     @Test
-    fun lockScreenContent_displaysBackWord_whenReverseMode() {
+    fun lockScreenContent_displaysDescription_whenDescriptionToTerm() {
         composeTestRule.setContent {
             LockScreenStudyContent(
                 uiState = LockScreenUiState(
                     isLoading = false,
                     card = sampleCard,
                     isFlipped = false,
-                    isReverse = true,
+                    studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
                 ),
                 onFlip = {},
                 onDone = {},

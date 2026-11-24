@@ -26,8 +26,8 @@ class KeywordEngine {
 
         // Filter and sort candidates by length descending
         val validCandidates = candidateCards
-            .filter { it.front.isNotBlank() && it.id != currentCardId }
-            .sortedByDescending { it.front.length }
+            .filter { it.term.isNotBlank() && it.id != currentCardId }
+            .sortedByDescending { it.term.length }
 
         if (validCandidates.isEmpty()) {
             return listOf(TextSegment.Plain(text))
@@ -47,18 +47,18 @@ class KeywordEngine {
             var matched: MatchRange? = null
 
             for (candidate in validCandidates) {
-                val candidateFront = candidate.front
+                val candidateTerm = candidate.term
                 if (text.regionMatches(
                         thisOffset = index,
-                        other = candidateFront,
+                        other = candidateTerm,
                         otherOffset = 0,
-                        length = candidateFront.length,
+                        length = candidateTerm.length,
                         ignoreCase = true,
                     )
                 ) {
                     matched = MatchRange(
                         start = index,
-                        end = index + candidateFront.length,
+                        end = index + candidateTerm.length,
                         card = candidate,
                     )
                     break // Since validCandidates is sorted by length descending, this is longest match
@@ -127,32 +127,32 @@ class KeywordEngine {
         card: Card,
         allSubjectCards: List<Card>,
     ): List<Card> {
-        val rawTarget = card.front.substringBefore("<").trim()
+        val rawTarget = card.term.substringBefore("<").trim()
         val targetLower = rawTarget.lowercase()
         if (targetLower.length < 3) return emptyList()
 
-        // Cards already directly referenced in this card's back
-        val directKeywords = extractRelatedCards(card.back, allSubjectCards, card.id).map { it.id }.toSet()
+        // Cards already directly referenced in this card's description
+        val directKeywords = extractRelatedCards(card.description, allSubjectCards, card.id).map { it.id }.toSet()
 
         return allSubjectCards
             .filter { candidate ->
                 if (candidate.id == card.id || directKeywords.contains(candidate.id)) {
                     false
                 } else {
-                    val candFront = candidate.front.substringBefore("<").trim().lowercase()
-                    // 1. Stem / Substring sharing in front word
-                    val frontMatches = (candFront.length >= 3) &&
-                        (candFront.contains(targetLower) || targetLower.contains(candFront))
+                    val candTerm = candidate.term.substringBefore("<").trim().lowercase()
+                    // 1. Stem / Substring sharing in term
+                    val termMatches = (candTerm.length >= 3) &&
+                        (candTerm.contains(targetLower) || targetLower.contains(candTerm))
 
-                    // 2. Candidate's definition, question or supplement mentions target word
-                    val backMatches = candidate.back.contains(targetLower, ignoreCase = true) ||
+                    // 2. Candidate's description, question or supplement mentions target word
+                    val descMatches = candidate.description.contains(targetLower, ignoreCase = true) ||
                         candidate.userQuestion.contains(targetLower, ignoreCase = true) ||
                         candidate.userSupplement.contains(targetLower, ignoreCase = true)
 
-                    frontMatches || backMatches
+                    termMatches || descMatches
                 }
             }
             .distinctBy { it.id }
-            .sortedBy { it.front.lowercase() }
+            .sortedBy { it.term.lowercase() }
     }
 }

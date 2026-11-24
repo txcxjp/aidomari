@@ -3,8 +3,8 @@ package com.aidomari.app.domain.model
 data class Card(
     val id: String,
     val deckId: String,
-    val front: String,
-    val back: String,
+    val term: String,
+    val description: String,
     val userQuestion: String = "",
     val userSupplement: String = "",
     val isBookmarked: Boolean = false,

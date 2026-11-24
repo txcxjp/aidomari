@@ -166,13 +166,13 @@ fun DeckListScreen(
     if (showAddDialog) {
         AddDeckDialog(
             onDismissRequest = { showAddDialog = false },
-            onConfirm = { name, splitSize, autoContinue, shuffleMode, reverseMode, autoSpeak, speechRate ->
+            onConfirm = { name, splitSize, autoContinue, shuffleMode, studyDirection, autoSpeak, speechRate ->
                 viewModel.createDeck(
                     name = name,
                     splitSize = splitSize,
                     autoContinue = autoContinue,
                     shuffleMode = shuffleMode,
-                    reverseMode = reverseMode,
+                    studyDirection = studyDirection,
                     autoSpeak = autoSpeak,
                     speechRate = speechRate,
                 )

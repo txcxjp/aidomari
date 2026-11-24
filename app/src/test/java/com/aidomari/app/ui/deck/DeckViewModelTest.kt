@@ -5,6 +5,7 @@ import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.PastDayGroup
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
@@ -50,7 +51,7 @@ class DeckViewModelTest {
             splitSize = 50,
             autoContinue = true,
             shuffleMode = true,
-            reverseMode = true,
+            studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
         )
         advanceUntilIdle()
 
@@ -60,7 +61,7 @@ class DeckViewModelTest {
         assertEquals(50, deck.splitSize)
         assertTrue(deck.autoContinue)
         assertTrue(deck.shuffleMode)
-        assertTrue(deck.reverseMode)
+        assertEquals(StudyDirection.DESCRIPTION_TO_TERM, deck.studyDirection)
     }
 
     @Test
@@ -134,8 +135,8 @@ class DeckViewModelTest {
     fun observeBookmarks_updatesBookmarkDeckUiModel() = runTest {
         assertEquals(null, viewModel.bookmarkDeckUiModel.value)
 
-        val card1 = Card(id = "c1", deckId = "d1", front = "A", back = "a", isBookmarked = true)
-        val card2 = Card(id = "c2", deckId = "d1", front = "B", back = "b", isBookmarked = true)
+        val card1 = Card(id = "c1", deckId = "d1", term = "A", description = "a", isBookmarked = true)
+        val card2 = Card(id = "c2", deckId = "d1", term = "B", description = "b", isBookmarked = true)
         fakeRepository.bookmarkedFlow.value = listOf(card1, card2)
         advanceUntilIdle()
 
@@ -154,19 +155,32 @@ class DeckViewModelTest {
 
     @Test
     fun updateDeck_modifiesDeckSettingsAndSaves() = runTest {
-        val deck = Deck(id = "d1", subjectId = "sub-1", name = "Old Name", splitSize = 50, reverseMode = false)
+        val deck = Deck(
+            id = "d1",
+            subjectId = "sub-1",
+            name = "Old Name",
+            splitSize = 50,
+            studyDirection = StudyDirection.TERM_TO_DESCRIPTION,
+        )
         fakeRepository.decksList.add(deck)
         fakeRepository.triggerDecksUpdate()
         advanceUntilIdle()
 
-        viewModel.updateDeck(deck.copy(name = "New Name", splitSize = 30, autoContinue = true, reverseMode = true))
+        viewModel.updateDeck(
+            deck.copy(
+                name = "New Name",
+                splitSize = 30,
+                autoContinue = true,
+                studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
+            ),
+        )
         advanceUntilIdle()
 
         val updated = fakeRepository.decksList.find { it.id == "d1" }
         assertEquals("New Name", updated?.name)
         assertEquals(30, updated?.splitSize)
         assertTrue(updated?.autoContinue == true)
-        assertTrue(updated?.reverseMode == true)
+        assertEquals(StudyDirection.DESCRIPTION_TO_TERM, updated?.studyDirection)
     }
 
     @Test
@@ -177,7 +191,7 @@ class DeckViewModelTest {
         // 120 cards -> 3 parts: Part 1 (1..50), Part 2 (51..100), Part 3 (101..120)
         for (i in 1..120) {
             fakeRepository.cardsList.add(
-                Card(id = "c$i", deckId = "d1", front = "w$i", back = "m$i", orderIndex = i),
+                Card(id = "c$i", deckId = "d1", term = "w$i", description = "m$i", orderIndex = i),
             )
         }
 
@@ -205,28 +219,28 @@ class DeckViewModelTest {
 
     @Test
     fun onSearchQueryChanged_matchingQuery_updatesSearchResults() = runTest {
-        val c1 = Card(id = "c1", deckId = "d1", front = "Abundant", back = "豊富な")
-        val c2 = Card(id = "c2", deckId = "d1", front = "Scarcity", back = "不足、希少")
-        val c3 = Card(id = "c3", deckId = "d1", front = "Dog", back = "犬", userSupplement = "Canine friend")
+        val c1 = Card(id = "c1", deckId = "d1", term = "Abundant", description = "豊富な")
+        val c2 = Card(id = "c2", deckId = "d1", term = "Scarcity", description = "不足、希少")
+        val c3 = Card(id = "c3", deckId = "d1", term = "Dog", description = "犬", userSupplement = "Canine friend")
         fakeRepository.cardsList.addAll(listOf(c1, c2, c3))
 
         viewModel.onSearchQueryChanged("Abund")
         advanceUntilIdle()
 
         assertEquals(1, viewModel.searchResults.value.size)
-        assertEquals("Abundant", viewModel.searchResults.value[0].front)
+        assertEquals("Abundant", viewModel.searchResults.value[0].term)
 
-        // Search by meaning
+        // Search by description
         viewModel.onSearchQueryChanged("希少")
         advanceUntilIdle()
         assertEquals(1, viewModel.searchResults.value.size)
-        assertEquals("Scarcity", viewModel.searchResults.value[0].front)
+        assertEquals("Scarcity", viewModel.searchResults.value[0].term)
 
         // Search by supplement note
         viewModel.onSearchQueryChanged("canine")
         advanceUntilIdle()
         assertEquals(1, viewModel.searchResults.value.size)
-        assertEquals("Dog", viewModel.searchResults.value[0].front)
+        assertEquals("Dog", viewModel.searchResults.value[0].term)
 
         // Empty query clears
         viewModel.onSearchQueryChanged("")
@@ -236,7 +250,7 @@ class DeckViewModelTest {
 
     @Test
     fun clearSearch_resetsQueryAndResults() = runTest {
-        fakeRepository.cardsList.add(Card(id = "c1", deckId = "d1", front = "Apple", back = "りんご"))
+        fakeRepository.cardsList.add(Card(id = "c1", deckId = "d1", term = "Apple", description = "りんご"))
         viewModel.onSearchQueryChanged("Apple")
         advanceUntilIdle()
         assertEquals(1, viewModel.searchResults.value.size)
@@ -248,7 +262,7 @@ class DeckViewModelTest {
 
     @Test
     fun toggleBookmark_updatesSearchResultsAndSubjectCards() = runTest {
-        val card = Card(id = "c1", deckId = "d1", front = "Apple", back = "りんご", isBookmarked = false)
+        val card = Card(id = "c1", deckId = "d1", term = "Apple", description = "りんご", isBookmarked = false)
         fakeRepository.cardsList.add(card)
         viewModel.onSearchQueryChanged("Apple")
         advanceUntilIdle()
@@ -265,7 +279,7 @@ class DeckViewModelTest {
 
     @Test
     fun updateCardNotes_updatesSearchResultsAndRepository() = runTest {
-        val card = Card(id = "c1", deckId = "d1", front = "Apple", back = "りんご")
+        val card = Card(id = "c1", deckId = "d1", term = "Apple", description = "りんご")
         fakeRepository.cardsList.add(card)
         viewModel.onSearchQueryChanged("Apple")
         advanceUntilIdle()
@@ -293,8 +307,8 @@ class DeckViewModelTest {
 
     @Test
     fun loadAllSubjectCards_populatesSubjectCards() = runTest {
-        val card1 = Card(id = "c1", deckId = "d1", front = "Front 1", back = "Back 1")
-        val card2 = Card(id = "c2", deckId = "d1", front = "Front 2", back = "Back 2")
+        val card1 = Card(id = "c1", deckId = "d1", term = "Front 1", description = "Back 1")
+        val card2 = Card(id = "c2", deckId = "d1", term = "Front 2", description = "Back 2")
         fakeRepository.cardsList.addAll(listOf(card1, card2))
 
         viewModel.loadAllSubjectCards()
@@ -307,10 +321,10 @@ class DeckViewModelTest {
     fun loadDecks_withCompletedParts_calculatesMasteryRateCorrectly() = runTest {
         val deck = Deck(id = "d1", subjectId = "sub-1", name = "Test Deck", splitSize = 2)
         val cards = listOf(
-            Card(id = "c1", deckId = "d1", front = "f1", back = "b1"),
-            Card(id = "c2", deckId = "d1", front = "f2", back = "b2"),
-            Card(id = "c3", deckId = "d1", front = "f3", back = "b3"),
-            Card(id = "c4", deckId = "d1", front = "f4", back = "b4"),
+            Card(id = "c1", deckId = "d1", term = "f1", description = "b1"),
+            Card(id = "c2", deckId = "d1", term = "f2", description = "b2"),
+            Card(id = "c3", deckId = "d1", term = "f3", description = "b3"),
+            Card(id = "c4", deckId = "d1", term = "f4", description = "b4"),
         )
         fakeRepository.decksList.add(deck)
         fakeRepository.cardsList.addAll(cards)
@@ -345,8 +359,8 @@ class DeckViewModelTest {
     fun loadDecks_allPartsCompleted_masteryRateIs100Percent() = runTest {
         val deck = Deck(id = "d1", subjectId = "sub-1", name = "Test Deck", splitSize = 2)
         val cards = listOf(
-            Card(id = "c1", deckId = "d1", front = "f1", back = "b1"),
-            Card(id = "c2", deckId = "d1", front = "f2", back = "b2"),
+            Card(id = "c1", deckId = "d1", term = "f1", description = "b1"),
+            Card(id = "c2", deckId = "d1", term = "f2", description = "b2"),
         )
         fakeRepository.decksList.add(deck)
         fakeRepository.cardsList.addAll(cards)
@@ -391,8 +405,8 @@ class DeckViewModelTest {
 
     @Test
     fun pastDayDecks_emitsUiModels_whenPastDayCardsExist() = runTest {
-        val cardYesterday = Card(id = "c-y", deckId = "d-1", front = "apple", back = "りんご")
-        val cardWeek = Card(id = "c-w", deckId = "d-1", front = "book", back = "本")
+        val cardYesterday = Card(id = "c-y", deckId = "d-1", term = "apple", description = "りんご")
+        val cardWeek = Card(id = "c-w", deckId = "d-1", term = "book", description = "本")
 
         fakeRepository.cardsList.addAll(listOf(cardYesterday, cardWeek))
 
@@ -433,8 +447,8 @@ class DeckViewModelTest {
     @Test
     fun observeLearnedCardsInSubject_updatesStateFlow() = runTest {
         val learned = listOf(
-            Card(id = "c1", deckId = "deck-1", front = "A", back = "あ"),
-            Card(id = "c2", deckId = "deck-1", front = "B", back = "い"),
+            Card(id = "c1", deckId = "deck-1", term = "A", description = "あ"),
+            Card(id = "c2", deckId = "deck-1", term = "B", description = "い"),
         )
         fakeRepository.learnedCardsFlow.value = learned
         advanceUntilIdle()
@@ -448,8 +462,8 @@ class DeckViewModelTest {
         fakeRepository.decksList.add(deck)
         fakeRepository.cardsList.addAll(
             listOf(
-                Card(id = "c1", deckId = "d1", front = "A", back = "あ"),
-                Card(id = "c2", deckId = "d1", front = "B", back = "い"),
+                Card(id = "c1", deckId = "d1", term = "A", description = "あ"),
+                Card(id = "c2", deckId = "d1", term = "B", description = "い"),
             ),
         )
         fakeRepository.studyLogs.addAll(
@@ -476,8 +490,8 @@ class DeckViewModelTest {
         val now = System.currentTimeMillis()
         fakeRepository.cardsList.addAll(
             listOf(
-                Card(id = "sc1", deckId = "d-snooze", front = "A", back = "あ"),
-                Card(id = "sc2", deckId = "d-snooze", front = "B", back = "い", snoozedUntil = now + 86400000L, snoozeLevel = 1),
+                Card(id = "sc1", deckId = "d-snooze", term = "A", description = "あ"),
+                Card(id = "sc2", deckId = "d-snooze", term = "B", description = "い", snoozedUntil = now + 86400000L, snoozeLevel = 1),
             ),
         )
         fakeRepository.studyLogs.addAll(
@@ -595,8 +609,8 @@ class DeckViewModelTest {
         override fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>> = bookmarkedFlow
         override suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card> =
             cardsList.filter {
-                it.front.contains(query, ignoreCase = true) ||
-                    it.back.contains(query, ignoreCase = true) ||
+                it.term.contains(query, ignoreCase = true) ||
+                    it.description.contains(query, ignoreCase = true) ||
                     it.userQuestion.contains(query, ignoreCase = true) ||
                     it.userSupplement.contains(query, ignoreCase = true)
             }

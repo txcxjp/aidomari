@@ -28,8 +28,10 @@ data class CardEntity(
     val id: String = UUID.randomUUID().toString(),
     @ColumnInfo(name = "deck_id")
     val deckId: String,
-    val front: String,
-    val back: String,
+    @ColumnInfo(name = "front")
+    val term: String,
+    @ColumnInfo(name = "back")
+    val description: String,
     @ColumnInfo(name = "user_question")
     val userQuestion: String = "",
     @ColumnInfo(name = "user_supplement")

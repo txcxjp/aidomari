@@ -49,6 +49,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.ui.deck.DeckWithPartsUiModel
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.theme.AidomariTheme
@@ -266,7 +267,7 @@ fun DeckItemCard(
                         )
                     }
                 }
-                if (deck.reverseMode) {
+                if (deck.studyDirection == StudyDirection.DESCRIPTION_TO_TERM) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
                         color = MaterialTheme.colorScheme.secondaryContainer,

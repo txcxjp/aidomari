@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.theme.AidomariTheme
 import com.aidomari.app.ui.theme.ThemePreviews
@@ -37,9 +38,10 @@ fun CardFaceFront(
     card: DomainCard,
     onSpeak: () -> Unit,
     modifier: Modifier = Modifier,
-    isReverse: Boolean = false,
+    studyDirection: StudyDirection = StudyDirection.TERM_TO_DESCRIPTION,
     onEditClick: (() -> Unit)? = null,
 ) {
+    val isDescriptionFirst = studyDirection == StudyDirection.DESCRIPTION_TO_TERM
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -77,10 +79,10 @@ fun CardFaceFront(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = if (isReverse) card.back else card.front,
+                text = if (isDescriptionFirst) card.description else card.term,
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = if (isReverse) 28.sp else 32.sp,
+                    fontSize = if (isDescriptionFirst) 28.sp else 32.sp,
                 ),
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -125,7 +127,7 @@ private fun CardFaceFrontPreview() {
         CardFaceFront(
             card = PreviewSampleData.sampleCard,
             onSpeak = {},
-            isReverse = false,
+            studyDirection = StudyDirection.TERM_TO_DESCRIPTION,
             onEditClick = {},
         )
     }

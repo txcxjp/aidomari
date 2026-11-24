@@ -6,6 +6,7 @@ import com.aidomari.app.core.lockscreen.LockScreenPreferences
 import com.aidomari.app.core.lockscreen.LockScreenTarget
 import com.aidomari.app.core.tts.TtsManager
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +18,7 @@ data class LockScreenUiState(
     val isLoading: Boolean = true,
     val card: Card? = null,
     val isFlipped: Boolean = false,
-    val isReverse: Boolean = false,
+    val studyDirection: StudyDirection = StudyDirection.TERM_TO_DESCRIPTION,
     val speechRate: Float = 1.0f,
     val ttsLanguage: String = "auto",
 )
@@ -52,12 +53,12 @@ class LockScreenStudyViewModel(
                 LockScreenTarget.ALL -> repository.getRandomCard(bookmarkOnly = false)
             }
             var lang = "auto"
-            var isReverse = false
+            var studyDirection = StudyDirection.TERM_TO_DESCRIPTION
             var speechRate = 1.0f
             if (card != null) {
                 val deck = repository.getDeckById(card.deckId)
                 if (deck != null) {
-                    isReverse = deck.reverseMode
+                    studyDirection = deck.studyDirection
                     speechRate = deck.speechRate
                     val subject = repository.getSubjectById(deck.subjectId)
                     if (subject != null) {
@@ -70,7 +71,7 @@ class LockScreenStudyViewModel(
                     isLoading = false,
                     card = card,
                     isFlipped = false,
-                    isReverse = isReverse,
+                    studyDirection = studyDirection,
                     speechRate = speechRate,
                     ttsLanguage = lang,
                 )

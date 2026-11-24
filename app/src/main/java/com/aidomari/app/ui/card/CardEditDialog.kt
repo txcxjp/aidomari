@@ -29,16 +29,16 @@ import com.aidomari.app.ui.theme.ThemePreviews
 fun CardEditDialog(
     card: Card?,
     onDismissRequest: () -> Unit,
-    onSave: (front: String, back: String, userQuestion: String, userSupplement: String) -> Unit,
+    onSave: (term: String, description: String, userQuestion: String, userSupplement: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isEditMode = card != null
-    var frontText by remember(card) { mutableStateOf(card?.front ?: "") }
-    var backText by remember(card) { mutableStateOf(card?.back ?: "") }
+    var termText by remember(card) { mutableStateOf(card?.term ?: "") }
+    var descriptionText by remember(card) { mutableStateOf(card?.description ?: "") }
     var questionText by remember(card) { mutableStateOf(card?.userQuestion ?: "") }
     var supplementText by remember(card) { mutableStateOf(card?.userSupplement ?: "") }
 
-    val canSave = frontText.isNotBlank() && backText.isNotBlank()
+    val canSave = termText.isNotBlank() && descriptionText.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -60,8 +60,8 @@ fun CardEditDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedTextField(
-                    value = frontText,
-                    onValueChange = { frontText = it },
+                    value = termText,
+                    onValueChange = { termText = it },
                     label = { Text("表面（単語・見出し語）*") },
                     placeholder = { Text("例: serendipity") },
                     singleLine = true,
@@ -71,8 +71,8 @@ fun CardEditDialog(
                 )
 
                 OutlinedTextField(
-                    value = backText,
-                    onValueChange = { backText = it },
+                    value = descriptionText,
+                    onValueChange = { descriptionText = it },
                     label = { Text("裏面（意味・訳・解答）*") },
                     placeholder = { Text("例: 思いがけない発見、幸運な偶然") },
                     minLines = 3,
@@ -111,7 +111,7 @@ fun CardEditDialog(
             Button(
                 onClick = {
                     if (canSave) {
-                        onSave(frontText, backText, questionText, supplementText)
+                        onSave(termText, descriptionText, questionText, supplementText)
                     }
                 },
                 enabled = canSave,

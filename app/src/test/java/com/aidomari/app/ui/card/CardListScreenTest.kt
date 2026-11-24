@@ -45,8 +45,8 @@ class CardListScreenTest {
     private val initialCard = Card(
         id = "card-1",
         deckId = "deck-1",
-        front = "Abundant",
-        back = "豊富な",
+        term = "Abundant",
+        description = "豊富な",
         userQuestion = "同義語は？",
         userSupplement = "plentiful",
         isBookmarked = false,
@@ -131,7 +131,7 @@ class CardListScreenTest {
         // Verify updated text in list
         composeTestRule.onNodeWithText("ありあまるほどの").assertIsDisplayed()
         val updated = fakeRepository.cards.find { it.id == "card-1" }
-        assertEquals("ありあまるほどの", updated?.back)
+        assertEquals("ありあまるほどの", updated?.description)
     }
 
     @Test
@@ -226,7 +226,7 @@ class CardListScreenTest {
         override fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>> =
             flowOf(cards.filter { it.isBookmarked })
         override suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card> =
-            cards.filter { it.front.contains(query) }
+            cards.filter { it.term.contains(query) }
         override suspend fun getAllCardsInSubject(subjectId: String): List<Card> = cards.toList()
         override suspend fun getSession(deckId: String): StudySession? = null
         override suspend fun saveSession(session: StudySession) {
@@ -235,7 +235,7 @@ class CardListScreenTest {
         }
         override suspend fun getOrCreateBookmarkDeck(subjectId: String): Deck = deck
         override suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card? =
-            cards.find { it.front.equals(frontWord, ignoreCase = true) }
+            cards.find { it.term.equals(frontWord, ignoreCase = true) }
         override fun getSessionFlow(deckId: String): Flow<StudySession?> = flowOf(null)
     }
 }

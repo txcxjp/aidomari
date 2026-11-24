@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.DeckPart
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.ui.deck.DeckPartWithSession
 import com.aidomari.app.ui.deck.DeckWithPartsUiModel
 import org.junit.Assert.assertEquals
@@ -108,7 +109,7 @@ class DeckItemCardTest {
             splitSize = 50,
             autoContinue = false,
             shuffleMode = true,
-            reverseMode = true,
+            studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
             autoSpeak = true,
             speechRate = 1.0f,
         )

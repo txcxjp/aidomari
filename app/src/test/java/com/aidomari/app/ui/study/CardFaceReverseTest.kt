@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.ui.study.components.CardFaceBack
 import com.aidomari.app.ui.study.components.CardFaceFront
 import org.junit.Assert.assertEquals
@@ -26,8 +27,8 @@ class CardFaceReverseTest {
     private val testCard = Card(
         id = "c1",
         deckId = "d1",
-        front = "Perspective",
-        back = "視点・観点",
+        term = "Perspective",
+        description = "視点・観点",
         userQuestion = "How do you use it?",
         userSupplement = "Point of view",
     )
@@ -39,7 +40,7 @@ class CardFaceReverseTest {
             CardFaceFront(
                 card = testCard,
                 onSpeak = { spoken = true },
-                isReverse = false,
+                studyDirection = StudyDirection.TERM_TO_DESCRIPTION,
             )
         }
 
@@ -56,7 +57,7 @@ class CardFaceReverseTest {
             CardFaceFront(
                 card = testCard,
                 onSpeak = { spoken = true },
-                isReverse = true,
+                studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
             )
         }
 
@@ -77,7 +78,7 @@ class CardFaceReverseTest {
                 card = testCard,
                 onDone = { doneClicked = true },
                 onRetry = { retryClicked = true },
-                isReverse = true,
+                studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
                 onSpeak = { spoken = true },
             )
         }
@@ -103,7 +104,7 @@ class CardFaceReverseTest {
                 card = testCard,
                 onDone = {},
                 onRetry = {},
-                isReverse = false,
+                studyDirection = StudyDirection.TERM_TO_DESCRIPTION,
                 onSpeak = { spoken = true },
             )
         }
@@ -118,8 +119,8 @@ class CardFaceReverseTest {
         val relatedCard = Card(
             id = "c2",
             deckId = "d1",
-            front = "Prospect",
-            back = "見通し・展望 (shares root with perspective)",
+            term = "Prospect",
+            description = "見通し・展望 (shares root with perspective)",
         )
         var clickedCard: Card? = null
 

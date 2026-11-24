@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.theme.AidomariTheme
 import com.aidomari.app.ui.theme.ThemePreviews
@@ -39,7 +40,7 @@ fun AddDeckDialog(
         splitSize: Int,
         autoContinue: Boolean,
         shuffleMode: Boolean,
-        reverseMode: Boolean,
+        studyDirection: StudyDirection,
         autoSpeak: Boolean,
         speechRate: Float,
     ) -> Unit,
@@ -48,7 +49,7 @@ fun AddDeckDialog(
     var splitSizeText by remember { mutableStateOf("50") }
     var autoContinue by remember { mutableStateOf(false) }
     var shuffleMode by remember { mutableStateOf(false) }
-    var reverseMode by remember { mutableStateOf(false) }
+    var studyDirection by remember { mutableStateOf(StudyDirection.TERM_TO_DESCRIPTION) }
     var autoSpeak by remember { mutableStateOf(false) }
     var speechRate by remember { mutableFloatStateOf(1.0f) }
     val rateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
@@ -98,7 +99,12 @@ fun AddDeckDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(text = "裏面から出題（和英・意味先出し）")
-                    Switch(checked = reverseMode, onCheckedChange = { reverseMode = it })
+                    Switch(
+                        checked = studyDirection == StudyDirection.DESCRIPTION_TO_TERM,
+                        onCheckedChange = { checked ->
+                            studyDirection = if (checked) StudyDirection.DESCRIPTION_TO_TERM else StudyDirection.TERM_TO_DESCRIPTION
+                        },
+                    )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -143,7 +149,7 @@ fun AddDeckDialog(
                             splitSize,
                             autoContinue,
                             shuffleMode,
-                            reverseMode,
+                            studyDirection,
                             autoSpeak,
                             speechRate,
                         )
@@ -172,7 +178,7 @@ fun EditDeckDialog(
     var splitSizeText by remember(deck) { mutableStateOf(deck.splitSize.toString()) }
     var autoContinue by remember(deck) { mutableStateOf(deck.autoContinue) }
     var shuffleMode by remember(deck) { mutableStateOf(deck.shuffleMode) }
-    var reverseMode by remember(deck) { mutableStateOf(deck.reverseMode) }
+    var studyDirection by remember(deck) { mutableStateOf(deck.studyDirection) }
     var autoSpeak by remember(deck) { mutableStateOf(deck.autoSpeak) }
     var speechRate by remember(deck) { mutableFloatStateOf(deck.speechRate) }
     val rateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
@@ -222,7 +228,16 @@ fun EditDeckDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(text = "裏面から出題（和英・意味先出し）")
-                    Switch(checked = reverseMode, onCheckedChange = { reverseMode = it })
+                    Switch(
+                        checked = studyDirection == StudyDirection.DESCRIPTION_TO_TERM,
+                        onCheckedChange = {
+                            studyDirection = if (it) {
+                                StudyDirection.DESCRIPTION_TO_TERM
+                            } else {
+                                StudyDirection.TERM_TO_DESCRIPTION
+                            }
+                        },
+                    )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -267,7 +282,7 @@ fun EditDeckDialog(
                             splitSize = splitSize,
                             autoContinue = autoContinue,
                             shuffleMode = shuffleMode,
-                            reverseMode = reverseMode,
+                            studyDirection = studyDirection,
                             autoSpeak = autoSpeak,
                             speechRate = speechRate,
                         )

@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
@@ -51,8 +52,8 @@ class StudyScreenTest {
     )
 
     private val cards = listOf(
-        Card(id = "c1", deckId = "deck-auto", front = "Card 1", back = "意味1", orderIndex = 0),
-        Card(id = "c2", deckId = "deck-auto", front = "Card 2", back = "意味2", orderIndex = 1),
+        Card(id = "c1", deckId = "deck-auto", term = "Card 1", description = "意味1", orderIndex = 0),
+        Card(id = "c2", deckId = "deck-auto", term = "Card 2", description = "意味2", orderIndex = 1),
     )
 
     @Before
@@ -97,8 +98,8 @@ class StudyScreenTest {
     @Test
     fun studyScreen_autoContinueDisabled_showsCompletionDialog() {
         val manualCards = listOf(
-            Card(id = "m1", deckId = "deck-manual", front = "Manual 1", back = "意味1", orderIndex = 0),
-            Card(id = "m2", deckId = "deck-manual", front = "Manual 2", back = "意味2", orderIndex = 1),
+            Card(id = "m1", deckId = "deck-manual", term = "Manual 1", description = "意味1", orderIndex = 0),
+            Card(id = "m2", deckId = "deck-manual", term = "Manual 2", description = "意味2", orderIndex = 1),
         )
         fakeRepository.decks.add(deckWithoutAutoContinue)
         fakeRepository.cards.addAll(manualCards)
@@ -136,7 +137,7 @@ class StudyScreenTest {
     fun studyScreen_autoContinueEnabled_lastPartShowsCompletionDialog() {
         val singleCardDeck = deckWithAutoContinue.copy(id = "deck-single")
         val singleCard = listOf(
-            Card(id = "s1", deckId = "deck-single", front = "Single Card", back = "意味", orderIndex = 0),
+            Card(id = "s1", deckId = "deck-single", term = "Single Card", description = "意味", orderIndex = 0),
         )
         fakeRepository.decks.add(singleCardDeck)
         fakeRepository.cards.addAll(singleCard)
@@ -169,8 +170,8 @@ class StudyScreenTest {
     @Test
     fun studyScreen_randomMode_showsContinueRandomStudyButtonAndContinues() {
         val manualCards = listOf(
-            Card(id = "m1", deckId = "deck-manual", front = "Manual 1", back = "意味1", orderIndex = 0),
-            Card(id = "m2", deckId = "deck-manual", front = "Manual 2", back = "意味2", orderIndex = 1),
+            Card(id = "m1", deckId = "deck-manual", term = "Manual 1", description = "意味1", orderIndex = 0),
+            Card(id = "m2", deckId = "deck-manual", term = "Manual 2", description = "意味2", orderIndex = 1),
         )
         fakeRepository.decks.add(deckWithoutAutoContinue)
         fakeRepository.cards.addAll(manualCards)
@@ -299,8 +300,8 @@ class StudyScreenTest {
             shuffleMode = false,
         )
         val deleteCards = listOf(
-            Card(id = "d1", deckId = "deck-test-del", front = "Delete Card 1", back = "意味1", orderIndex = 0),
-            Card(id = "d2", deckId = "deck-test-del", front = "Delete Card 2", back = "意味2", orderIndex = 1),
+            Card(id = "d1", deckId = "deck-test-del", term = "Delete Card 1", description = "意味1", orderIndex = 0),
+            Card(id = "d2", deckId = "deck-test-del", term = "Delete Card 2", description = "意味2", orderIndex = 1),
         )
         fakeRepository.decks.add(manualDeck)
         fakeRepository.cards.addAll(deleteCards)
@@ -340,17 +341,17 @@ class StudyScreenTest {
     }
 
     @Test
-    fun studyScreen_autoSpeak_normalMode_speaksFrontOnDisplay_and_backOnFlip() {
+    fun studyScreen_autoSpeak_termToDescription_speaksTermOnDisplay_and_descriptionOnFlip() {
         val normalDeck = Deck(
             id = "deck-normal-speak",
             subjectId = "sub-1",
             name = "Normal Speak Deck",
             splitSize = 10,
             autoSpeak = true,
-            reverseMode = false,
+            studyDirection = StudyDirection.TERM_TO_DESCRIPTION,
         )
         val normalCards = listOf(
-            Card(id = "ns1", deckId = "deck-normal-speak", front = "apple", back = "りんご", orderIndex = 0),
+            Card(id = "ns1", deckId = "deck-normal-speak", term = "apple", description = "りんご", orderIndex = 0),
         )
         fakeRepository.decks.add(normalDeck)
         fakeRepository.cards.addAll(normalCards)
@@ -370,7 +371,7 @@ class StudyScreenTest {
 
         composeTestRule.waitForIdle()
 
-        // Card is displayed (オモテ面) -> speaks front
+        // Card is displayed (オモテ面) -> speaks term
         assertEquals(listOf("apple"), spokenTexts)
 
         // Flip card to ウラ面
@@ -379,22 +380,22 @@ class StudyScreenTest {
         }
         composeTestRule.waitForIdle()
 
-        // Card flipped (ウラ面) -> speaks back
+        // Card flipped (ウラ面) -> speaks description
         assertEquals(listOf("apple", "りんご"), spokenTexts)
     }
 
     @Test
-    fun studyScreen_autoSpeak_reverseMode_speaksBackOnDisplay_and_frontOnFlip() {
+    fun studyScreen_autoSpeak_descriptionToTerm_speaksDescriptionOnDisplay_and_termOnFlip() {
         val reverseDeck = Deck(
             id = "deck-reverse-speak",
             subjectId = "sub-1",
             name = "Reverse Speak Deck",
             splitSize = 10,
             autoSpeak = true,
-            reverseMode = true,
+            studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
         )
         val reverseCards = listOf(
-            Card(id = "rs1", deckId = "deck-reverse-speak", front = "journey", back = "旅、旅行", orderIndex = 0),
+            Card(id = "rs1", deckId = "deck-reverse-speak", term = "journey", description = "旅、旅行", orderIndex = 0),
         )
         fakeRepository.decks.add(reverseDeck)
         fakeRepository.cards.addAll(reverseCards)

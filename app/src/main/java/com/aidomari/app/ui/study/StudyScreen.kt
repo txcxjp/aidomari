@@ -31,6 +31,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.core.input.VolumeKeyHandler
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.util.CardSnoozeCalculator
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.study.components.CardEditNotesDialog
@@ -67,7 +68,8 @@ fun StudyScreen(
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     val autoSpeak = uiState.deck?.autoSpeak == true
-    val isReverse = uiState.deck?.reverseMode == true
+    val studyDirection = uiState.deck?.studyDirection ?: StudyDirection.TERM_TO_DESCRIPTION
+    val isDescriptionFirst = studyDirection == StudyDirection.DESCRIPTION_TO_TERM
     val currentCard = uiState.currentCard
     val currentCardId = currentCard?.id
     val nextSnoozeLabel = currentCard?.let {
@@ -77,7 +79,7 @@ fun StudyScreen(
     // Auto-speak on card display (オモテ面: 設問)
     LaunchedEffect(currentCardId, autoSpeak) {
         if (autoSpeak && currentCard != null) {
-            val frontText = if (isReverse) currentCard.back else currentCard.front
+            val frontText = if (isDescriptionFirst) currentCard.description else currentCard.term
             onSpeakText(frontText)
         }
     }
@@ -85,7 +87,7 @@ fun StudyScreen(
     // Auto-speak on card flip (ウラ面: 解答)
     LaunchedEffect(uiState.isFlipped, autoSpeak) {
         if (autoSpeak && currentCard != null && uiState.isFlipped) {
-            val backText = if (isReverse) currentCard.front else currentCard.back
+            val backText = if (isDescriptionFirst) currentCard.term else currentCard.description
             onSpeakText(backText)
         }
     }
@@ -136,10 +138,10 @@ fun StudyScreen(
         onKeywordClick = { bottomSheetCard = it },
         onSnoozeCard = if (uiState.currentCard != null) {
             {
-                val front = uiState.currentCard?.front ?: ""
+                val term = uiState.currentCard?.term ?: ""
                 viewModel.snoozeCurrentCard { label ->
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar("「$front」を${label}非表示にしました")
+                        snackbarHostState.showSnackbar("「$term」を${label}非表示にしました")
                     }
                 }
             }
@@ -173,7 +175,7 @@ fun StudyScreen(
                 showTtsSettingsDialog = false
             },
             onTestSpeak = {
-                onSpeakText(uiState.currentCard?.front ?: "相泊")
+                onSpeakText(uiState.currentCard?.term ?: "相泊")
             },
         )
     }
@@ -209,14 +211,14 @@ fun StudyScreen(
             onSnoozeCard = { card ->
                 viewModel.snoozeCard(card) { label ->
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar("「${card.front}」を${label}非表示にしました")
+                        snackbarHostState.showSnackbar("「${card.term}」を${label}非表示にしました")
                     }
                 }
             },
             onUnsnoozeCard = { card ->
                 viewModel.unsnoozeCard(card) {
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar("「${card.front}」のスヌーズを解除しました")
+                        snackbarHostState.showSnackbar("「${card.term}」のスヌーズを解除しました")
                     }
                 }
             },
@@ -228,7 +230,7 @@ fun StudyScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
             title = { Text(text = "カードを削除") },
-            text = { Text(text = "「${cardToDelete.front}」を削除しますか？\nこの操作は取り消せません。") },
+            text = { Text(text = "「${cardToDelete.term}」を削除しますか？\nこの操作は取り消せません。") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -271,7 +273,7 @@ fun StudyContent(
     snoozeDurationLabel: String? = null,
 ) {
     val autoSpeak = uiState.deck?.autoSpeak == true
-    val isReverse = uiState.deck?.reverseMode == true
+    val studyDirection = uiState.deck?.studyDirection ?: StudyDirection.TERM_TO_DESCRIPTION
     val isAutoContinue = uiState.deck?.autoContinue == true
     val hasNextPart = uiState.hasNextPart
 
@@ -374,7 +376,7 @@ fun StudyContent(
                                         CardFaceFront(
                                             card = nextCard,
                                             onSpeak = {},
-                                            isReverse = isReverse,
+                                            studyDirection = studyDirection,
                                         )
                                     }
                                 }
@@ -392,10 +394,14 @@ fun StudyContent(
                                         CardFaceFront(
                                             card = card,
                                             onSpeak = {
-                                                val frontText = if (isReverse) card.back else card.front
+                                                val frontText = if (studyDirection == StudyDirection.DESCRIPTION_TO_TERM) {
+                                                    card.description
+                                                } else {
+                                                    card.term
+                                                }
                                                 onSpeakText(frontText)
                                             },
-                                            isReverse = isReverse,
+                                            studyDirection = studyDirection,
                                             onEditClick = onEditNotes,
                                         )
                                     },
@@ -406,9 +412,13 @@ fun StudyContent(
                                             onKeywordClick = onKeywordClick,
                                             onDone = onMarkDone,
                                             onRetry = onMarkRetry,
-                                            isReverse = isReverse,
+                                            studyDirection = studyDirection,
                                             onSpeak = {
-                                                val backText = if (isReverse) card.front else card.back
+                                                val backText = if (studyDirection == StudyDirection.DESCRIPTION_TO_TERM) {
+                                                    card.term
+                                                } else {
+                                                    card.description
+                                                }
                                                 onSpeakText(backText)
                                             },
                                             onEditClick = onEditNotes,

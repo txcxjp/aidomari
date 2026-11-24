@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.core.keyword.KeywordEngine
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.theme.AidomariTheme
 import com.aidomari.app.ui.theme.ThemePreviews
@@ -52,11 +53,12 @@ fun CardFaceBack(
     modifier: Modifier = Modifier,
     candidateCards: List<DomainCard> = emptyList(),
     onKeywordClick: (DomainCard) -> Unit = {},
-    isReverse: Boolean = false,
+    studyDirection: StudyDirection = StudyDirection.TERM_TO_DESCRIPTION,
     onSpeak: (() -> Unit)? = null,
     onEditClick: (() -> Unit)? = null,
     onSnooze: (() -> Unit)? = null,
 ) {
+    val isDescriptionFirst = studyDirection == StudyDirection.DESCRIPTION_TO_TERM
     val scrollState = rememberScrollState()
     val keywordEngine = remember { KeywordEngine() }
     val relatedCards = remember(card, candidateCards) {
@@ -101,10 +103,10 @@ fun CardFaceBack(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            if (isReverse) {
-                // In reverse mode, answer is the target word (card.front)
+            if (isDescriptionFirst) {
+                // When description is shown first, answer is card.term
                 Text(
-                    text = card.front,
+                    text = card.term,
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 30.sp,
@@ -112,9 +114,9 @@ fun CardFaceBack(
                     textAlign = TextAlign.Center,
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                // Also display meaning and keyword links
+                // Also display description and keyword links
                 KeywordText(
-                    text = card.back,
+                    text = card.description,
                     candidateCards = candidateCards,
                     currentCardId = card.id,
                     onKeywordClick = onKeywordClick,
@@ -125,7 +127,7 @@ fun CardFaceBack(
                 )
             } else {
                 KeywordText(
-                    text = card.back,
+                    text = card.description,
                     candidateCards = candidateCards,
                     currentCardId = card.id,
                     onKeywordClick = onKeywordClick,
@@ -246,7 +248,7 @@ private fun CardFaceBackPreview() {
             onRetry = {},
             candidateCards = PreviewSampleData.sampleCards,
             onKeywordClick = {},
-            isReverse = false,
+            studyDirection = StudyDirection.TERM_TO_DESCRIPTION,
             onSpeak = {},
             onEditClick = {},
         )

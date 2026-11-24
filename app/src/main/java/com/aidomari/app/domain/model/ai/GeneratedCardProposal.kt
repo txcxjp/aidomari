@@ -7,8 +7,8 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class GeneratedCardProposal(
-    val front: String,
-    val back: String,
+    val term: String,
+    val description: String,
     val userSupplement: String = "",
     val sourceUrl: String = "",
     val sourceTitle: String = "",

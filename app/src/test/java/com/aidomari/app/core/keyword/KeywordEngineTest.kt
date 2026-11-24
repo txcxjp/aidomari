@@ -10,10 +10,10 @@ class KeywordEngineTest {
 
     private lateinit var keywordEngine: KeywordEngine
 
-    private val cardApple = Card(id = "c1", deckId = "d1", front = "apple", back = "りんご")
-    private val cardPineapple = Card(id = "c2", deckId = "d1", front = "pineapple", back = "パイナップル")
-    private val cardRome = Card(id = "c3", deckId = "d2", front = "ローマ", back = "イタリアの首都")
-    private val cardRomanEmpire = Card(id = "c4", deckId = "d2", front = "ローマ帝国", back = "古代の大帝国")
+    private val cardApple = Card(id = "c1", deckId = "d1", term = "apple", description = "りんご")
+    private val cardPineapple = Card(id = "c2", deckId = "d1", term = "pineapple", description = "パイナップル")
+    private val cardRome = Card(id = "c3", deckId = "d2", term = "ローマ", description = "イタリアの首都")
+    private val cardRomanEmpire = Card(id = "c4", deckId = "d2", term = "ローマ帝国", description = "古代の大帝国")
 
     @Before
     fun setup() {
@@ -103,11 +103,11 @@ class KeywordEngineTest {
 
     @Test
     fun findRelatedCards_findsCardsByStemAndContent_excludingSelfAndDirectKeywords() {
-        val cardFruit = Card(id = "c0", deckId = "d1", front = "fruit", back = "Seed-bearing structure including apple")
-        val cardApple = Card(id = "c1", deckId = "d1", front = "apple", back = "A red sweet fruit")
-        val cardPie = Card(id = "c2", deckId = "d1", front = "apple pie", back = "A pastry with fruit filling")
-        val cardOrchard = Card(id = "c3", deckId = "d1", front = "orchard", back = "A piece of land planted with fruit trees")
-        val cardOrange = Card(id = "c4", deckId = "d1", front = "orange", back = "A citrus crop")
+        val cardFruit = Card(id = "c0", deckId = "d1", term = "fruit", description = "Seed-bearing structure including apple")
+        val cardApple = Card(id = "c1", deckId = "d1", term = "apple", description = "A red sweet fruit")
+        val cardPie = Card(id = "c2", deckId = "d1", term = "apple pie", description = "A pastry with fruit filling")
+        val cardOrchard = Card(id = "c3", deckId = "d1", term = "orchard", description = "A piece of land planted with fruit trees")
+        val cardOrange = Card(id = "c4", deckId = "d1", term = "orange", description = "A citrus crop")
 
         val allCards = listOf(cardFruit, cardApple, cardPie, cardOrchard, cardOrange)
 
@@ -127,8 +127,8 @@ class KeywordEngineTest {
 
     @Test
     fun findRelatedCards_shortTargetLength_returnsEmptyList() {
-        val shortCard = Card(id = "s1", deckId = "d1", front = "in", back = "inside")
-        val otherCard = Card(id = "s2", deckId = "d1", front = "inn", back = "hotel")
+        val shortCard = Card(id = "s1", deckId = "d1", term = "in", description = "inside")
+        val otherCard = Card(id = "s2", deckId = "d1", term = "inn", description = "hotel")
         val related = keywordEngine.findRelatedCards(shortCard, listOf(shortCard, otherCard))
         assertTrue(related.isEmpty())
     }

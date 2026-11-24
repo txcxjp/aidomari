@@ -4,6 +4,7 @@ import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.CardStudyLog
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.PastDayDeckType
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
@@ -43,9 +44,9 @@ class StudyViewModelTest {
     )
 
     private val testCards = listOf(
-        Card(id = "c1", deckId = "deck-1", front = "Apple", back = "りんご", orderIndex = 0),
-        Card(id = "c2", deckId = "deck-1", front = "Banana", back = "バナナ", orderIndex = 1),
-        Card(id = "c3", deckId = "deck-1", front = "Cherry", back = "さくらんぼ", orderIndex = 2),
+        Card(id = "c1", deckId = "deck-1", term = "Apple", description = "りんご", orderIndex = 0),
+        Card(id = "c2", deckId = "deck-1", term = "Banana", description = "バナナ", orderIndex = 1),
+        Card(id = "c3", deckId = "deck-1", term = "Cherry", description = "さくらんぼ", orderIndex = 2),
     )
 
     @Before
@@ -83,18 +84,18 @@ class StudyViewModelTest {
     }
 
     @Test
-    fun loadDeckAndPart_withReverseMode_retainsReverseModeInDeck() = runTest {
-        val reverseDeck = testDeck.copy(id = "deck-rev", reverseMode = true)
+    fun loadDeckAndPart_withDescriptionToTerm_retainsStudyDirectionInDeck() = runTest {
+        val reverseDeck = testDeck.copy(id = "deck-rev", studyDirection = StudyDirection.DESCRIPTION_TO_TERM)
         fakeRepository.decks.add(reverseDeck)
         fakeRepository.cards.add(
-            Card(id = "c-rev", deckId = "deck-rev", front = "Dog", back = "犬", orderIndex = 0),
+            Card(id = "c-rev", deckId = "deck-rev", term = "Dog", description = "犬", orderIndex = 0),
         )
 
         viewModel.loadDeckAndPart("deck-rev", 0)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(true, state.deck?.reverseMode)
+        assertEquals(StudyDirection.DESCRIPTION_TO_TERM, state.deck?.studyDirection)
         assertEquals("c-rev", state.currentCard?.id)
         assertFalse(state.isFlipped)
     }
@@ -298,7 +299,7 @@ class StudyViewModelTest {
     @Test
     fun loadDeckAndPart_randomMode_loadsSpecifiedCountFromSubject() = runTest {
         val manyCards = (1..10).map { i ->
-            Card(id = "card-$i", deckId = "deck-1", front = "Word $i", back = "Meaning $i", orderIndex = i)
+            Card(id = "card-$i", deckId = "deck-1", term = "Word $i", description = "Meaning $i", orderIndex = i)
         }
         fakeRepository.cards.clear()
         fakeRepository.cards.addAll(manyCards)
@@ -318,7 +319,7 @@ class StudyViewModelTest {
     @Test
     fun loadDeckAndPart_randomMode_allQuestions_loadsAllCardsFromSubject() = runTest {
         val manyCards = (1..5).map { i ->
-            Card(id = "card-$i", deckId = "deck-1", front = "Word $i", back = "Meaning $i", orderIndex = i)
+            Card(id = "card-$i", deckId = "deck-1", term = "Word $i", description = "Meaning $i", orderIndex = i)
         }
         fakeRepository.cards.clear()
         fakeRepository.cards.addAll(manyCards)
@@ -404,11 +405,11 @@ class StudyViewModelTest {
     }
 
     @Test
-    fun searchCards_filtersCardsByFrontBackAndNotes() = runTest {
+    fun searchCards_filtersCardsByTermDescriptionAndNotes() = runTest {
         val customCards = listOf(
-            Card(id = "c1", deckId = "deck-1", front = "Algorithm", back = "アルゴリズム", userQuestion = "計算手順"),
-            Card(id = "c2", deckId = "deck-1", front = "Binary", back = "2進数", userSupplement = "0と1"),
-            Card(id = "c3", deckId = "deck-1", front = "Compiler", back = "コンパイラ"),
+            Card(id = "c1", deckId = "deck-1", term = "Algorithm", description = "アルゴリズム", userQuestion = "計算手順"),
+            Card(id = "c2", deckId = "deck-1", term = "Binary", description = "2進数", userSupplement = "0と1"),
+            Card(id = "c3", deckId = "deck-1", term = "Compiler", description = "コンパイラ"),
         )
         fakeRepository.cards.clear()
         fakeRepository.cards.addAll(customCards)
@@ -416,13 +417,13 @@ class StudyViewModelTest {
         viewModel.loadDeckAndPart("deck-1", 0)
         advanceUntilIdle()
 
-        // Search by front
+        // Search by term
         viewModel.searchCards("algo")
         advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.searchResults.size)
         assertEquals("c1", viewModel.uiState.value.searchResults.first().id)
 
-        // Search by back
+        // Search by description
         viewModel.searchCards("2進数")
         advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.searchResults.size)
@@ -520,8 +521,8 @@ class StudyViewModelTest {
     @Test
     fun loadDeckAndPart_withPastDayDeck_startsStudySuccessfully() = runTest {
         val pastCards = listOf(
-            Card(id = "past-1", deckId = "deck-1", front = "Past Apple", back = "過去のりんご"),
-            Card(id = "past-2", deckId = "deck-1", front = "Past Banana", back = "過去のバナナ"),
+            Card(id = "past-1", deckId = "deck-1", term = "Past Apple", description = "過去のりんご"),
+            Card(id = "past-2", deckId = "deck-1", term = "Past Banana", description = "過去のバナナ"),
         )
         fakeRepository.pastDayCards[PastDayDeckType.YESTERDAY] = pastCards
 
@@ -541,8 +542,8 @@ class StudyViewModelTest {
         val snoozedCard = Card(
             id = "c-snoozed",
             deckId = "deck-1",
-            front = "Snoozed",
-            back = "休眠中",
+            term = "Snoozed",
+            description = "休眠中",
             orderIndex = 3,
             snoozedUntil = System.currentTimeMillis() + 86400000L,
             snoozeLevel = 1,
@@ -570,15 +571,15 @@ class StudyViewModelTest {
             Card(
                 id = "sc1",
                 deckId = "deck-split",
-                front = "Card 1",
-                back = "1",
+                term = "Card 1",
+                description = "1",
                 orderIndex = 0,
                 snoozedUntil = System.currentTimeMillis() + 86400000L,
                 snoozeLevel = 1,
             ),
-            Card(id = "sc2", deckId = "deck-split", front = "Card 2", back = "2", orderIndex = 1),
-            Card(id = "sc3", deckId = "deck-split", front = "Card 3", back = "3", orderIndex = 2),
-            Card(id = "sc4", deckId = "deck-split", front = "Card 4", back = "4", orderIndex = 3),
+            Card(id = "sc2", deckId = "deck-split", term = "Card 2", description = "2", orderIndex = 1),
+            Card(id = "sc3", deckId = "deck-split", term = "Card 3", description = "3", orderIndex = 2),
+            Card(id = "sc4", deckId = "deck-split", term = "Card 4", description = "4", orderIndex = 3),
         )
         fakeRepository.cards.addAll(splitCards)
 
@@ -618,14 +619,14 @@ class StudyViewModelTest {
             Card(
                 id = "rc1",
                 deckId = "deck-split-restart",
-                front = "Card 1",
-                back = "1",
+                term = "Card 1",
+                description = "1",
                 orderIndex = 0,
                 snoozedUntil = System.currentTimeMillis() + 86400000L,
                 snoozeLevel = 1,
             ),
-            Card(id = "rc2", deckId = "deck-split-restart", front = "Card 2", back = "2", orderIndex = 1),
-            Card(id = "rc3", deckId = "deck-split-restart", front = "Card 3", back = "3", orderIndex = 2),
+            Card(id = "rc2", deckId = "deck-split-restart", term = "Card 2", description = "2", orderIndex = 1),
+            Card(id = "rc3", deckId = "deck-split-restart", term = "Card 3", description = "3", orderIndex = 2),
         )
         fakeRepository.cards.addAll(splitCards)
 
@@ -698,7 +699,7 @@ class StudyViewModelTest {
     @Test
     fun loadDeckAndPart_withDeckRandomMode_loadsCardsFromSpecificDeck() = runTest {
         val otherDeck = Deck(id = "deck-other", subjectId = "sub-1", name = "別デッキ")
-        val otherCard = Card(id = "c-other", deckId = "deck-other", front = "Other", back = "別")
+        val otherCard = Card(id = "c-other", deckId = "deck-other", term = "Other", description = "別")
         fakeRepository.decks.add(otherDeck)
         fakeRepository.cards.add(otherCard)
 

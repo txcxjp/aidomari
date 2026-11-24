@@ -2,6 +2,7 @@ package com.aidomari.app.core.importer
 
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.serialization.json.Json
@@ -85,15 +86,15 @@ class WordsDataImporter(
             val contentArray = bookObj["content"]?.jsonArray ?: continue
             contentArray.forEach { cardElem ->
                 val cardObj = cardElem.jsonObject
-                val front = cardObj["front"]?.jsonPrimitive?.content ?: ""
-                val back = cardObj["back"]?.jsonPrimitive?.content ?: ""
-                if (front.isNotBlank() || back.isNotBlank()) {
+                val term = extractCardField(cardObj, "term", "front")
+                val description = extractCardField(cardObj, "description", "back")
+                if (term.isNotBlank() || description.isNotBlank()) {
                     allCards.add(
                         Card(
                             id = UUID.randomUUID().toString(),
                             deckId = deckId,
-                            front = front,
-                            back = back,
+                            term = term,
+                            description = description,
                             orderIndex = allCards.size,
                         ),
                     )
@@ -128,7 +129,7 @@ class WordsDataImporter(
         val subject = getOrCreateSubject(targetSubjectId, title)
 
         val prefObj = booksArray.mapNotNull { it.jsonObject["preference"]?.jsonObject }.firstOrNull()
-        val reverseMode = prefObj?.get("reverseMode")?.jsonPrimitive?.booleanOrNull ?: false
+        val studyDirection = parseStudyDirection(prefObj)
         val shuffleMode = prefObj?.get("shuffleMode")?.jsonPrimitive?.booleanOrNull ?: false
         val autoContinue = prefObj?.get("autoContinue")?.jsonPrimitive?.booleanOrNull ?: false
         val autoSpeak = prefObj?.get("autoSpeak")?.jsonPrimitive?.booleanOrNull ?: false
@@ -143,7 +144,7 @@ class WordsDataImporter(
             splitSize = splitSize,
             autoContinue = autoContinue,
             shuffleMode = shuffleMode,
-            reverseMode = reverseMode,
+            studyDirection = studyDirection,
             autoSpeak = autoSpeak,
             speechRate = speechRate,
             sortOrder = 0,
@@ -157,23 +158,19 @@ class WordsDataImporter(
             contentArray.forEach { cardElem ->
                 val cardObj = cardElem.jsonObject
                 // Elm uses "word" and "meaning"
-                val front = cardObj["word"]?.jsonPrimitive?.content
-                    ?: cardObj["front"]?.jsonPrimitive?.content
-                    ?: ""
-                val back = cardObj["meaning"]?.jsonPrimitive?.content
-                    ?: cardObj["back"]?.jsonPrimitive?.content
-                    ?: ""
+                val term = extractCardField(cardObj, "word", "term", "front")
+                val description = extractCardField(cardObj, "meaning", "description", "back")
                 val userQuestion = cardObj["user_question"]?.jsonPrimitive?.content ?: ""
                 val userSupplement = cardObj["user_supplement"]?.jsonPrimitive?.content ?: ""
                 val bookmarkId = cardObj["bookmark_id"]?.jsonPrimitive?.intOrNull ?: 0
 
-                if (front.isNotBlank() || back.isNotBlank()) {
+                if (term.isNotBlank() || description.isNotBlank()) {
                     allCards.add(
                         Card(
                             id = UUID.randomUUID().toString(),
                             deckId = deckId,
-                            front = front,
-                            back = back,
+                            term = term,
+                            description = description,
                             userQuestion = userQuestion,
                             userSupplement = userSupplement,
                             isBookmarked = bookmarkId > 0,
@@ -223,7 +220,7 @@ class WordsDataImporter(
                 val splitSize = deckObj["splitSize"]?.jsonPrimitive?.intOrNull ?: 50
                 val autoContinue = deckObj["autoContinue"]?.jsonPrimitive?.booleanOrNull ?: false
                 val shuffleMode = deckObj["shuffleMode"]?.jsonPrimitive?.booleanOrNull ?: false
-                val reverseMode = deckObj["reverseMode"]?.jsonPrimitive?.booleanOrNull ?: false
+                val studyDirection = parseStudyDirection(deckObj)
                 val autoSpeak = deckObj["autoSpeak"]?.jsonPrimitive?.booleanOrNull ?: false
                 val speechRate = deckObj["speechRate"]?.jsonPrimitive?.content?.toFloatOrNull() ?: 1.0f
 
@@ -235,7 +232,7 @@ class WordsDataImporter(
                     splitSize = splitSize,
                     autoContinue = autoContinue,
                     shuffleMode = shuffleMode,
-                    reverseMode = reverseMode,
+                    studyDirection = studyDirection,
                     autoSpeak = autoSpeak,
                     speechRate = speechRate,
                     sortOrder = decksImported,
@@ -247,19 +244,19 @@ class WordsDataImporter(
                 val cards = mutableListOf<Card>()
                 cardsArray.forEachIndexed { index, cardElem ->
                     val cardObj = cardElem.jsonObject
-                    val front = cardObj["front"]?.jsonPrimitive?.content ?: ""
-                    val back = cardObj["back"]?.jsonPrimitive?.content ?: ""
+                    val term = extractCardField(cardObj, "term", "front")
+                    val description = extractCardField(cardObj, "description", "back")
                     val userQuestion = cardObj["userQuestion"]?.jsonPrimitive?.content ?: ""
                     val userSupplement = cardObj["userSupplement"]?.jsonPrimitive?.content ?: ""
                     val isBookmarked = cardObj["isBookmarked"]?.jsonPrimitive?.booleanOrNull ?: false
 
-                    if (front.isNotBlank() || back.isNotBlank()) {
+                    if (term.isNotBlank() || description.isNotBlank()) {
                         cards.add(
                             Card(
                                 id = UUID.randomUUID().toString(),
                                 deckId = deckId,
-                                front = front,
-                                back = back,
+                                term = term,
+                                description = description,
                                 userQuestion = userQuestion,
                                 userSupplement = userSupplement,
                                 isBookmarked = isBookmarked,
@@ -280,6 +277,20 @@ class WordsDataImporter(
             decksCount = decksImported,
             cardsCount = cardsImported,
         )
+    }
+
+    private fun extractCardField(cardObj: JsonObject, vararg keys: String): String =
+        keys.firstNotNullOfOrNull { key ->
+            runCatching { cardObj[key]?.jsonPrimitive?.content }.getOrNull()
+        } ?: ""
+
+    private fun parseStudyDirection(obj: JsonObject?): StudyDirection {
+        val raw = runCatching { obj?.get("studyDirection")?.jsonPrimitive?.content?.trim() }.getOrNull()
+        if (!raw.isNullOrBlank()) {
+            StudyDirection.entries.find { it.name.equals(raw, ignoreCase = true) }?.let { return it }
+        }
+        val reverseMode = runCatching { obj?.get("reverseMode")?.jsonPrimitive?.booleanOrNull }.getOrNull() ?: false
+        return if (reverseMode) StudyDirection.DESCRIPTION_TO_TERM else StudyDirection.TERM_TO_DESCRIPTION
     }
 
     private suspend fun getOrCreateSubject(targetSubjectId: String?, defaultName: String): Subject {

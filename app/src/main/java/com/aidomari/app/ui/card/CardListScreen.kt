@@ -315,7 +315,7 @@ fun CardListContent(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
-                                        text = card.front,
+                                        text = card.term,
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontSize = 18.sp,
                                             fontWeight = FontWeight.Bold,
@@ -346,7 +346,7 @@ fun CardListContent(
 
                                         // TTS speak button
                                         IconButton(
-                                            onClick = { onSpeakText(card.front) },
+                                            onClick = { onSpeakText(card.term) },
                                             modifier = Modifier.size(36.dp),
                                         ) {
                                             Icon(
@@ -376,7 +376,7 @@ fun CardListContent(
 
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = card.back,
+                                    text = card.description,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

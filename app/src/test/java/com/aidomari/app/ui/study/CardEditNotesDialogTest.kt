@@ -27,8 +27,8 @@ class CardEditNotesDialogTest {
     private val card = Card(
         id = "c1",
         deckId = "d1",
-        front = "Eloquent",
-        back = "雄弁な、説得力のある",
+        term = "Eloquent",
+        description = "雄弁な、説得力のある",
         userQuestion = "How to say in German?",
         userSupplement = "Origin: Latin eloquens",
     )

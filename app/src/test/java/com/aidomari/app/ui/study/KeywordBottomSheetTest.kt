@@ -30,23 +30,23 @@ class KeywordBottomSheetTest {
     private val cardApple = Card(
         id = "c1",
         deckId = "deck-1",
-        front = "Apple",
-        back = "A delicious fruit",
+        term = "Apple",
+        description = "A delicious fruit",
         userSupplement = "Rich in vitamin C",
     )
 
     private val cardFruit = Card(
         id = "c2",
         deckId = "deck-1",
-        front = "fruit",
-        back = "Seed-bearing structure in flowering plants",
+        term = "fruit",
+        description = "Seed-bearing structure in flowering plants",
     )
 
     private val cardCider = Card(
         id = "c3",
         deckId = "deck-1",
-        front = "Cider",
-        back = "Juice made from crushed apples",
+        term = "Cider",
+        description = "Juice made from crushed apples",
     )
 
     @Test
@@ -172,7 +172,7 @@ class KeywordBottomSheetTest {
             .performClick()
 
         assertEquals("c3", clickedCard?.id)
-        assertEquals("Cider", clickedCard?.front)
+        assertEquals("Cider", clickedCard?.term)
     }
 
     @Test
@@ -225,7 +225,7 @@ class KeywordBottomSheetTest {
 
     @Test
     fun keywordSheetContent_showsRelatedItems_andInvokesKeywordClick() {
-        val cardPie = Card(id = "c3", deckId = "deck-1", front = "apple pie", back = "Pastry with apples")
+        val cardPie = Card(id = "c3", deckId = "deck-1", term = "apple pie", description = "Pastry with apples")
         var clickedCard: Card? = null
 
         composeTestRule.setContent {

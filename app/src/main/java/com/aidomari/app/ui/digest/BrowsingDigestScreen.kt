@@ -913,7 +913,7 @@ fun CandidateCardItem(
                     onCheckedChange = { onToggle() },
                 )
                 Text(
-                    text = candidate.front,
+                    text = candidate.term,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = 16.5.sp,
                         fontWeight = FontWeight.Bold,
@@ -940,7 +940,7 @@ fun CandidateCardItem(
                     .padding(start = 10.dp),
             ) {
                 Text(
-                    text = candidate.back,
+                    text = candidate.description,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         lineHeight = 20.sp,
                     ),
@@ -981,12 +981,12 @@ fun CandidateCardItem(
 private fun CandidateCardEditDialog(
     candidate: CardCandidateItem,
     onDismiss: () -> Unit,
-    onSave: (front: String, back: String, supplement: String) -> Unit,
+    onSave: (term: String, description: String, supplement: String) -> Unit,
 ) {
-    var front by remember(candidate.id) { mutableStateOf(candidate.front) }
-    var back by remember(candidate.id) { mutableStateOf(candidate.back) }
+    var term by remember(candidate.id) { mutableStateOf(candidate.term) }
+    var description by remember(candidate.id) { mutableStateOf(candidate.description) }
     var supplement by remember(candidate.id) { mutableStateOf(candidate.supplement) }
-    val canSave = front.isNotBlank() && back.isNotBlank()
+    val canSave = term.isNotBlank() && description.isNotBlank()
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -1037,16 +1037,16 @@ private fun CandidateCardEditDialog(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     OutlinedTextField(
-                        value = front,
-                        onValueChange = { front = it },
+                        value = term,
+                        onValueChange = { term = it },
                         label = { Text("表面（問題・用語）") },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 1,
                         maxLines = 3,
                     )
                     OutlinedTextField(
-                        value = back,
-                        onValueChange = { back = it },
+                        value = description,
+                        onValueChange = { description = it },
                         label = { Text("裏面（解答・定義）") },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
@@ -1076,7 +1076,7 @@ private fun CandidateCardEditDialog(
                     Button(
                         onClick = {
                             if (canSave) {
-                                onSave(front.trim(), back.trim(), supplement.trim())
+                                onSave(term.trim(), description.trim(), supplement.trim())
                             }
                         },
                         enabled = canSave,
