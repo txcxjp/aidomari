@@ -47,12 +47,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -78,7 +76,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.aidomari.app.core.ai.GeminiApiClientImpl
 import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.domain.model.ai.CardExtractionMode
-import com.aidomari.app.domain.model.article.ArticleStatus
 import com.aidomari.app.domain.model.article.SourceArticle
 import com.aidomari.app.ui.settings.GeminiSettingsDialog
 
@@ -199,27 +196,6 @@ fun BrowsingDigestScreen(
                 }
             }
 
-            // フィルタータブ
-            PrimaryTabRow(
-                selectedTabIndex = uiState.selectedTab.ordinal,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                ArticleFilterTab.values().forEach { tab ->
-                    Tab(
-                        selected = uiState.selectedTab == tab,
-                        onClick = { viewModel.selectTab(tab) },
-                        text = {
-                            val count = when (tab) {
-                                ArticleFilterTab.PENDING -> uiState.articles.count { it.status == ArticleStatus.PENDING }
-                                ArticleFilterTab.GENERATED -> uiState.articles.count { it.status == ArticleStatus.GENERATED }
-                                ArticleFilterTab.ALL -> uiState.articles.size
-                            }
-                            Text("${tab.label} ($count)")
-                        },
-                    )
-                }
-            }
-
             // 抽出モードセレクター
             ExtractionModeSelectorBar(
                 selectedMode = uiState.selectedMode,
@@ -238,7 +214,7 @@ fun BrowsingDigestScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            "記事がありません",
+                            "未処理の記事はありません",
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -420,7 +396,7 @@ fun ArticleItemCard(
         ),
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            // メタ行: ドメイン、日時、ステータス
+            // メタ行: ドメイン、文字数
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -440,8 +416,6 @@ fun ArticleItemCard(
                         color = MaterialTheme.colorScheme.outline,
                     )
                 }
-
-                StatusBadge(status = article.status, cardCount = article.generatedCardCount)
             }
 
             Spacer(Modifier.height(8.dp))
@@ -640,7 +614,7 @@ fun ArticleItemCard(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                if (article.status == ArticleStatus.GENERATED) "再生成" else "カード生成",
+                                "カード生成",
                                 fontSize = 12.sp,
                             )
                         }
@@ -648,24 +622,6 @@ fun ArticleItemCard(
                 }
             }
         }
-    }
-}
-
-@Composable
-fun StatusBadge(status: ArticleStatus, cardCount: Int, modifier: Modifier = Modifier) {
-    val (label, bg, fg) = when (status) {
-        ArticleStatus.PENDING -> Triple("未処理", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
-        ArticleStatus.GENERATED -> Triple("${cardCount}枚生成済", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
-        ArticleStatus.DISCARDED -> Triple("破棄", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(bg)
-            .padding(horizontal = 8.dp, vertical = 2.dp),
-    ) {
-        Text(label, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = fg)
     }
 }
 

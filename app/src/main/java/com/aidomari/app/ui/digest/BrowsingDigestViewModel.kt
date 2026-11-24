@@ -55,10 +55,6 @@ class BrowsingDigestViewModel(
         }
     }
 
-    fun selectTab(tab: ArticleFilterTab) {
-        _uiState.update { it.copy(selectedTab = tab) }
-    }
-
     fun selectSubject(subjectId: String) {
         _uiState.update { it.copy(selectedSubjectId = subjectId) }
     }

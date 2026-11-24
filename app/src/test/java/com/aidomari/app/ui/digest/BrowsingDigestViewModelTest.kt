@@ -93,25 +93,15 @@ class BrowsingDigestViewModelTest {
     }
 
     @Test
-    fun selectTab_filtersArticlesCorrectly() = runTest {
+    fun filteredArticles_onlyIncludesPendingArticles() = runTest {
         val pendingArticle = SourceArticle(id = "1", url = "https://example.com/1", domain = "example.com", title = "未処理記事", extractedText = "本文", status = ArticleStatus.PENDING)
         val generatedArticle = SourceArticle(id = "2", url = "https://example.com/2", domain = "example.com", title = "生成済記事", extractedText = "本文", status = ArticleStatus.GENERATED, generatedCardCount = 3)
 
         fakeArticleRepository.setArticles(listOf(pendingArticle, generatedArticle))
         advanceUntilIdle()
 
-        // PENDING (デフォルト)
         assertEquals(1, viewModel.uiState.value.filteredArticles.size)
         assertEquals("未処理記事", viewModel.uiState.value.filteredArticles[0].title)
-
-        // GENERATED
-        viewModel.selectTab(ArticleFilterTab.GENERATED)
-        assertEquals(1, viewModel.uiState.value.filteredArticles.size)
-        assertEquals("生成済記事", viewModel.uiState.value.filteredArticles[0].title)
-
-        // ALL
-        viewModel.selectTab(ArticleFilterTab.ALL)
-        assertEquals(2, viewModel.uiState.value.filteredArticles.size)
     }
 
     @Test
