@@ -480,7 +480,7 @@ fun ArticleItemCard(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "全文プレビュー（枠内スクロール）",
+                                text = "全文プレビュー",
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
