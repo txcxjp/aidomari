@@ -144,9 +144,9 @@ class GeminiApiClientTest {
 
         assertEquals("StateFlow", cards[1].front)
 
-        // Verify prompt specifies flashcard rules, smart mode, systemInstruction, responseSchema, and few-shot examples
+        // Verify prompt specifies flashcard rules, fallback knowledge mode, systemInstruction, responseSchema, and few-shot examples
         assertTrue(fakeTransport.lastBody.contains("単語帳"))
-        assertTrue(fakeTransport.lastBody.contains("スマート自動最適化"))
+        assertTrue(fakeTransport.lastBody.contains("ナレッジ徹底網羅"))
         assertTrue(fakeTransport.lastBody.contains("systemInstruction"))
         assertTrue(fakeTransport.lastBody.contains("responseSchema"))
         assertTrue(fakeTransport.lastBody.contains("出力例（Good）"))
@@ -699,5 +699,176 @@ class GeminiApiClientTest {
         assertTrue(result.isSuccess)
         assertEquals(2, callCount)
         assertEquals("レート制限復旧", result.getOrNull()?.first()?.front)
+    }
+
+    @Test
+    fun generateCardsFromArticle_withSmartMode_whenResolvedToCore_runsDirectCoreExtraction() = runTest {
+        var callCount = 0
+        val requestBodies = mutableListOf<String>()
+        val fakeTransport = FakeHttpTransport { _, jsonBody ->
+            callCount++
+            requestBodies.add(jsonBody)
+            when (callCount) {
+                1 -> HttpResponse(
+                    statusCode = 200,
+                    body = """
+                    {
+                      "candidates": [
+                        {
+                          "content": {
+                            "parts": [
+                              { "text": "{\"recommendedMode\":\"CORE\",\"themes\":[\"AIと創作性\"]}" }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+                2 -> HttpResponse(
+                    statusCode = 200,
+                    body = """
+                    {
+                      "candidates": [
+                        {
+                          "content": {
+                            "parts": [
+                              { "text": "[{\"front\":\"メタ認知能力\",\"back\":\"思考を客観視する能力。\",\"userSupplement\":\"補足。\"}]" }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+                else -> HttpResponse(statusCode = 200, body = "{}")
+            }
+        }
+
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+        val progressEvents = mutableListOf<GenerationProgress>()
+        val result = client.generateCardsFromArticle(
+            title = "さよならAI",
+            url = "https://example.com/essay",
+            content = "エッセイ本文",
+            apiKey = "key",
+            mode = CardExtractionMode.SMART,
+            onProgress = { progressEvents.add(it) },
+        )
+
+        assertTrue(result.isSuccess)
+        val cards = result.getOrNull() ?: emptyList()
+        assertEquals(2, callCount)
+        assertEquals(1, cards.size)
+        assertEquals("メタ認知能力", cards.single().front)
+        assertTrue(requestBodies[0].contains("recommendedMode"))
+        assertTrue(requestBodies[1].contains("コア概念・要旨の凝縮"))
+        assertFalse(requestBodies[1].contains("他テーマ一覧"))
+        assertTrue(progressEvents.any { it is GenerationProgress.AnalyzingThemes })
+        assertFalse(progressEvents.any { it is GenerationProgress.GeneratingThemeCards })
+        assertFalse(progressEvents.any { it is GenerationProgress.Deduplicating })
+    }
+
+    @Test
+    fun generateCardsFromArticle_withSmartMode_whenResolvedToKnowledge_runsMultiStageKnowledgeExtraction() = runTest {
+        var callCount = 0
+        val requestBodies = mutableListOf<String>()
+        val fakeTransport = FakeHttpTransport { _, jsonBody ->
+            callCount++
+            requestBodies.add(jsonBody)
+            when (callCount) {
+                1 -> HttpResponse(
+                    statusCode = 200,
+                    body = """
+                    {
+                      "candidates": [
+                        {
+                          "content": {
+                            "parts": [
+                              { "text": "{\"recommendedMode\":\"KNOWLEDGE\",\"themes\":[\"基本仕様\",\"セキュリティ\"]}" }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+                2 -> HttpResponse(
+                    statusCode = 200,
+                    body = """
+                    {
+                      "candidates": [
+                        {
+                          "content": {
+                            "parts": [
+                              { "text": "[{\"front\":\"HTTPS\",\"back\":\"TLS上のHTTP。\",\"userSupplement\":\"補足。\"}]" }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+                3 -> HttpResponse(
+                    statusCode = 200,
+                    body = """
+                    {
+                      "candidates": [
+                        {
+                          "content": {
+                            "parts": [
+                              { "text": "[{\"front\":\"TLSハンドシェイク\",\"back\":\"暗号鍵交換手順。\",\"userSupplement\":\"補足。\"}]" }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+                else -> HttpResponse(statusCode = 200, body = "{}")
+            }
+        }
+
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+        val progressEvents = mutableListOf<GenerationProgress>()
+        val result = client.generateCardsFromArticle(
+            title = "HTTPS",
+            url = "https://example.com/https",
+            content = "技術解説本文",
+            apiKey = "key",
+            mode = CardExtractionMode.SMART,
+            onProgress = { progressEvents.add(it) },
+        )
+
+        assertTrue(result.isSuccess)
+        val cards = result.getOrNull() ?: emptyList()
+        assertEquals(3, callCount)
+        assertEquals(2, cards.size)
+        assertTrue(requestBodies[1].contains("ナレッジ徹底網羅"))
+        assertTrue(requestBodies[2].contains("ナレッジ徹底網羅"))
+        assertTrue(requestBodies[2].contains("他テーマ一覧"))
+        assertTrue(requestBodies[2].contains("基本仕様"))
+        assertTrue(requestBodies[2].contains("抽出済みの用語"))
+        assertTrue(requestBodies[2].contains("HTTPS"))
+        assertTrue(progressEvents.any { it is GenerationProgress.GeneratingThemeCards && it.currentThemeName == "基本仕様" })
+        assertTrue(progressEvents.any { it is GenerationProgress.GeneratingThemeCards && it.currentThemeName == "セキュリティ" })
+        assertTrue(progressEvents.any { it is GenerationProgress.Deduplicating })
+    }
+
+    @Test
+    fun prompts_containNoArticleSpecificOverfitting() {
+        val client = GeminiApiClientImpl(httpTransport = FakeHttpTransport())
+        val targets = listOf(
+            client.buildSmartAnalysisSystemInstruction(),
+            client.buildThemeExtractionSystemInstruction(CardExtractionMode.KNOWLEDGE),
+            client.buildCardExtractionSystemInstruction(CardExtractionMode.CORE, isThemeScoped = false),
+            client.buildCardExtractionSystemInstruction(CardExtractionMode.KNOWLEDGE, isThemeScoped = true),
+        )
+        val forbiddenTerms = listOf("北海道", "松前藩", "箱館戦争", "根釧台地", "札幌都市圏", "アイヌ", "メタ認知")
+        for (prompt in targets) {
+            for (term in forbiddenTerms) {
+                assertFalse("Prompt should not contain '$term'", prompt.contains(term))
+            }
+        }
     }
 }

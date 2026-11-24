@@ -29,6 +29,11 @@ sealed interface GenerationProgress {
     }
 }
 
+internal data class SmartArticleAnalysis(
+    val resolvedMode: CardExtractionMode,
+    val themes: List<String>,
+)
+
 interface GeminiApiClient {
     suspend fun testConnection(apiKey: String, model: String = GeminiConfig.DEFAULT_MODEL): Result<Boolean>
 
@@ -253,6 +258,56 @@ class GeminiApiClientImpl(
         parseThemesFromGeminiResponse(response.body)
     }
 
+    internal suspend fun analyzeArticleForSmartMode(
+        title: String,
+        url: String,
+        content: String,
+        apiKey: String,
+        model: String = GeminiConfig.DEFAULT_MODEL,
+    ): Result<SmartArticleAnalysis> = runCatching {
+        require(apiKey.isNotBlank()) { "APIキーが設定されていません" }
+        require(content.isNotBlank()) { "解析対象の記事本文が空です" }
+
+        val endpoint = "$BASE_URL/$model:generateContent?key=$apiKey"
+        val systemInstruction = buildSmartAnalysisSystemInstruction()
+        val prompt = buildThemeExtractionPrompt(
+            title = title,
+            url = url,
+            content = content,
+            mode = CardExtractionMode.SMART,
+        )
+
+        val requestBody = buildJsonObject {
+            putJsonObject("systemInstruction") {
+                putJsonArray("parts") {
+                    add(buildJsonObject { put("text", systemInstruction) })
+                }
+            }
+            putJsonArray("contents") {
+                add(
+                    buildJsonObject {
+                        putJsonArray("parts") {
+                            add(buildJsonObject { put("text", prompt) })
+                        }
+                    },
+                )
+            }
+            putJsonObject("generationConfig") {
+                put("temperature", 0.2f)
+                put("responseMimeType", "application/json")
+                put("responseSchema", buildSmartAnalysisResponseSchema())
+            }
+        }.toString()
+
+        val response = postWithRetry(endpoint, requestBody)
+        if (!response.isSuccessful) {
+            val errorMsg = parseErrorMessage(response.body, response.statusCode)
+            throw IllegalStateException(errorMsg)
+        }
+
+        parseSmartAnalysisFromGeminiResponse(response.body)
+    }
+
     override suspend fun generateCardsForTheme(
         title: String,
         url: String,
@@ -325,16 +380,49 @@ class GeminiApiClientImpl(
         require(apiKey.isNotBlank()) { "APIキーが設定されていません" }
         require(content.isNotBlank()) { "解析対象の記事本文が空です" }
 
-        // If CORE, direct single-turn generation is optimal (concise backbone)
-        if (mode == CardExtractionMode.CORE) {
-            onProgress(GenerationProgress.AnalyzingThemes("コア概念を抽出中..."))
-            return@runCatching generateCardsDirectly(title, url, content, apiKey, model, temperature, mode)
+        val (effectiveMode, rawThemes) = when (mode) {
+            CardExtractionMode.CORE -> {
+                onProgress(GenerationProgress.AnalyzingThemes("コア概念を抽出中..."))
+                return@runCatching generateCardsDirectly(
+                    title,
+                    url,
+                    content,
+                    apiKey,
+                    model,
+                    temperature,
+                    CardExtractionMode.CORE,
+                )
+            }
+            CardExtractionMode.SMART -> {
+                onProgress(GenerationProgress.AnalyzingThemes("記事のタイプと主要テーマを分析中..."))
+                val analysis = analyzeArticleForSmartMode(title, url, content, apiKey, model).getOrThrow()
+                if (analysis.resolvedMode == CardExtractionMode.CORE) {
+                    onProgress(GenerationProgress.AnalyzingThemes("要旨重視の記事と判定（コアモードで抽出中...）"))
+                    return@runCatching generateCardsDirectly(
+                        title,
+                        url,
+                        content,
+                        apiKey,
+                        model,
+                        temperature,
+                        CardExtractionMode.CORE,
+                    )
+                }
+                CardExtractionMode.KNOWLEDGE to analysis.themes
+            }
+            CardExtractionMode.KNOWLEDGE -> {
+                onProgress(GenerationProgress.AnalyzingThemes())
+                CardExtractionMode.KNOWLEDGE to extractThemes(
+                    title,
+                    url,
+                    content,
+                    apiKey,
+                    model,
+                    CardExtractionMode.KNOWLEDGE,
+                ).getOrThrow()
+            }
         }
 
-        // Multi-stage extraction for SMART and KNOWLEDGE
-        onProgress(GenerationProgress.AnalyzingThemes())
-        val themesResult = extractThemes(title, url, content, apiKey, model, mode)
-        val rawThemes = themesResult.getOrThrow()
         val themes = if (rawThemes.isNotEmpty()) {
             rawThemes
         } else {
@@ -363,7 +451,7 @@ class GeminiApiClientImpl(
                 apiKey = apiKey,
                 model = model,
                 temperature = temperature,
-                mode = mode,
+                mode = effectiveMode,
                 otherThemes = themes.filter { it != theme },
                 alreadyExtractedFronts = allProposals.map { it.front }.distinct(),
             )
@@ -377,7 +465,7 @@ class GeminiApiClientImpl(
         val deduplicated = deduplicateCardProposals(allProposals)
 
         if (deduplicated.isEmpty()) {
-            generateCardsDirectly(title, url, content, apiKey, model, temperature, mode)
+            generateCardsDirectly(title, url, content, apiKey, model, temperature, effectiveMode)
         } else {
             deduplicated
         }
@@ -427,6 +515,38 @@ class GeminiApiClientImpl(
         return parseCardsFromGeminiResponse(response.body, sourceUrl = url, sourceTitle = title)
     }
 
+    private fun buildSmartAnalysisResponseSchema(): JsonObject = buildJsonObject {
+        put("type", "OBJECT")
+        put("description", "記事のタイプ判定結果と、主要テーマ（章・トピック）のリスト")
+        putJsonObject("properties") {
+            putJsonObject("recommendedMode") {
+                put("type", "STRING")
+                putJsonArray("enum") {
+                    add(kotlinx.serialization.json.JsonPrimitive("CORE"))
+                    add(kotlinx.serialization.json.JsonPrimitive("KNOWLEDGE"))
+                }
+                put(
+                    "description",
+                    "記事のジャンルに最適な抽出モード。論説・エッセイ・コラム・意見記事・ニュース解説などはCORE、事典・技術ドキュメント・学習教材・用語解説・体系的リファレンスはKNOWLEDGEとする",
+                )
+            }
+            putJsonObject("themes") {
+                put("type", "ARRAY")
+                put(
+                    "description",
+                    "記事から特定された主要テーマ（章・トピック）のリスト。KNOWLEDGE判定時は主要セクションごとに分割し、CORE判定時は中心テーマ1〜2個とする",
+                )
+                putJsonObject("items") {
+                    put("type", "STRING")
+                }
+            }
+        }
+        putJsonArray("required") {
+            add(kotlinx.serialization.json.JsonPrimitive("recommendedMode"))
+            add(kotlinx.serialization.json.JsonPrimitive("themes"))
+        }
+    }
+
     private fun buildThemeResponseSchema(): JsonObject = buildJsonObject {
         put("type", "ARRAY")
         put("description", "記事から特定された主要テーマ（章・トピック）のリスト")
@@ -443,7 +563,10 @@ class GeminiApiClientImpl(
             putJsonObject("properties") {
                 putJsonObject("front") {
                     put("type", "STRING")
-                    put("description", "暗記・想起の対象となる固有名詞・歴史用語・制度名・専門概念（名詞句。backの定義文から一意に逆引きできる用語とすること。一般名詞単体や『〜の酪農』『過疎地域指定』のようなテーマ句・状況ラベル、疑問文は不可）")
+                    put(
+                        "description",
+                        "暗記・想起の対象となる固有名詞・専門用語・制度名・中核概念（名詞句。backの定義文から一意に逆引きできる用語とすること。単なる一般名詞や『〜の概要』『〜の動向』のような抽象的な見出し句・状況ラベル、疑問文は不可）",
+                    )
                 }
                 putJsonObject("back") {
                     put("type", "STRING")
@@ -462,18 +585,35 @@ class GeminiApiClientImpl(
         }
     }
 
+    internal fun buildSmartAnalysisSystemInstruction(): String = """
+        提供されたWeb記事の性質と構成を分析し、フラッシュカード（単語帳）として最適な抽出モード（CORE または KNOWLEDGE）と、主要テーマのリストを決定する。
+
+        【抽出モード判定基準（recommendedMode）】
+        - CORE（要旨・論点重視）を選ぶべき記事：
+          ・エッセイ、コラム、オピニオン、ブログ随筆、書評、対談記事、ニュース解説・社説など、「筆者の主張・問題提起・思考の枠組み」を理解することが主目的の記事。
+          ・記事中の固有名詞の多くが主張を補強するための例え話・引用エピソードにとどまる記事。
+        - KNOWLEDGE（体系的知識・用語網羅）を選ぶべき記事：
+          ・百科事典（Wikipedia等）、技術ドキュメント、プログラミング・IT解説、学習教材、用語集、歴史・科学・法律・経済などの体系的な解説記事など、「記事内に登場する専門用語・固有名詞・仕組み・制度・ファクト」を幅広く定着させることが主目的の記事。
+
+        【テーマ特定の基準（themes）】
+        - CORE と判定した場合：記事全体を貫く中心テーマを1〜2個特定する。
+        - KNOWLEDGE と判定した場合：記事の規模に応じて、扱われている主要な章・領域・トピックごとに互いに重複しないよう分割する（短〜中編は2〜4個、長大な事典・解説記事は5〜8個）。
+        - 各テーマ名は、担当範囲が明確に分担された簡潔な名詞句（例: "基本概念と仕組み", "歴史的背景", "主要な制度と構造", "応用と課題"）とする。
+    """.trimIndent()
+
     internal fun buildThemeExtractionSystemInstruction(mode: CardExtractionMode): String {
         val scaleCriteria = when (mode) {
             CardExtractionMode.CORE -> "記事全体を貫く中心テーマを1〜2個特定する。"
-            CardExtractionMode.SMART -> "記事のジャンルと規模に応じてテーマ分割の粒度を調整する。短〜中編のコラム・エッセイ・ニュース（数千字程度）は分割しすぎず1〜2個、長大な解説・事典記事（数万字規模）は主要セクション（名称・地理・歴史・行政・産業・交通・文化など）に沿って5〜7個に分割する。"
-            CardExtractionMode.KNOWLEDGE -> "記事全体の知識を漏れなく体系化できるよう、扱われている主要な章・領域・トピックごとに（短編なら2〜3個、長大な事典記事なら6〜8個）互いに領域が重ならないよう分割する。"
+            CardExtractionMode.SMART,
+            CardExtractionMode.KNOWLEDGE,
+            -> "記事全体の知識を漏れなく体系化できるよう、扱われている主要な章・領域・トピックごとに、規模に応じて互いに領域が重ならないよう分割する（短〜中編は2〜4個、長大な事典・解説記事は5〜8個）。"
         }
         return """
             提供されたWeb記事の構成を分析し、知識を単語帳カードとして抽出するための主要テーマ（章・トピック）のリストを特定する。
 
             【テーマ特定の基準】
             - $scaleCriteria
-            - 各テーマの担当範囲が互いに重複しないよう、明確に分担された簡潔な名詞句（例: "地理・自然環境", "歴史とアイヌ文化", "行政・地域・人口", "経済・産業", "交通・インフラ", "文化・スポーツ"）とする。
+            - 各テーマの担当範囲が互いに重複しないよう、明確に分担された簡潔な名詞句（例: "基本概念と仕組み", "歴史的背景", "主要な制度と構造", "応用と課題"）とする。
         """.trimIndent()
     }
 
@@ -498,23 +638,17 @@ class GeminiApiClientImpl(
         val modeCriteria = when (mode) {
             CardExtractionMode.CORE -> """
                 【抽出基準：コア概念・要旨の凝縮】
-                - 記事の中心命題（メインメッセージ）、思考の枠組み、議論の骨格をなす最重要概念のみを抽出する。
-                - 主張を補強するためだけの一過性の具体例、付随的な固有名詞、トリビアは除外する。
+                - 記事の中心命題（メインメッセージ）、思考の枠組み、議論の骨格をなす最重要概念・キー用語のみを抽出する。
+                - 主張を補強するためだけの一過性の具体例・例え話・引用作品名・付随的な人名やトリビアは除外する。
             """.trimIndent()
-            CardExtractionMode.SMART -> """
-                【抽出基準：スマート自動最適化】
-                - 記事のジャンルを判別して抽出対象を最適化する：
-                  ・事典・技術解説・教材記事の場合：その領域で最も代表性の高い基本固有名詞・中核概念（幹）を最優先で押さえた上で、理解に不可欠な専門用語・制度・歴史的事項をバランスよく抽出する（周辺的な専門用語ばかり拾って代表的な基本用語を落とさないこと）。
-                  ・記事全体のセクション比重バランス：特定の1段落（例：一産業の特定樹種や単一施設など）から細かい用語を複数偏って抽出するのではなく、記事を構成する各主要セクション（名称・地理・歴史・制度・産業・交通・文化など）の柱となる用語を優先して網羅すること。
-                  ・同種項目の偏り防止とサブセクション網羅（重要）：対象テーマ内のすべての小見出し・サブ分野（例：地理なら「主要な山脈・平野・台地・低地帯」「主要河川・湖沼」「気候区分」「生物地理境界」「代表的な半島・自然公園」、歴史なら「先史文化」「中世・松前藩と交易制度」「幕末・箱館戦争」「明治開拓・官庁・学校」「戦後開発」、行政・地域なら「出先機関・行政区画」「主要都市圏（札幌都市圏など）・北方領土」「地方自治の歴史・分県構想」、産業なら「農業・酪農の代表地域や特産」「水産業（北洋漁業等）」「代表的な炭田・工業」「IT・宇宙・金融・観光」）から満遍なく代表語を選ぶこと。1つの小項目や同種リスト（例：東西南北の端の岬や島ばかり複数、閉山した鉱山ばかり複数、個別の城館跡など）から偏って大量に抽出してはならない。
-                  ・論説・エッセイ・コラムの場合：筆者の中心的な主張・キー概念に加え、議論の転換点や象徴的な対比として機能している重要キーワードを抽出する。
-            """.trimIndent()
-            CardExtractionMode.KNOWLEDGE -> """
+            CardExtractionMode.KNOWLEDGE,
+            CardExtractionMode.SMART,
+            -> """
                 【抽出基準：ナレッジ徹底網羅】
-                - 階層的な網羅（幹から枝葉まで網羅）：その領域で最も代表性の高い基本概念・最重要固有名詞（幹）を確実にすべて含めた上で、文中に登場する専門用語・固有名詞・歴史的事項・制度・統計データなどの詳細知識（枝葉）まで網羅的に抽出する。
-                - 記事全体のセクション比重バランス：特定の1段落（例：一産業の特定樹種や単一施設など）から細かい用語を複数偏って抽出するのではなく、記事を構成する各主要セクション（名称・地理・歴史・制度・産業・交通・文化など）の柱となる用語を優先して網羅すること。
-                - 同種項目の偏り防止とサブセクション網羅（重要）：対象テーマ内のすべての小見出し・サブ分野（例：地理なら「主要な山脈・平野・台地・低地帯」「主要河川・湖沼」「気候区分」「生物地理境界」「代表的な半島・自然公園」、歴史なら「先史文化」「中世・松前藩と交易制度」「幕末・箱館戦争」「明治開拓・官庁・学校」「戦後開発」、行政・地域なら「出先機関・行政区画」「主要都市圏（札幌都市圏など）・北方領土」「地方自治の歴史・分県構想」、産業なら「農業・酪農の代表地域や特産」「水産業（北洋漁業等）」「代表的な炭田・工業」「IT・宇宙・金融・観光」）から満遍なく代表語を選ぶこと。1つの小項目や同種リスト（例：東西南北の端の岬や島ばかり複数、閉山した鉱山ばかり複数、個別の城館跡など）から偏って大量に抽出してはならない。
+                - 階層的な網羅（幹から枝葉まで網羅）：その領域で最も代表性の高い基本概念・最重要固有名詞（幹）を確実にすべて含めた上で、文中に登場する専門用語・固有名詞・歴史的事項・制度・仕組みなどの詳細知識（枝葉）まで網羅的に抽出する。
                 - 基本概念を省略してマニアックな用語だけを抽出してはならない（常にコア概念・代表用語の上位集合とすること）。
+                - セクション・小見出し間のバランス網羅：特定の1段落や1つの小項目だけに偏らず、対象テーマに含まれるすべての小見出し・観点から満遍なく代表的な用語を選ぶこと。
+                - 同種リストの列挙偏り防止：本文中に並んでいる同種の具体例・一覧（例：多数の個別施設名、端点の羅列、類似事例の連続列挙など）から偏って大量に抽出せず、最も象徴的な代表例に絞ること。
             """.trimIndent()
         }
         val scopeRule = if (isThemeScoped) {
@@ -523,7 +657,7 @@ class GeminiApiClientImpl(
                 - 今回は記事全体のうち、指定された「対象テーマ」の領域に属する用語のみを抽出すること。
                 - 「他テーマ一覧」に含まれる別テーマの領域には踏み込まず、対象テーマ固有の重要語を深掘りすること。
                 - 「抽出済みの用語」リストが指定されている場合、そこに含まれる用語（およびその表記ゆれ・同義語）は絶対に出力しないこと。
-            """.trimIndent().let { "\n$it" }
+            """.trimIndent().let { "\n\n$it" }
         } else {
             ""
         }
@@ -532,9 +666,9 @@ class GeminiApiClientImpl(
             提供されたWeb記事から知識を抽出し、フラッシュカード（単語帳）の配列を生成する。
 
             【各フィールドの定義】
-            - front（表面）: 暗記・想起の対象となる固有名詞・歴史用語・制度名・専門概念（名詞句）。
-              ・双方向（リバースモード）成立の原則：frontを見てbackが言えるだけでなく、逆にback（定義文）だけを読んだときにも正解のfrontがただ1つに一意に定まる用語にすること（節見出しになっている重要用語、例えば「松前藩」や「開拓使」なども1対1の用語として積極的に抽出してよい）。
-              ・単なる一般名詞（例：「酪農」「道の駅」「大規模畑作」）や、テーマ句・状況ラベル（例：「北海道の酪農」「過疎地域指定」「一般的4地域区分」）は、裏面から一意に答えられないためfrontにしてはならない。
+            - front（表面）: 暗記・想起の対象となる固有名詞・専門用語・制度名・中核概念（名詞句）。
+              ・双方向（リバースモード）成立の原則：frontを見てbackが言えるだけでなく、逆にback（定義文）だけを読んだときにも正解のfrontがただ1つに一意に定まる用語にすること（節見出しになっている重要な固有名詞や制度名も、1対1で定義できるなら積極的に抽出してよい）。
+              ・単なる一般名詞（例：「農業」「データベース」「法律」）や、抽象的な見出し句・状況ラベル（例：「〇〇の課題」「近年の動向」「一般的な分類」）は、裏面から一意に答えられないためfrontにしてはならない。
               ・疑問文（「〜とは」「なぜ〜か」）や文章にはしない。
             - back（裏面）: frontが何であるかを一目で想起できる核となる定義または要点。
               ・文体は「体言止め（名詞止め）」または簡潔な1文（常体）に統一する。
@@ -553,10 +687,10 @@ class GeminiApiClientImpl(
               userSupplement: "班田収授法の維持が困難になる中で、貴族や寺社による大規模な土地開墾と荘園の発達を促す契機となった。"
 
             【避けるべき例（Bad）】
-            - front: "酪農" / "道の駅"（※一般名詞単体になっており、他デッキと混ざった際に北海道のどの固有名詞・地域の話か判別できない。「根釧台地」など記事固有の対象・固有名詞を抽出すること）
-            - front: "北海道の酪農" / "過疎地域指定" / "一般的4地域区分"（※1対1の用語ではなくテーマ句・状況ラベルになっており、何を答えるべきか定まらずリバースモードでも破綻する）
-            - front: "なぜAIに文章を書かせると作文能力が低下するのか？"（※疑問文・長文になっている）
-            - back: "米国での研究によるとAIを使うと作文能力が低下し、人間は書くことを通じてメタ認知を養っています。"（※定義ではなく長文の理由説明になっており、敬体が混ざっている）
+            - front: "農業" / "法律"（※一般名詞単体になっており、他デッキと混ざった際にどの固有の概念・制度か判別できない。記事固有の固有名詞や専門用語を抽出すること）
+            - front: "日本の農業の課題" / "近年の動向" / "一般的な分類"（※1対1の用語ではなくテーマ句・状況ラベルになっており、何を答えるべきか定まらずリバースモードでも破綻する）
+            - front: "なぜインフレが起きると金利が上がるのか？"（※疑問文・長文になっている）
+            - back: "記事によると中央銀行は物価上昇を抑えるために政策金利を引き上げて景気を冷やしています。"（※定義ではなく長文の経過説明になっており、敬体が混ざっている）
         """.trimIndent()
     }
 
@@ -597,6 +731,49 @@ class GeminiApiClientImpl(
         本文:
         $content
     """.trimIndent()
+
+    internal fun parseSmartAnalysisFromGeminiResponse(responseJson: String): SmartArticleAnalysis {
+        val fallback = SmartArticleAnalysis(
+            resolvedMode = CardExtractionMode.KNOWLEDGE,
+            themes = emptyList(),
+        )
+        val root = runCatching { json.parseToJsonElement(responseJson).jsonObject }.getOrNull() ?: return fallback
+        val candidates = root["candidates"]?.jsonArray ?: return fallback
+        if (candidates.isEmpty()) return fallback
+
+        val firstCandidate = candidates[0].jsonObject
+        val contentObj = firstCandidate["content"]?.jsonObject ?: return fallback
+        val parts = contentObj["parts"]?.jsonArray ?: return fallback
+        if (parts.isEmpty()) return fallback
+
+        val rawText = parts[0].jsonObject["text"]?.jsonPrimitive?.content ?: ""
+        val cleaned = cleanJsonCodeFence(rawText)
+        val parsed = runCatching { json.parseToJsonElement(cleaned) }.getOrNull() ?: return fallback
+
+        return when (parsed) {
+            is JsonObject -> {
+                val modeStr = runCatching { parsed["recommendedMode"]?.jsonPrimitive?.content?.trim()?.uppercase() }.getOrNull()
+                val resolvedMode = when (modeStr) {
+                    "CORE" -> CardExtractionMode.CORE
+                    "KNOWLEDGE" -> CardExtractionMode.KNOWLEDGE
+                    else -> CardExtractionMode.KNOWLEDGE
+                }
+                val themes = parsed["themes"]?.jsonArray?.mapNotNull {
+                    val str = runCatching { it.jsonPrimitive.content.trim() }.getOrNull()
+                    if (!str.isNullOrBlank()) str else null
+                }.orEmpty()
+                SmartArticleAnalysis(resolvedMode = resolvedMode, themes = themes)
+            }
+            is JsonArray -> {
+                val themes = parsed.mapNotNull {
+                    val str = runCatching { it.jsonPrimitive.content.trim() }.getOrNull()
+                    if (!str.isNullOrBlank()) str else null
+                }
+                SmartArticleAnalysis(resolvedMode = CardExtractionMode.KNOWLEDGE, themes = themes)
+            }
+            else -> fallback
+        }
+    }
 
     internal fun parseThemesFromGeminiResponse(responseJson: String): List<String> {
         val root = json.parseToJsonElement(responseJson).jsonObject
