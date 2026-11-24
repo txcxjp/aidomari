@@ -8,6 +8,7 @@ import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
+import com.aidomari.app.domain.model.ai.CardExtractionMode
 import com.aidomari.app.domain.model.ai.GeneratedCardProposal
 import com.aidomari.app.domain.model.article.ArticleStatus
 import com.aidomari.app.domain.model.article.SourceArticle
@@ -46,6 +47,7 @@ class BrowsingDigestViewModelTest {
     private lateinit var fakeArticleRepository: FakeSourceArticleRepository
     private lateinit var fakeWordsRepository: FakeWordsRepository
     private lateinit var fakeGeminiApiClient: FakeGeminiApiClient
+    private lateinit var fakeNotificationController: FakeCardGenerationNotificationController
     private lateinit var geminiPreferences: GeminiPreferences
     private lateinit var viewModel: BrowsingDigestViewModel
 
@@ -62,12 +64,14 @@ class BrowsingDigestViewModelTest {
         fakeArticleRepository = FakeSourceArticleRepository()
         fakeWordsRepository = FakeWordsRepository()
         fakeGeminiApiClient = FakeGeminiApiClient()
+        fakeNotificationController = FakeCardGenerationNotificationController()
 
         viewModel = BrowsingDigestViewModel(
             sourceArticleRepository = fakeArticleRepository,
             wordsRepository = fakeWordsRepository,
             geminiApiClient = fakeGeminiApiClient,
             geminiPreferences = geminiPreferences,
+            notificationController = fakeNotificationController,
         )
     }
 
@@ -92,25 +96,15 @@ class BrowsingDigestViewModelTest {
     }
 
     @Test
-    fun selectTab_filtersArticlesCorrectly() = runTest {
+    fun filteredArticles_onlyIncludesPendingArticles() = runTest {
         val pendingArticle = SourceArticle(id = "1", url = "https://example.com/1", domain = "example.com", title = "未処理記事", extractedText = "本文", status = ArticleStatus.PENDING)
         val generatedArticle = SourceArticle(id = "2", url = "https://example.com/2", domain = "example.com", title = "生成済記事", extractedText = "本文", status = ArticleStatus.GENERATED, generatedCardCount = 3)
 
         fakeArticleRepository.setArticles(listOf(pendingArticle, generatedArticle))
         advanceUntilIdle()
 
-        // PENDING (デフォルト)
         assertEquals(1, viewModel.uiState.value.filteredArticles.size)
         assertEquals("未処理記事", viewModel.uiState.value.filteredArticles[0].title)
-
-        // GENERATED
-        viewModel.selectTab(ArticleFilterTab.GENERATED)
-        assertEquals(1, viewModel.uiState.value.filteredArticles.size)
-        assertEquals("生成済記事", viewModel.uiState.value.filteredArticles[0].title)
-
-        // ALL
-        viewModel.selectTab(ArticleFilterTab.ALL)
-        assertEquals(2, viewModel.uiState.value.filteredArticles.size)
     }
 
     @Test
@@ -149,6 +143,32 @@ class BrowsingDigestViewModelTest {
         assertEquals("解答1", state.candidateCards[0].back)
         assertTrue(state.candidateCards[0].isSelected)
         assertTrue(state.candidateCards[1].isSelected)
+        assertEquals(CardExtractionMode.SMART, fakeGeminiApiClient.lastMode)
+    }
+
+    @Test
+    fun selectMode_and_generateCards_passesSpecifiedMode() = runTest {
+        geminiPreferences.setApiKey("valid_api_key")
+        val article = SourceArticle(id = "1", url = "https://example.com", domain = "example.com", title = "記事", extractedText = "本文", status = ArticleStatus.PENDING)
+
+        // デフォルトは SMART
+        assertEquals(CardExtractionMode.SMART, viewModel.uiState.value.selectedMode)
+
+        // KNOWLEDGEに変更
+        viewModel.selectMode(CardExtractionMode.KNOWLEDGE)
+        assertEquals(CardExtractionMode.KNOWLEDGE, viewModel.uiState.value.selectedMode)
+
+        viewModel.generateCards(article)
+        advanceUntilIdle()
+
+        assertEquals(CardExtractionMode.KNOWLEDGE, fakeGeminiApiClient.lastMode)
+
+        // ダイアログ内で CORE に変更して再生成
+        viewModel.generateCards(article, mode = CardExtractionMode.CORE)
+        advanceUntilIdle()
+
+        assertEquals(CardExtractionMode.CORE, fakeGeminiApiClient.lastMode)
+        assertEquals(CardExtractionMode.CORE, viewModel.uiState.value.selectedMode)
     }
 
     @Test
@@ -176,6 +196,46 @@ class BrowsingDigestViewModelTest {
         // 全選択
         viewModel.selectAllCandidates(true)
         assertEquals(2, viewModel.uiState.value.selectedCandidateCount)
+    }
+
+    @Test
+    fun generateCards_updatesProgressMessageAndFractionDuringExecution() = runTest {
+        geminiPreferences.setApiKey("valid_api_key")
+        val article = SourceArticle(id = "1", url = "https://example.com", domain = "example.com", title = "記事", extractedText = "本文", status = ArticleStatus.PENDING)
+
+        var capturedProgressMessage: String? = null
+        var capturedProgressFraction: Float? = null
+
+        fakeGeminiApiClient.onProgressInvoked = {
+            capturedProgressMessage = viewModel.uiState.value.generationProgressMessage
+            capturedProgressFraction = viewModel.uiState.value.generationProgressFraction
+        }
+
+        viewModel.generateCards(article)
+        advanceUntilIdle()
+
+        assertNotNull(capturedProgressMessage)
+        assertTrue(capturedProgressMessage!!.contains("主要テーマ"))
+        assertNotNull(capturedProgressFraction)
+        assertTrue(capturedProgressFraction!! > 0f)
+        assertNull(viewModel.uiState.value.generationProgressMessage)
+        assertNull(viewModel.uiState.value.generationProgressFraction)
+        assertFalse(viewModel.uiState.value.isGenerating)
+    }
+
+    @Test
+    fun generateCards_clearsProgressOnFailure() = runTest {
+        geminiPreferences.setApiKey("valid_api_key")
+        fakeGeminiApiClient.shouldFail = true
+        val article = SourceArticle(id = "1", url = "https://example.com", domain = "example.com", title = "記事", extractedText = "本文", status = ArticleStatus.PENDING)
+
+        viewModel.generateCards(article)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isGenerating)
+        assertNull(viewModel.uiState.value.generationProgressMessage)
+        assertNull(viewModel.uiState.value.generationProgressFraction)
+        assertNotNull(viewModel.uiState.value.errorMessage)
     }
 
     @Test
@@ -250,6 +310,37 @@ class BrowsingDigestViewModelTest {
         advanceUntilIdle()
 
         assertNull(fakeArticleRepository.getArticleById("art_del"))
+    }
+
+    @Test
+    fun generateCards_notifiesProgressAndCompletionController() = runTest {
+        geminiPreferences.setApiKey("valid_api_key")
+        fakeGeminiApiClient.stubbedProposals = listOf(
+            GeneratedCardProposal(front = "問1", back = "答1"),
+            GeneratedCardProposal(front = "問2", back = "答2"),
+        )
+        val article = SourceArticle(id = "art_notify", url = "https://example.com", domain = "example.com", title = "北海道", extractedText = "本文", status = ArticleStatus.PENDING)
+
+        viewModel.generateCards(article)
+        advanceUntilIdle()
+
+        assertEquals(listOf("北海道"), fakeNotificationController.startedTitles)
+        assertTrue(fakeNotificationController.progressUpdates.isNotEmpty())
+        assertEquals(Pair("北海道", 2), fakeNotificationController.completedEvents.single())
+
+        viewModel.closeReview()
+        assertEquals(1, fakeNotificationController.clearedCount)
+    }
+
+    @Test
+    fun createSubject_savesNewSubjectAndSelectsIt() = runTest {
+        viewModel.createSubject("社会・地理")
+        advanceUntilIdle()
+
+        assertEquals(1, fakeWordsRepository.subjectsList.size)
+        val created = fakeWordsRepository.subjectsList.single()
+        assertEquals("社会・地理", created.name)
+        assertEquals(created.id, viewModel.uiState.value.selectedSubjectId)
     }
 }
 
@@ -357,8 +448,36 @@ private class FakeWordsRepository : WordsRepository {
 
 private class FakeGeminiApiClient : GeminiApiClient {
     var stubbedProposals: List<GeneratedCardProposal> = emptyList()
+    var lastMode: CardExtractionMode? = null
+    var shouldFail: Boolean = false
+    var onProgressInvoked: (() -> Unit)? = null
 
     override suspend fun testConnection(apiKey: String, model: String): Result<Boolean> = Result.success(true)
+
+    override suspend fun fetchAvailableModels(apiKey: String): Result<List<String>> =
+        Result.success(listOf("gemini-3.8-flash", "gemini-2.5-flash"))
+
+    override suspend fun extractThemes(
+        title: String,
+        url: String,
+        content: String,
+        apiKey: String,
+        model: String,
+        mode: CardExtractionMode,
+    ): Result<List<String>> = Result.success(listOf("主要テーマ"))
+
+    override suspend fun generateCardsForTheme(
+        title: String,
+        url: String,
+        content: String,
+        theme: String,
+        apiKey: String,
+        model: String,
+        temperature: Float,
+        mode: CardExtractionMode,
+        otherThemes: List<String>,
+        alreadyExtractedFronts: List<String>,
+    ): Result<List<GeneratedCardProposal>> = Result.success(stubbedProposals)
 
     override suspend fun generateCardsFromArticle(
         title: String,
@@ -367,5 +486,45 @@ private class FakeGeminiApiClient : GeminiApiClient {
         apiKey: String,
         model: String,
         temperature: Float,
-    ): Result<List<GeneratedCardProposal>> = Result.success(stubbedProposals)
+        mode: CardExtractionMode,
+        onProgress: (com.aidomari.app.core.ai.GenerationProgress) -> Unit,
+    ): Result<List<GeneratedCardProposal>> {
+        lastMode = mode
+        if (shouldFail) {
+            return Result.failure(RuntimeException("Gemini API error"))
+        }
+        onProgress(com.aidomari.app.core.ai.GenerationProgress.AnalyzingThemes())
+        onProgress(com.aidomari.app.core.ai.GenerationProgress.GeneratingThemeCards(1, 1, "主要テーマ", 0))
+        onProgressInvoked?.invoke()
+        onProgress(com.aidomari.app.core.ai.GenerationProgress.Deduplicating(stubbedProposals.size))
+        return Result.success(stubbedProposals)
+    }
+}
+
+private class FakeCardGenerationNotificationController : com.aidomari.app.core.ai.CardGenerationNotificationController {
+    val startedTitles = mutableListOf<String>()
+    val progressUpdates = mutableListOf<Triple<String, String, Float>>()
+    val completedEvents = mutableListOf<Pair<String, Int>>()
+    val failedEvents = mutableListOf<Pair<String, String>>()
+    var clearedCount = 0
+
+    override fun onGenerationStarted(articleTitle: String) {
+        startedTitles.add(articleTitle)
+    }
+
+    override fun onGenerationProgress(articleTitle: String, message: String, fraction: Float) {
+        progressUpdates.add(Triple(articleTitle, message, fraction))
+    }
+
+    override fun onGenerationCompleted(articleTitle: String, cardCount: Int) {
+        completedEvents.add(Pair(articleTitle, cardCount))
+    }
+
+    override fun onGenerationFailed(articleTitle: String, errorMessage: String) {
+        failedEvents.add(Pair(articleTitle, errorMessage))
+    }
+
+    override fun clearCompletionNotification() {
+        clearedCount++
+    }
 }

@@ -24,10 +24,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -160,10 +160,7 @@ fun ShareReceiverScreen(
                     content = fetched.content
                 }
             } else {
-                fetchError = result.exceptionOrNull()?.message
-                if (content.isBlank()) {
-                    content = "(URL共有: ${parsed.url})"
-                }
+                fetchError = result.exceptionOrNull()?.message ?: "本文の取得に失敗しました"
             }
             isLoading = false
         }
@@ -198,6 +195,7 @@ fun ShareReceiverScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
@@ -264,6 +262,43 @@ fun ShareReceiverScreen(
                     }
                 }
 
+                // Fetch Error Banner
+                if (fetchError != null) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("ShareFetchErrorBanner"),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "本文の自動取得に失敗しました",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                                Text(
+                                    text = fetchError ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Domain / Source Info
                 if (parsed.url != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -296,7 +331,7 @@ fun ShareReceiverScreen(
                         .testTag("ShareTitleInput"),
                 )
 
-                // Content Preview / Loading State
+                // Content Preview / Loading State / Manual Input
                 if (isLoading) {
                     Row(
                         modifier = Modifier
@@ -313,11 +348,25 @@ fun ShareReceiverScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                } else if (content.isBlank() || fetchError != null) {
+                    OutlinedTextField(
+                        value = content,
+                        onValueChange = { content = it },
+                        label = { Text("記事本文 (手動入力またはペースト)") },
+                        placeholder = { Text("URLのみ保存する場合は空のままで構いません") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 90.dp, max = 150.dp)
+                            .testTag("ShareContentInput"),
+                        maxLines = 5,
+                    )
                 } else {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("ShareContentPreview"),
                     ) {
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(
@@ -348,22 +397,25 @@ fun ShareReceiverScreen(
                 ) {
                     OutlinedButton(
                         onClick = {
-                            if (content.isNotBlank() && !isExcluded) {
-                                onSave(targetUrl, title.trim().ifBlank { "共有記事" }, content.trim(), false)
+                            if (!isExcluded) {
+                                val finalTitle = title.trim().ifBlank { parsed.url ?: "共有記事" }
+                                val finalContent = content.trim().ifBlank { "(URL: $targetUrl)" }
+                                onSave(targetUrl, finalTitle, finalContent, false)
                             }
                         },
-                        enabled = !isLoading && !isExcluded && content.isNotBlank(),
+                        enabled = !isLoading && !isExcluded,
                         modifier = Modifier
                             .weight(1f)
                             .testTag("ShareSaveButton"),
                     ) {
-                        Text("保存（後で）")
+                        Text(if (content.isBlank() && parsed.url != null) "URLのみ保存" else "保存（後で）")
                     }
 
                     Button(
                         onClick = {
                             if (content.isNotBlank() && !isExcluded) {
-                                onSave(targetUrl, title.trim().ifBlank { "共有記事" }, content.trim(), true)
+                                val finalTitle = title.trim().ifBlank { parsed.url ?: "共有記事" }
+                                onSave(targetUrl, finalTitle, content.trim(), true)
                             }
                         },
                         enabled = !isLoading && !isExcluded && content.isNotBlank(),
@@ -372,12 +424,12 @@ fun ShareReceiverScreen(
                             .testTag("ShareDeckifyButton"),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AutoAwesome,
+                            imageVector = Icons.Default.Style,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("今すぐデッキ化")
+                        Text("今すぐデッキ作成")
                     }
                 }
             }

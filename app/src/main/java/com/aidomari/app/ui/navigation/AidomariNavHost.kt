@@ -54,11 +54,24 @@ fun AidomariNavHost(
     sugorokuDebugPreferences: SugorokuDebugPreferences? = null,
     sourceArticleRepository: SourceArticleRepository? = null,
     initialRoute: String? = null,
+    onInitialRouteHandled: () -> Unit = {},
 ) {
     val context = LocalContext.current
+
+    androidx.compose.runtime.LaunchedEffect(initialRoute) {
+        if (!initialRoute.isNullOrBlank()) {
+            if (navController.currentDestination?.route != initialRoute) {
+                navController.navigate(initialRoute) {
+                    launchSingleTop = true
+                }
+            }
+            onInitialRouteHandled()
+        }
+    }
+
     NavHost(
         navController = navController,
-        startDestination = initialRoute ?: "subjects",
+        startDestination = "subjects",
         modifier = modifier,
         enterTransition = {
             slideIntoContainer(
@@ -106,23 +119,25 @@ fun AidomariNavHost(
         }
 
         composable("browsing_digest") {
-            val articleRepo = sourceArticleRepository ?: remember {
-                (context.applicationContext as? com.aidomari.app.AidomariApp)?.sourceArticleRepository
-                    ?: error("SourceArticleRepository is required")
-            }
-            val geminiPreferences = remember { GeminiPreferences(context) }
-            val geminiApiClient = remember { GeminiApiClientImpl() }
+            val app = context.applicationContext as? com.aidomari.app.AidomariApp
             val digestViewModel = remember {
-                BrowsingDigestViewModel(
-                    sourceArticleRepository = articleRepo,
+                app?.browsingDigestViewModel ?: BrowsingDigestViewModel(
+                    sourceArticleRepository = sourceArticleRepository
+                        ?: error("SourceArticleRepository is required"),
                     wordsRepository = repository,
-                    geminiApiClient = geminiApiClient,
-                    geminiPreferences = geminiPreferences,
+                    geminiApiClient = GeminiApiClientImpl(),
+                    geminiPreferences = GeminiPreferences(context),
                 )
             }
             BrowsingDigestScreen(
                 viewModel = digestViewModel,
-                onBack = { navController.popBackStack() },
+                onBack = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate("subjects") {
+                            popUpTo("browsing_digest") { inclusive = true }
+                        }
+                    }
+                },
             )
         }
 

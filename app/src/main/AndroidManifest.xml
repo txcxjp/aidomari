@@ -59,6 +59,15 @@
                 android:value="Lock screen study mode listening for screen on events" />
         </service>
 
+        <service
+            android:name=".core.ai.CardGenerationService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Background flashcard generation from saved articles" />
+        </service>
+
         <receiver
             android:name=".core.lockscreen.BootReceiver"
             android:exported="true">

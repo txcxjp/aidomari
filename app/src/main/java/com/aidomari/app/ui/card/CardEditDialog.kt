@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.theme.AidomariTheme
@@ -41,7 +42,10 @@ fun CardEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        modifier = modifier.testTag("CardEditDialog"),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = modifier
+            .fillMaxWidth(0.92f)
+            .testTag("CardEditDialog"),
         title = {
             Text(
                 text = if (isEditMode) "単語カードを編集" else "新規単語を追加",
@@ -71,8 +75,8 @@ fun CardEditDialog(
                     onValueChange = { backText = it },
                     label = { Text("裏面（意味・訳・解答）*") },
                     placeholder = { Text("例: 思いがけない発見、幸運な偶然") },
-                    minLines = 2,
-                    maxLines = 4,
+                    minLines = 3,
+                    maxLines = 6,
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("CardEditBackTextField"),
@@ -95,8 +99,8 @@ fun CardEditDialog(
                     onValueChange = { supplementText = it },
                     label = { Text("裏面の補足メモ（解説・例文など）") },
                     placeholder = { Text("例: 語源: セレンディップの3人の王子") },
-                    minLines = 2,
-                    maxLines = 5,
+                    minLines = 3,
+                    maxLines = 7,
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("CardEditSupplementTextField"),

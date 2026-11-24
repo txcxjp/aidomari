@@ -12,9 +12,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -34,6 +34,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,6 +66,7 @@ fun GeminiSettingsDialog(
     onConfigChanged: (GeminiConfig) -> Unit,
     onTestConnection: suspend (apiKey: String, model: String) -> Result<Boolean>,
     onDismissRequest: () -> Unit,
+    onFetchModels: (suspend (apiKey: String) -> Result<List<String>>)? = null,
     modifier: Modifier = Modifier,
 ) {
     var apiKey by remember(config.apiKey) { mutableStateOf(config.apiKey) }
@@ -72,15 +74,31 @@ fun GeminiSettingsDialog(
     var isKeyVisible by remember { mutableStateOf(false) }
     var testState by remember { mutableStateOf<ConnectionTestState>(ConnectionTestState.Idle) }
     var isModelMenuExpanded by remember { mutableStateOf(false) }
+    var availableModels by remember { mutableStateOf(GeminiConfig.AVAILABLE_MODELS) }
+    var isFetchingModels by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(apiKey) {
+        if (apiKey.isNotBlank() && onFetchModels != null) {
+            isFetchingModels = true
+            val result = onFetchModels(apiKey.trim())
+            if (result.isSuccess) {
+                val fetched = result.getOrDefault(emptyList())
+                if (fetched.isNotEmpty()) {
+                    availableModels = fetched
+                }
+            }
+            isFetchingModels = false
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
         modifier = modifier.testTag("GeminiSettingsDialog"),
         icon = {
             Icon(
-                imageVector = Icons.Default.AutoAwesome,
+                imageVector = Icons.Default.Tune,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp),
@@ -88,7 +106,7 @@ fun GeminiSettingsDialog(
         },
         title = {
             Text(
-                text = "AIデッキ化設定 (Gemini)",
+                text = "自動デッキ作成設定 (Gemini)",
                 fontWeight = FontWeight.Bold,
             )
         },
@@ -98,7 +116,7 @@ fun GeminiSettingsDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = "Google AI Studio で取得したAPIキーを入力すると、Webブラウザで閲覧したページから自動で重要知識を暗記カード化できます。",
+                    text = "Google AI Studio で取得したAPIキーを入力すると、共有した記事などから自動でカードを作成できます。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -127,29 +145,33 @@ fun GeminiSettingsDialog(
                         .testTag("GeminiApiKeyInput"),
                 )
 
-                // Model Selector
+                // Model Selector (Dropdown Only, Read-Only)
                 ExposedDropdownMenuBox(
                     expanded = isModelMenuExpanded,
                     onExpandedChange = { isModelMenuExpanded = it },
                 ) {
                     OutlinedTextField(
                         value = selectedModel,
-                        onValueChange = {
-                            selectedModel = it
-                            testState = ConnectionTestState.Idle
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("使用モデル") },
+                        trailingIcon = {
+                            if (isFetchingModels) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            } else {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = isModelMenuExpanded)
+                            }
                         },
-                        label = { Text("使用モデル（直接入力可）") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isModelMenuExpanded) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(MenuAnchorType.PrimaryEditable)
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                             .testTag("GeminiModelSelector"),
                     )
                     ExposedDropdownMenu(
                         expanded = isModelMenuExpanded,
                         onDismissRequest = { isModelMenuExpanded = false },
                     ) {
-                        GeminiConfig.AVAILABLE_MODELS.forEach { model ->
+                        availableModels.forEach { model ->
                             DropdownMenuItem(
                                 text = {
                                     val note = if (model == GeminiConfig.DEFAULT_MODEL) " (推奨・高速)" else ""
@@ -181,6 +203,13 @@ fun GeminiSettingsDialog(
                             coroutineScope.launch {
                                 val result = onTestConnection(apiKey.trim(), selectedModel)
                                 testState = if (result.isSuccess) {
+                                    if (onFetchModels != null) {
+                                        val modelsResult = onFetchModels(apiKey.trim())
+                                        val fetched = modelsResult.getOrDefault(emptyList())
+                                        if (fetched.isNotEmpty()) {
+                                            availableModels = fetched
+                                        }
+                                    }
                                     ConnectionTestState.Success
                                 } else {
                                     val error = result.exceptionOrNull()?.message ?: "接続に失敗しました"

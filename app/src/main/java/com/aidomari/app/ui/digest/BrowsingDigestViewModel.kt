@@ -2,11 +2,13 @@ package com.aidomari.app.ui.digest
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aidomari.app.core.ai.CardGenerationNotificationController
 import com.aidomari.app.core.ai.GeminiApiClient
 import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.Subject
+import com.aidomari.app.domain.model.ai.CardExtractionMode
 import com.aidomari.app.domain.model.article.ArticleStatus
 import com.aidomari.app.domain.model.article.SourceArticle
 import com.aidomari.app.domain.repository.SourceArticleRepository
@@ -26,6 +28,7 @@ class BrowsingDigestViewModel(
     private val wordsRepository: WordsRepository,
     private val geminiApiClient: GeminiApiClient,
     private val geminiPreferences: GeminiPreferences,
+    private val notificationController: CardGenerationNotificationController? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BrowsingDigestUiState())
@@ -54,19 +57,35 @@ class BrowsingDigestViewModel(
         }
     }
 
-    fun selectTab(tab: ArticleFilterTab) {
-        _uiState.update { it.copy(selectedTab = tab) }
-    }
-
     fun selectSubject(subjectId: String) {
         _uiState.update { it.copy(selectedSubjectId = subjectId) }
+    }
+
+    fun createSubject(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return
+        viewModelScope.launch {
+            val newSubject = Subject(
+                id = UUID.randomUUID().toString(),
+                name = trimmed,
+                ttsLanguage = "ja",
+            )
+            wordsRepository.saveSubject(newSubject)
+            _uiState.update {
+                it.copy(selectedSubjectId = newSubject.id)
+            }
+        }
+    }
+
+    fun selectMode(mode: CardExtractionMode) {
+        _uiState.update { it.copy(selectedMode = mode) }
     }
 
     fun updateNewDeckName(name: String) {
         _uiState.update { it.copy(newDeckName = name) }
     }
 
-    fun generateCards(article: SourceArticle) {
+    fun generateCards(article: SourceArticle, mode: CardExtractionMode = _uiState.value.selectedMode) {
         val config = geminiPreferences.config.value
         if (!config.isConfigured) {
             _uiState.update {
@@ -79,9 +98,13 @@ class BrowsingDigestViewModel(
             it.copy(
                 isGenerating = true,
                 generatingArticleId = article.id,
+                generationProgressMessage = "作成準備中...",
+                generationProgressFraction = 0.05f,
+                selectedMode = mode,
                 errorMessage = null,
             )
         }
+        notificationController?.onGenerationStarted(article.title)
 
         viewModelScope.launch {
             val result = geminiApiClient.generateCardsFromArticle(
@@ -91,6 +114,26 @@ class BrowsingDigestViewModel(
                 apiKey = config.apiKey,
                 model = config.modelName,
                 temperature = config.temperature,
+                mode = mode,
+                onProgress = { progress ->
+                    val (message, fraction) = when (progress) {
+                        is com.aidomari.app.core.ai.GenerationProgress.AnalyzingThemes -> Pair(progress.message, 0.15f)
+                        is com.aidomari.app.core.ai.GenerationProgress.GeneratingThemeCards -> {
+                            val base = 0.15f
+                            val step = 0.75f / progress.totalThemes.coerceAtLeast(1)
+                            val frac = (base + step * progress.currentThemeIndex).coerceIn(0.15f, 0.90f)
+                            Pair(progress.displayMessage, frac)
+                        }
+                        is com.aidomari.app.core.ai.GenerationProgress.Deduplicating -> Pair(progress.displayMessage, 0.95f)
+                    }
+                    _uiState.update {
+                        it.copy(
+                            generationProgressMessage = message,
+                            generationProgressFraction = fraction,
+                        )
+                    }
+                    notificationController?.onGenerationProgress(article.title, message, fraction)
+                },
             )
 
             result.fold(
@@ -114,21 +157,32 @@ class BrowsingDigestViewModel(
                         it.copy(
                             isGenerating = false,
                             generatingArticleId = null,
+                            generationProgressMessage = null,
+                            generationProgressFraction = null,
                             reviewArticle = article,
                             candidateCards = candidates,
                             newDeckName = defaultDeckName,
-                            errorMessage = if (candidates.isEmpty()) "カード候補が生成されませんでした。本文が短すぎる可能性があります。" else null,
+                            errorMessage = if (candidates.isEmpty()) "カード候補を作成できませんでした。本文が短すぎる可能性があります。" else null,
                         )
+                    }
+                    if (candidates.isNotEmpty()) {
+                        notificationController?.onGenerationCompleted(article.title, candidates.size)
+                    } else {
+                        notificationController?.onGenerationFailed(article.title, "カード候補を作成できませんでした")
                     }
                 },
                 onFailure = { error ->
+                    val errorMsg = error.localizedMessage ?: "不明なエラー"
                     _uiState.update {
                         it.copy(
                             isGenerating = false,
                             generatingArticleId = null,
-                            errorMessage = "カード生成に失敗しました: ${error.localizedMessage ?: "不明なエラー"}",
+                            generationProgressMessage = null,
+                            generationProgressFraction = null,
+                            errorMessage = "カード作成に失敗しました: $errorMsg",
                         )
                     }
+                    notificationController?.onGenerationFailed(article.title, errorMsg)
                 },
             )
         }
@@ -160,6 +214,7 @@ class BrowsingDigestViewModel(
     }
 
     fun closeReview() {
+        notificationController?.clearCompletionNotification()
         _uiState.update {
             it.copy(
                 reviewArticle = null,
@@ -236,6 +291,7 @@ class BrowsingDigestViewModel(
                 )
 
                 // 5. 状態更新
+                notificationController?.clearCompletionNotification()
                 _uiState.update {
                     it.copy(
                         reviewArticle = null,
