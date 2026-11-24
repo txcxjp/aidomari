@@ -858,17 +858,32 @@ class GeminiApiClientTest {
     @Test
     fun prompts_containNoArticleSpecificOverfitting() {
         val client = GeminiApiClientImpl(httpTransport = FakeHttpTransport())
+        val coreInstruction = client.buildCardExtractionSystemInstruction(CardExtractionMode.CORE, isThemeScoped = false)
+        val knowledgeInstruction = client.buildCardExtractionSystemInstruction(CardExtractionMode.KNOWLEDGE, isThemeScoped = true)
         val targets = listOf(
             client.buildSmartAnalysisSystemInstruction(),
             client.buildThemeExtractionSystemInstruction(CardExtractionMode.KNOWLEDGE),
-            client.buildCardExtractionSystemInstruction(CardExtractionMode.CORE, isThemeScoped = false),
-            client.buildCardExtractionSystemInstruction(CardExtractionMode.KNOWLEDGE, isThemeScoped = true),
+            coreInstruction,
+            knowledgeInstruction,
         )
-        val forbiddenTerms = listOf("北海道", "松前藩", "箱館戦争", "根釧台地", "札幌都市圏", "アイヌ", "メタ認知")
+        val forbiddenTerms = listOf(
+            "北海道",
+            "松前藩",
+            "箱館戦争",
+            "根釧台地",
+            "札幌都市圏",
+            "アイヌ",
+            "メタ認知",
+            "スーパーカミオカンデ",
+            "ガドリニウム",
+            "予算成立年",
+        )
         for (prompt in targets) {
             for (term in forbiddenTerms) {
                 assertFalse("Prompt should not contain '$term'", prompt.contains(term))
             }
         }
+        assertTrue(coreInstruction.contains("ソース厳格準拠"))
+        assertTrue(knowledgeInstruction.contains("ソース厳格準拠"))
     }
 }
