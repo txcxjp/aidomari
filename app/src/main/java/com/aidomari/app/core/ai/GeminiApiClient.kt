@@ -52,6 +52,8 @@ interface GeminiApiClient {
         model: String = GeminiConfig.DEFAULT_MODEL,
         temperature: Float = GeminiConfig.DEFAULT_TEMPERATURE,
         mode: CardExtractionMode = CardExtractionMode.SMART,
+        otherThemes: List<String> = emptyList(),
+        alreadyExtractedFronts: List<String> = emptyList(),
     ): Result<List<GeneratedCardProposal>>
 
     suspend fun generateCardsFromArticle(
@@ -260,6 +262,8 @@ class GeminiApiClientImpl(
         model: String,
         temperature: Float,
         mode: CardExtractionMode,
+        otherThemes: List<String>,
+        alreadyExtractedFronts: List<String>,
     ): Result<List<GeneratedCardProposal>> = runCatching {
         require(apiKey.isNotBlank()) { "APIキーが設定されていません" }
         require(content.isNotBlank()) { "解析対象の記事本文が空です" }
@@ -273,6 +277,8 @@ class GeminiApiClientImpl(
             content = content,
             theme = theme,
             mode = mode,
+            otherThemes = otherThemes,
+            alreadyExtractedFronts = alreadyExtractedFronts,
         )
 
         val requestBody = buildJsonObject {
@@ -358,6 +364,8 @@ class GeminiApiClientImpl(
                 model = model,
                 temperature = temperature,
                 mode = mode,
+                otherThemes = themes.filter { it != theme },
+                alreadyExtractedFronts = allProposals.map { it.front }.distinct(),
             )
 
             val cards = themeCardsResult.getOrThrow()
@@ -457,15 +465,15 @@ class GeminiApiClientImpl(
     internal fun buildThemeExtractionSystemInstruction(mode: CardExtractionMode): String {
         val scaleCriteria = when (mode) {
             CardExtractionMode.CORE -> "記事全体を貫く中心テーマを1〜2個特定する。"
-            CardExtractionMode.SMART -> "記事のジャンルに応じてテーマ分割の粒度を調整する。単一トピックのコラム・エッセイ・ニュースは1〜2個、複数の章や観点を持つ解説・事典記事は主要トピックごとに3〜5個に分割する。"
-            CardExtractionMode.KNOWLEDGE -> "記事全体の知識を漏れなく体系化できるよう、扱われている主要な章・領域・トピックごとに3〜7個のテーマに分割する。"
+            CardExtractionMode.SMART -> "記事のジャンルと規模に応じてテーマ分割の粒度を調整する。短〜中編のコラム・エッセイ・ニュース（数千字程度）は分割しすぎず1〜2個、長大な解説・事典記事（数万字規模）は主要セクション（名称・地理・歴史・行政・産業・交通・文化など）に沿って5〜7個に分割する。"
+            CardExtractionMode.KNOWLEDGE -> "記事全体の知識を漏れなく体系化できるよう、扱われている主要な章・領域・トピックごとに（短編なら2〜3個、長大な事典記事なら6〜8個）互いに領域が重ならないよう分割する。"
         }
         return """
             提供されたWeb記事の構成を分析し、知識を単語帳カードとして抽出するための主要テーマ（章・トピック）のリストを特定する。
 
             【テーマ特定の基準】
             - $scaleCriteria
-            - 各テーマ名は、対象領域が明確にわかる簡潔な名詞句（例: "地理・自然環境", "歴史とアイヌ文化", "産業と農業"）とする。
+            - 各テーマの担当範囲が互いに重複しないよう、明確に分担された簡潔な名詞句（例: "地理・自然環境", "歴史とアイヌ文化", "行政・地域・人口", "経済・産業", "交通・インフラ", "文化・スポーツ"）とする。
         """.trimIndent()
     }
 
@@ -498,17 +506,24 @@ class GeminiApiClientImpl(
                 - 記事のジャンルを判別して抽出対象を最適化する：
                   ・事典・技術解説・教材記事の場合：その領域で最も代表性の高い基本固有名詞・中核概念（幹）を最優先で押さえた上で、理解に不可欠な専門用語・制度・歴史的事項をバランスよく抽出する（周辺的な専門用語ばかり拾って代表的な基本用語を落とさないこと）。
                   ・記事全体のセクション比重バランス：特定の1段落（例：一産業の特定樹種や単一施設など）から細かい用語を複数偏って抽出するのではなく、記事を構成する各主要セクション（名称・地理・歴史・制度・産業・交通・文化など）の柱となる用語を優先して網羅すること。
+                  ・同種項目の偏り防止とサブセクション網羅（重要）：対象テーマ内のすべての小見出し・サブ分野（例：地理なら「主要な山脈・平野・台地・低地帯」「主要河川・湖沼」「気候区分」「生物地理境界」「代表的な半島・自然公園」、歴史なら「先史文化」「中世・松前藩と交易制度」「幕末・箱館戦争」「明治開拓・官庁・学校」「戦後開発」、行政・地域なら「出先機関・行政区画」「主要都市圏（札幌都市圏など）・北方領土」「地方自治の歴史・分県構想」、産業なら「農業・酪農の代表地域や特産」「水産業（北洋漁業等）」「代表的な炭田・工業」「IT・宇宙・金融・観光」）から満遍なく代表語を選ぶこと。1つの小項目や同種リスト（例：東西南北の端の岬や島ばかり複数、閉山した鉱山ばかり複数、個別の城館跡など）から偏って大量に抽出してはならない。
                   ・論説・エッセイ・コラムの場合：筆者の中心的な主張・キー概念に加え、議論の転換点や象徴的な対比として機能している重要キーワードを抽出する。
             """.trimIndent()
             CardExtractionMode.KNOWLEDGE -> """
                 【抽出基準：ナレッジ徹底網羅】
                 - 階層的な網羅（幹から枝葉まで網羅）：その領域で最も代表性の高い基本概念・最重要固有名詞（幹）を確実にすべて含めた上で、文中に登場する専門用語・固有名詞・歴史的事項・制度・統計データなどの詳細知識（枝葉）まで網羅的に抽出する。
                 - 記事全体のセクション比重バランス：特定の1段落（例：一産業の特定樹種や単一施設など）から細かい用語を複数偏って抽出するのではなく、記事を構成する各主要セクション（名称・地理・歴史・制度・産業・交通・文化など）の柱となる用語を優先して網羅すること。
+                - 同種項目の偏り防止とサブセクション網羅（重要）：対象テーマ内のすべての小見出し・サブ分野（例：地理なら「主要な山脈・平野・台地・低地帯」「主要河川・湖沼」「気候区分」「生物地理境界」「代表的な半島・自然公園」、歴史なら「先史文化」「中世・松前藩と交易制度」「幕末・箱館戦争」「明治開拓・官庁・学校」「戦後開発」、行政・地域なら「出先機関・行政区画」「主要都市圏（札幌都市圏など）・北方領土」「地方自治の歴史・分県構想」、産業なら「農業・酪農の代表地域や特産」「水産業（北洋漁業等）」「代表的な炭田・工業」「IT・宇宙・金融・観光」）から満遍なく代表語を選ぶこと。1つの小項目や同種リスト（例：東西南北の端の岬や島ばかり複数、閉山した鉱山ばかり複数、個別の城館跡など）から偏って大量に抽出してはならない。
                 - 基本概念を省略してマニアックな用語だけを抽出してはならない（常にコア概念・代表用語の上位集合とすること）。
             """.trimIndent()
         }
         val scopeRule = if (isThemeScoped) {
-            "\n- 指定された「対象テーマ」に関連する用語・概念・事象を記事本文から抽出する（記事全体との関わりやテーマをまたぐ基本概念も含めてよい）。"
+            """
+                【テーマ分担と重複防止の厳守】
+                - 今回は記事全体のうち、指定された「対象テーマ」の領域に属する用語のみを抽出すること。
+                - 「他テーマ一覧」に含まれる別テーマの領域には踏み込まず、対象テーマ固有の重要語を深掘りすること。
+                - 「抽出済みの用語」リストが指定されている場合、そこに含まれる用語（およびその表記ゆれ・同義語）は絶対に出力しないこと。
+            """.trimIndent().let { "\n$it" }
         } else {
             ""
         }
@@ -530,9 +545,9 @@ class GeminiApiClientImpl(
             $modeCriteria$scopeRule
 
             【出力例（Good）】
-            - front: "メタ認知"
-              back: "自身の思考や認知状態を客観的に把握・制御する能力。"
-              userSupplement: "人間は文章を自ら書く過程で自分が何を考えているかを知るメタ認知を養っており、AI代筆に頼るとこの能力開発が放棄されると指摘されている。"
+            - front: "機会費用"
+              back: "ある選択を行ったことで断念せざるを得なかった他の選択肢から得られたはずの最大利益。"
+              userSupplement: "限られた予算や時間をどこに投じるかを判断する際、目に見える支出だけでなく機会費用を考慮する必要があると論じられている。"
             - front: "墾田永年私財法"
               back: "743年に発布された、開墾した土地の永代私有を認める法令。"
               userSupplement: "班田収授法の維持が困難になる中で、貴族や寺社による大規模な土地開墾と荘園の発達を促す契機となった。"
@@ -551,15 +566,23 @@ class GeminiApiClientImpl(
         content: String,
         theme: String,
         mode: CardExtractionMode,
-    ): String = """
-        対象テーマ: $theme
-        抽出モード: ${mode.label}
-        タイトル: $title
-        URL: $url
+        otherThemes: List<String> = emptyList(),
+        alreadyExtractedFronts: List<String> = emptyList(),
+    ): String {
+        val othersText = if (otherThemes.isNotEmpty()) otherThemes.joinToString(", ") else "なし"
+        val alreadyText = if (alreadyExtractedFronts.isNotEmpty()) alreadyExtractedFronts.joinToString(", ") else "なし"
+        return """
+            対象テーマ: $theme
+            他テーマ一覧（これらに属する用語は今回の抽出対象外）: $othersText
+            抽出済みの用語（重複・同義出力禁止）: $alreadyText
+            抽出モード: ${mode.label}
+            タイトル: $title
+            URL: $url
 
-        本文:
-        $content
-    """.trimIndent()
+            本文:
+            $content
+        """.trimIndent()
+    }
 
     private fun buildKnowledgeExtractionPrompt(
         title: String,

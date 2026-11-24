@@ -464,6 +464,8 @@ private class FakeGeminiApiClient : GeminiApiClient {
         model: String,
         temperature: Float,
         mode: CardExtractionMode,
+        otherThemes: List<String>,
+        alreadyExtractedFronts: List<String>,
     ): Result<List<GeneratedCardProposal>> = Result.success(stubbedProposals)
 
     override suspend fun generateCardsFromArticle(
