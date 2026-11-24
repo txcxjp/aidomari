@@ -91,6 +91,20 @@ fun BrowsingDigestScreen(
     val context = LocalContext.current
     var showGeminiSettings by remember { mutableStateOf(false) }
 
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { _ -> }
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            android.os.Build.FINGERPRINT != "robolectric" &&
+            !com.aidomari.app.core.ai.CardGenerationService.canPostNotifications(context)
+        ) {
+            runCatching {
+                permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     // エラー / 成功通知のスナックバー表示
     LaunchedEffect(uiState.errorMessage, uiState.successMessage) {
         uiState.errorMessage?.let { msg ->

@@ -1,6 +1,9 @@
 package com.aidomari.app
 
 import android.app.Application
+import com.aidomari.app.core.ai.AndroidCardGenerationNotificationController
+import com.aidomari.app.core.ai.GeminiApiClientImpl
+import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.core.database.AidomariDatabase
 import com.aidomari.app.core.database.SourceArticleRepositoryImpl
 import com.aidomari.app.core.database.WordsRepositoryImpl
@@ -9,6 +12,7 @@ import com.aidomari.app.core.lockscreen.LockScreenPreferences
 import com.aidomari.app.core.server.LocalIngestServerManager
 import com.aidomari.app.domain.repository.SourceArticleRepository
 import com.aidomari.app.domain.repository.WordsRepository
+import com.aidomari.app.ui.digest.BrowsingDigestViewModel
 import com.aidomari.app.ui.theme.ThemePreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +46,16 @@ class AidomariApp : Application() {
 
     val sugorokuDebugPreferences: SugorokuDebugPreferences by lazy {
         SugorokuDebugPreferences(this)
+    }
+
+    val browsingDigestViewModel: BrowsingDigestViewModel by lazy {
+        BrowsingDigestViewModel(
+            sourceArticleRepository = sourceArticleRepository,
+            wordsRepository = repository,
+            geminiApiClient = GeminiApiClientImpl(),
+            geminiPreferences = GeminiPreferences(this),
+            notificationController = AndroidCardGenerationNotificationController(this),
+        )
     }
 
     override fun onCreate() {

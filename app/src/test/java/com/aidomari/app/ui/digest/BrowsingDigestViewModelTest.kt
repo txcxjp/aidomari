@@ -47,6 +47,7 @@ class BrowsingDigestViewModelTest {
     private lateinit var fakeArticleRepository: FakeSourceArticleRepository
     private lateinit var fakeWordsRepository: FakeWordsRepository
     private lateinit var fakeGeminiApiClient: FakeGeminiApiClient
+    private lateinit var fakeNotificationController: FakeCardGenerationNotificationController
     private lateinit var geminiPreferences: GeminiPreferences
     private lateinit var viewModel: BrowsingDigestViewModel
 
@@ -63,12 +64,14 @@ class BrowsingDigestViewModelTest {
         fakeArticleRepository = FakeSourceArticleRepository()
         fakeWordsRepository = FakeWordsRepository()
         fakeGeminiApiClient = FakeGeminiApiClient()
+        fakeNotificationController = FakeCardGenerationNotificationController()
 
         viewModel = BrowsingDigestViewModel(
             sourceArticleRepository = fakeArticleRepository,
             wordsRepository = fakeWordsRepository,
             geminiApiClient = fakeGeminiApiClient,
             geminiPreferences = geminiPreferences,
+            notificationController = fakeNotificationController,
         )
     }
 
@@ -308,6 +311,26 @@ class BrowsingDigestViewModelTest {
 
         assertNull(fakeArticleRepository.getArticleById("art_del"))
     }
+
+    @Test
+    fun generateCards_notifiesProgressAndCompletionController() = runTest {
+        geminiPreferences.setApiKey("valid_api_key")
+        fakeGeminiApiClient.stubbedProposals = listOf(
+            GeneratedCardProposal(front = "問1", back = "答1"),
+            GeneratedCardProposal(front = "問2", back = "答2"),
+        )
+        val article = SourceArticle(id = "art_notify", url = "https://example.com", domain = "example.com", title = "北海道", extractedText = "本文", status = ArticleStatus.PENDING)
+
+        viewModel.generateCards(article)
+        advanceUntilIdle()
+
+        assertEquals(listOf("北海道"), fakeNotificationController.startedTitles)
+        assertTrue(fakeNotificationController.progressUpdates.isNotEmpty())
+        assertEquals(Pair("北海道", 2), fakeNotificationController.completedEvents.single())
+
+        viewModel.closeReview()
+        assertEquals(1, fakeNotificationController.clearedCount)
+    }
 }
 
 // === Fakes ===
@@ -462,5 +485,33 @@ private class FakeGeminiApiClient : GeminiApiClient {
         onProgressInvoked?.invoke()
         onProgress(com.aidomari.app.core.ai.GenerationProgress.Deduplicating(stubbedProposals.size))
         return Result.success(stubbedProposals)
+    }
+}
+
+private class FakeCardGenerationNotificationController : com.aidomari.app.core.ai.CardGenerationNotificationController {
+    val startedTitles = mutableListOf<String>()
+    val progressUpdates = mutableListOf<Triple<String, String, Float>>()
+    val completedEvents = mutableListOf<Pair<String, Int>>()
+    val failedEvents = mutableListOf<Pair<String, String>>()
+    var clearedCount = 0
+
+    override fun onGenerationStarted(articleTitle: String) {
+        startedTitles.add(articleTitle)
+    }
+
+    override fun onGenerationProgress(articleTitle: String, message: String, fraction: Float) {
+        progressUpdates.add(Triple(articleTitle, message, fraction))
+    }
+
+    override fun onGenerationCompleted(articleTitle: String, cardCount: Int) {
+        completedEvents.add(Pair(articleTitle, cardCount))
+    }
+
+    override fun onGenerationFailed(articleTitle: String, errorMessage: String) {
+        failedEvents.add(Pair(articleTitle, errorMessage))
+    }
+
+    override fun clearCompletionNotification() {
+        clearedCount++
     }
 }

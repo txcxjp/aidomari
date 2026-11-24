@@ -1,5 +1,6 @@
 package com.aidomari.app
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -10,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import com.aidomari.app.core.input.VolumeKeyHandler
 import com.aidomari.app.core.lockscreen.LockScreenStudyService
@@ -20,6 +22,7 @@ import com.aidomari.app.ui.theme.AidomariTheme
 class MainActivity : ComponentActivity() {
 
     private lateinit var ttsManager: TtsManager
+    private val pendingRoute = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,7 +33,7 @@ class MainActivity : ComponentActivity() {
         }
         ttsManager = TtsManager(this)
         val themePreferences = app.themePreferences
-        val initialRoute = intent.getStringExtra("navigate_to")
+        pendingRoute.value = intent?.getStringExtra("navigate_to")
 
         setContent {
             val themeConfig by themePreferences.themeConfig.collectAsState()
@@ -45,10 +48,19 @@ class MainActivity : ComponentActivity() {
                         themePreferences = themePreferences,
                         sugorokuDebugPreferences = app.sugorokuDebugPreferences,
                         sourceArticleRepository = app.sourceArticleRepository,
-                        initialRoute = initialRoute,
+                        initialRoute = pendingRoute.value,
+                        onInitialRouteHandled = { pendingRoute.value = null },
                     )
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra("navigate_to")?.let { route ->
+            pendingRoute.value = route
         }
     }
 

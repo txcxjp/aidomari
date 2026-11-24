@@ -2,6 +2,7 @@ package com.aidomari.app.ui.digest
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aidomari.app.core.ai.CardGenerationNotificationController
 import com.aidomari.app.core.ai.GeminiApiClient
 import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.domain.model.Card
@@ -27,6 +28,7 @@ class BrowsingDigestViewModel(
     private val wordsRepository: WordsRepository,
     private val geminiApiClient: GeminiApiClient,
     private val geminiPreferences: GeminiPreferences,
+    private val notificationController: CardGenerationNotificationController? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BrowsingDigestUiState())
@@ -86,6 +88,7 @@ class BrowsingDigestViewModel(
                 errorMessage = null,
             )
         }
+        notificationController?.onGenerationStarted(article.title)
 
         viewModelScope.launch {
             val result = geminiApiClient.generateCardsFromArticle(
@@ -113,6 +116,7 @@ class BrowsingDigestViewModel(
                             generationProgressFraction = fraction,
                         )
                     }
+                    notificationController?.onGenerationProgress(article.title, message, fraction)
                 },
             )
 
@@ -145,17 +149,24 @@ class BrowsingDigestViewModel(
                             errorMessage = if (candidates.isEmpty()) "カード候補が生成されませんでした。本文が短すぎる可能性があります。" else null,
                         )
                     }
+                    if (candidates.isNotEmpty()) {
+                        notificationController?.onGenerationCompleted(article.title, candidates.size)
+                    } else {
+                        notificationController?.onGenerationFailed(article.title, "カード候補が生成されませんでした")
+                    }
                 },
                 onFailure = { error ->
+                    val errorMsg = error.localizedMessage ?: "不明なエラー"
                     _uiState.update {
                         it.copy(
                             isGenerating = false,
                             generatingArticleId = null,
                             generationProgressMessage = null,
                             generationProgressFraction = null,
-                            errorMessage = "カード生成に失敗しました: ${error.localizedMessage ?: "不明なエラー"}",
+                            errorMessage = "カード生成に失敗しました: $errorMsg",
                         )
                     }
+                    notificationController?.onGenerationFailed(article.title, errorMsg)
                 },
             )
         }
@@ -187,6 +198,7 @@ class BrowsingDigestViewModel(
     }
 
     fun closeReview() {
+        notificationController?.clearCompletionNotification()
         _uiState.update {
             it.copy(
                 reviewArticle = null,
@@ -263,6 +275,7 @@ class BrowsingDigestViewModel(
                 )
 
                 // 5. 状態更新
+                notificationController?.clearCompletionNotification()
                 _uiState.update {
                     it.copy(
                         reviewArticle = null,
