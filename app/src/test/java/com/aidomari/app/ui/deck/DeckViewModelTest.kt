@@ -184,6 +184,36 @@ class DeckViewModelTest {
     }
 
     @Test
+    fun toggleStudyDirection_togglesBetweenTermFirstAndDescriptionFirst() = runTest {
+        val deck = Deck(
+            id = "d-dir",
+            subjectId = "sub-1",
+            name = "Direction Deck",
+            studyDirection = StudyDirection.TERM_TO_DESCRIPTION,
+        )
+        fakeRepository.decksList.add(deck)
+        fakeRepository.triggerDecksUpdate()
+        advanceUntilIdle()
+
+        viewModel.toggleStudyDirection("d-dir")
+        advanceUntilIdle()
+        assertEquals(
+            StudyDirection.DESCRIPTION_TO_TERM,
+            fakeRepository.decksList.find { it.id == "d-dir" }?.studyDirection,
+        )
+
+        fakeRepository.triggerDecksUpdate()
+        advanceUntilIdle()
+
+        viewModel.toggleStudyDirection("d-dir")
+        advanceUntilIdle()
+        assertEquals(
+            StudyDirection.TERM_TO_DESCRIPTION,
+            fakeRepository.decksList.find { it.id == "d-dir" }?.studyDirection,
+        )
+    }
+
+    @Test
     fun loadDecks_calculatesPartsAndProgress() = runTest {
         val deck = Deck(id = "d1", subjectId = "sub-1", name = "英単語", splitSize = 50)
         fakeRepository.decksList.add(deck)

@@ -7,6 +7,7 @@ import com.aidomari.app.core.ai.GeminiApiClient
 import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.model.ai.CardExtractionMode
 import com.aidomari.app.domain.model.article.ArticleStatus
@@ -79,6 +80,10 @@ class BrowsingDigestViewModel(
 
     fun selectMode(mode: CardExtractionMode) {
         _uiState.update { it.copy(selectedMode = mode) }
+    }
+
+    fun selectStudyDirection(direction: StudyDirection) {
+        _uiState.update { it.copy(selectedStudyDirection = direction) }
     }
 
     fun updateNewDeckName(name: String) {
@@ -162,6 +167,7 @@ class BrowsingDigestViewModel(
                             reviewArticle = article,
                             candidateCards = candidates,
                             newDeckName = defaultDeckName,
+                            selectedStudyDirection = StudyDirection.DESCRIPTION_TO_TERM,
                             errorMessage = if (candidates.isEmpty()) "カード候補を作成できませんでした。本文が短すぎる可能性があります。" else null,
                         )
                     }
@@ -265,6 +271,7 @@ class BrowsingDigestViewModel(
                     name = deckName,
                     splitSize = 50,
                     autoContinue = true,
+                    studyDirection = state.selectedStudyDirection,
                 )
                 wordsRepository.saveDeck(deck)
 

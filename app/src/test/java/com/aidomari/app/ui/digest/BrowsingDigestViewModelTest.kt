@@ -6,6 +6,7 @@ import com.aidomari.app.core.ai.GeminiApiClient
 import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.model.ai.CardExtractionMode
@@ -341,6 +342,43 @@ class BrowsingDigestViewModelTest {
         val created = fakeWordsRepository.subjectsList.single()
         assertEquals("社会・地理", created.name)
         assertEquals(created.id, viewModel.uiState.value.selectedSubjectId)
+    }
+
+    @Test
+    fun saveSelectedCards_defaultsToDescriptionToTerm_andRespectsSelection() = runTest {
+        val subject = Subject(id = "sub1", name = "既存教科")
+        fakeWordsRepository.saveSubject(subject)
+        geminiPreferences.setApiKey("valid_api_key")
+        fakeGeminiApiClient.stubbedProposals = listOf(
+            GeneratedCardProposal(term = "機会費用", description = "選ばなかった選択肢の最大利益"),
+        )
+        val article = SourceArticle(
+            id = "art-dir",
+            url = "https://example.com/econ",
+            domain = "example.com",
+            title = "経済学記事",
+            extractedText = "本文",
+            status = ArticleStatus.PENDING,
+        )
+        fakeArticleRepository.setArticles(listOf(article))
+
+        // デフォルトは「説明 → ことば」
+        assertEquals(StudyDirection.DESCRIPTION_TO_TERM, viewModel.uiState.value.selectedStudyDirection)
+
+        viewModel.generateCards(article)
+        advanceUntilIdle()
+        assertEquals(StudyDirection.DESCRIPTION_TO_TERM, viewModel.uiState.value.selectedStudyDirection)
+
+        // 保存前に「ことば → 説明」へ切り替え
+        viewModel.selectStudyDirection(StudyDirection.TERM_TO_DESCRIPTION)
+        assertEquals(StudyDirection.TERM_TO_DESCRIPTION, viewModel.uiState.value.selectedStudyDirection)
+
+        viewModel.selectSubject("sub1")
+        viewModel.updateNewDeckName("向きテスト")
+        viewModel.saveSelectedCards()
+        advanceUntilIdle()
+
+        assertEquals(StudyDirection.TERM_TO_DESCRIPTION, fakeWordsRepository.decksList.single().studyDirection)
     }
 }
 

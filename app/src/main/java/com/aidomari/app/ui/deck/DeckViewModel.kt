@@ -365,6 +365,11 @@ class DeckViewModel(
         updateDeck(current.copy(autoSpeak = !current.autoSpeak))
     }
 
+    fun toggleStudyDirection(deckId: String) {
+        val current = _decksWithParts.value.find { it.deck.id == deckId }?.deck ?: return
+        updateDeck(current.copy(studyDirection = current.studyDirection.toggled()))
+    }
+
     fun deleteDeck(deckId: String) {
         viewModelScope.launch {
             repository.deleteDeck(deckId)

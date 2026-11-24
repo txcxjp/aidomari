@@ -132,6 +132,7 @@ fun DeckListScreen(
         },
         onToggleShuffle = { viewModel.toggleShuffle(it.id) },
         onToggleAutoSpeak = { viewModel.toggleAutoSpeak(it.id) },
+        onToggleStudyDirection = { viewModel.toggleStudyDirection(it.id) },
         onEditDeck = { deckToEdit = it },
         onDeleteDeck = { deckToDelete = it },
         onManageCardsClick = onManageCardsClick,
@@ -274,6 +275,7 @@ fun DeckListContent(
     onSpeakText: (String) -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onToggleStudyDirection: (Deck) -> Unit = {},
     onDeckRandomStudyClick: ((DeckWithPartsUiModel) -> Unit)? = null,
 ) {
     Scaffold(
@@ -468,6 +470,7 @@ fun DeckListContent(
                             onPartClick = onPartClick,
                             onToggleShuffle = { onToggleShuffle(item.deck) },
                             onToggleAutoSpeak = { onToggleAutoSpeak(item.deck) },
+                            onToggleStudyDirection = { onToggleStudyDirection(item.deck) },
                             onManageCardsClick = { onManageCardsClick(item.deck.id) },
                             onEditDeck = { onEditDeck(item.deck) },
                             onDeleteDeck = { onDeleteDeck(item.deck) },

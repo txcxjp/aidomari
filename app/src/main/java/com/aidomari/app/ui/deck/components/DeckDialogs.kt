@@ -24,9 +24,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.StudyDirection
+import com.aidomari.app.ui.components.StudyDirectionSelector
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.theme.AidomariTheme
 import com.aidomari.app.ui.theme.ThemePreviews
@@ -93,19 +95,16 @@ fun AddDeckDialog(
                     Switch(checked = shuffleMode, onCheckedChange = { shuffleMode = it })
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(text = "裏面から出題（和英・意味先出し）")
-                    Switch(
-                        checked = studyDirection == StudyDirection.DESCRIPTION_TO_TERM,
-                        onCheckedChange = { checked ->
-                            studyDirection = if (checked) StudyDirection.DESCRIPTION_TO_TERM else StudyDirection.TERM_TO_DESCRIPTION
-                        },
-                    )
-                }
+                Text(
+                    text = "出題の向き",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                StudyDirectionSelector(
+                    selected = studyDirection,
+                    onSelect = { studyDirection = it },
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -222,23 +221,16 @@ fun EditDeckDialog(
                     Switch(checked = shuffleMode, onCheckedChange = { shuffleMode = it })
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(text = "裏面から出題（和英・意味先出し）")
-                    Switch(
-                        checked = studyDirection == StudyDirection.DESCRIPTION_TO_TERM,
-                        onCheckedChange = {
-                            studyDirection = if (it) {
-                                StudyDirection.DESCRIPTION_TO_TERM
-                            } else {
-                                StudyDirection.TERM_TO_DESCRIPTION
-                            }
-                        },
-                    )
-                }
+                Text(
+                    text = "出題の向き",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                StudyDirectionSelector(
+                    selected = studyDirection,
+                    onSelect = { studyDirection = it },
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),

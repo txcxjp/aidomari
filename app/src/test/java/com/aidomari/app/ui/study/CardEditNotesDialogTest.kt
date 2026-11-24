@@ -56,11 +56,11 @@ class CardEditNotesDialogTest {
 
         // Modify question
         composeTestRule.onNodeWithText("How to say in German?").performTextClearance()
-        composeTestRule.onNodeWithText("表面の質問（自分用クイズ）").performTextInput("What is a synonym?")
+        composeTestRule.onNodeWithText("出題時の質問（自分用クイズ）").performTextInput("What is a synonym?")
 
         // Modify supplement
         composeTestRule.onNodeWithText("Origin: Latin eloquens").performTextClearance()
-        composeTestRule.onNodeWithText("裏面の補足メモ（解説・例文など）").performTextInput("Synonym: articulate")
+        composeTestRule.onNodeWithText("補足メモ（解説・例文など）").performTextInput("Synonym: articulate")
 
         // Click save
         composeTestRule.onNodeWithText("保存").performClick()

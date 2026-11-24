@@ -86,8 +86,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.aidomari.app.core.ai.GeminiApiClientImpl
 import com.aidomari.app.core.ai.GeminiPreferences
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.ai.CardExtractionMode
 import com.aidomari.app.domain.model.article.SourceArticle
+import com.aidomari.app.ui.components.StudyDirectionSelector
 import com.aidomari.app.ui.settings.GeminiSettingsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -143,6 +145,8 @@ fun BrowsingDigestScreen(
             onCandidateChange = { id, f, b, s -> viewModel.updateCandidate(id, f, b, s) },
             onSave = { viewModel.saveSelectedCards() },
             onDismiss = { viewModel.closeReview() },
+            selectedStudyDirection = uiState.selectedStudyDirection,
+            onStudyDirectionSelect = { viewModel.selectStudyDirection(it) },
             modifier = modifier,
             snackbarHostState = snackbarHostState,
         )
@@ -658,6 +662,8 @@ fun CardReviewDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    selectedStudyDirection: StudyDirection = StudyDirection.DESCRIPTION_TO_TERM,
+    onStudyDirectionSelect: (StudyDirection) -> Unit = {},
 ) {
     val selectedCount = candidates.count { it.isSelected }
     var isSubjectDropdownExpanded by remember { mutableStateOf(false) }
@@ -791,6 +797,18 @@ fun CardReviewDialog(
                         modifier = Modifier.weight(1.2f),
                     )
                 }
+
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "出題の向き",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(4.dp))
+                StudyDirectionSelector(
+                    selected = selectedStudyDirection,
+                    onSelect = onStudyDirectionSelect,
+                )
 
                 Spacer(Modifier.height(10.dp))
 
@@ -1039,7 +1057,7 @@ private fun CandidateCardEditDialog(
                     OutlinedTextField(
                         value = term,
                         onValueChange = { term = it },
-                        label = { Text("表面（問題・用語）") },
+                        label = { Text("ことば（単語・用語）") },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 1,
                         maxLines = 3,
@@ -1047,7 +1065,7 @@ private fun CandidateCardEditDialog(
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
-                        label = { Text("裏面（解答・定義）") },
+                        label = { Text("説明（意味・定義）") },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         maxLines = 6,

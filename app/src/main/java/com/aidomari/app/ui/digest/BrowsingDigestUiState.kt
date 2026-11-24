@@ -1,5 +1,6 @@
 package com.aidomari.app.ui.digest
 
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.model.ai.CardExtractionMode
 import com.aidomari.app.domain.model.article.ArticleStatus
@@ -18,6 +19,7 @@ data class BrowsingDigestUiState(
     val articles: List<SourceArticle> = emptyList(),
     val pendingCount: Int = 0,
     val selectedMode: CardExtractionMode = CardExtractionMode.SMART,
+    val selectedStudyDirection: StudyDirection = StudyDirection.DESCRIPTION_TO_TERM,
     val isGenerating: Boolean = false,
     val generatingArticleId: String? = null,
     val generationProgressMessage: String? = null,

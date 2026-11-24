@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -66,6 +67,7 @@ fun DeckItemCard(
     onEditDeck: () -> Unit,
     onDeleteDeck: () -> Unit,
     modifier: Modifier = Modifier,
+    onToggleStudyDirection: () -> Unit = {},
     onRandomStudyClick: (() -> Unit)? = null,
 ) {
     val deck = item.deck
@@ -267,16 +269,43 @@ fun DeckItemCard(
                         )
                     }
                 }
-                if (deck.studyDirection == StudyDirection.DESCRIPTION_TO_TERM) {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer,
+                val isDescriptionFirst = deck.studyDirection == StudyDirection.DESCRIPTION_TO_TERM
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (isDescriptionFirst) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { onToggleStudyDirection() }
+                        .testTag("StudyDirectionBadge_${deck.id}"),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = "出題の向き切替",
+                            modifier = Modifier.size(12.dp),
+                            tint = if (isDescriptionFirst) {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                            },
+                        )
                         Text(
-                            text = "裏面スタート",
+                            text = deck.studyDirection.label,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            color = if (isDescriptionFirst) {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                            },
+                            fontWeight = if (isDescriptionFirst) FontWeight.Bold else FontWeight.Medium,
                         )
                     }
                 }
