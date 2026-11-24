@@ -106,7 +106,7 @@ fun GeminiSettingsDialog(
         },
         title = {
             Text(
-                text = "自動デッキ化設定 (Gemini)",
+                text = "自動デッキ作成設定 (Gemini)",
                 fontWeight = FontWeight.Bold,
             )
         },
@@ -116,7 +116,7 @@ fun GeminiSettingsDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = "Google AI Studio で取得したAPIキーを入力すると、Webブラウザで閲覧したページから自動で重要知識を暗記カード化できます。",
+                    text = "Google AI Studio で取得したAPIキーを入力すると、共有した記事などから自動でカードを作成できます。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

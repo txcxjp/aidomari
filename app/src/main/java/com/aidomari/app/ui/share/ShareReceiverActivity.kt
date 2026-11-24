@@ -24,10 +24,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -424,12 +424,12 @@ fun ShareReceiverScreen(
                             .testTag("ShareDeckifyButton"),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AutoAwesome,
+                            imageVector = Icons.Default.Style,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("今すぐデッキ化")
+                        Text("今すぐデッキ作成")
                     }
                 }
             }

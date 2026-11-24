@@ -156,7 +156,7 @@ fun BrowsingDigestScreen(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "本日の閲覧デッキ化",
+                            "自動デッキ作成",
                             fontWeight = FontWeight.Bold,
                         )
                         if (uiState.pendingCount > 0) {
@@ -266,7 +266,7 @@ fun BrowsingDigestScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "ブラウザのAidomari拡張機能から記事を送信すると、ここに表示されます。",
+                            "共有メニューやブラウザ拡張機能から記事を送ると、ここに表示されます。",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.outline,
                         )

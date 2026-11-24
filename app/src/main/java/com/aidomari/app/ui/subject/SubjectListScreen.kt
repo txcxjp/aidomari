@@ -27,7 +27,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
@@ -36,6 +35,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -758,9 +758,9 @@ fun SubjectListContent(
                                 DropdownMenuItem(
                                     text = {
                                         val label = if (pendingArticlesCount > 0) {
-                                            "本日の閲覧デッキ化 (${pendingArticlesCount}件未処理)"
+                                            "自動デッキ作成 (${pendingArticlesCount}件未処理)"
                                         } else {
-                                            "本日の閲覧デッキ化"
+                                            "自動デッキ作成"
                                         }
                                         Text(text = label)
                                     },
@@ -778,7 +778,7 @@ fun SubjectListContent(
                                     modifier = Modifier.testTag("MenuAiSettingsItem"),
                                     leadingIcon = {
                                         Icon(
-                                            imageVector = Icons.Default.AutoAwesome,
+                                            imageVector = Icons.Default.Tune,
                                             contentDescription = null,
                                         )
                                     },
@@ -1035,7 +1035,7 @@ fun SubjectListContent(
                                 ) {
                                     Text(text = "📰", fontSize = 16.sp)
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(text = "届いているWeb記事をデッキ化する (${pendingArticlesCount}件)")
+                                    Text(text = "自動デッキ作成 (${pendingArticlesCount}件)")
                                 }
                             }
                         }
@@ -1068,12 +1068,12 @@ fun SubjectListContent(
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "本日のWeb閲覧からデッキ化",
+                                                text = "自動デッキ作成",
                                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                             )
                                             Text(
-                                                text = "${pendingArticlesCount}件の新着記事が待機中・タップしてデッキ化",
+                                                text = "${pendingArticlesCount}件の記事が待機中・タップして作成",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                                             )
