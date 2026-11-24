@@ -144,9 +144,12 @@ class GeminiApiClientTest {
 
         assertEquals("StateFlow", cards[1].front)
 
-        // Verify prompt specifies flashcard rules and smart mode
+        // Verify prompt specifies flashcard rules, smart mode, systemInstruction, responseSchema, and few-shot examples
         assertTrue(fakeTransport.lastBody.contains("単語帳"))
         assertTrue(fakeTransport.lastBody.contains("スマート自動最適化"))
+        assertTrue(fakeTransport.lastBody.contains("systemInstruction"))
+        assertTrue(fakeTransport.lastBody.contains("responseSchema"))
+        assertTrue(fakeTransport.lastBody.contains("出力例（Good）"))
         assertFalse(fakeTransport.lastBody.contains("3〜10"))
     }
 
@@ -180,6 +183,9 @@ class GeminiApiClientTest {
         assertTrue(result.isSuccess)
         assertTrue(fakeTransport.lastBody.contains("コア概念・要旨の凝縮"))
         assertTrue(fakeTransport.lastBody.contains("中心命題"))
+        assertTrue(fakeTransport.lastBody.contains("systemInstruction"))
+        assertTrue(fakeTransport.lastBody.contains("responseSchema"))
+        assertTrue(fakeTransport.lastBody.contains("出力例（Good）"))
     }
 
     @Test
@@ -212,6 +218,9 @@ class GeminiApiClientTest {
         assertTrue(result.isSuccess)
         assertTrue(fakeTransport.lastBody.contains("ナレッジ徹底網羅"))
         assertTrue(fakeTransport.lastBody.contains("幹から枝葉まで網羅"))
+        assertTrue(fakeTransport.lastBody.contains("systemInstruction"))
+        assertTrue(fakeTransport.lastBody.contains("responseSchema"))
+        assertTrue(fakeTransport.lastBody.contains("出力例（Good）"))
     }
 
     @Test

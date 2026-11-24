@@ -217,9 +217,15 @@ class GeminiApiClientImpl(
         require(content.isNotBlank()) { "解析対象の記事本文が空です" }
 
         val endpoint = "$BASE_URL/$model:generateContent?key=$apiKey"
+        val systemInstruction = buildThemeExtractionSystemInstruction(mode = mode)
         val prompt = buildThemeExtractionPrompt(title = title, url = url, content = content, mode = mode)
 
         val requestBody = buildJsonObject {
+            putJsonObject("systemInstruction") {
+                putJsonArray("parts") {
+                    add(buildJsonObject { put("text", systemInstruction) })
+                }
+            }
             putJsonArray("contents") {
                 add(
                     buildJsonObject {
@@ -232,6 +238,7 @@ class GeminiApiClientImpl(
             putJsonObject("generationConfig") {
                 put("temperature", 0.2f)
                 put("responseMimeType", "application/json")
+                put("responseSchema", buildThemeResponseSchema())
             }
         }.toString()
 
@@ -259,6 +266,7 @@ class GeminiApiClientImpl(
         require(theme.isNotBlank()) { "対象テーマが空です" }
 
         val endpoint = "$BASE_URL/$model:generateContent?key=$apiKey"
+        val systemInstruction = buildCardExtractionSystemInstruction(mode = mode, isThemeScoped = true)
         val prompt = buildThemeCardExtractionPrompt(
             title = title,
             url = url,
@@ -268,6 +276,11 @@ class GeminiApiClientImpl(
         )
 
         val requestBody = buildJsonObject {
+            putJsonObject("systemInstruction") {
+                putJsonArray("parts") {
+                    add(buildJsonObject { put("text", systemInstruction) })
+                }
+            }
             putJsonArray("contents") {
                 add(
                     buildJsonObject {
@@ -280,6 +293,7 @@ class GeminiApiClientImpl(
             putJsonObject("generationConfig") {
                 put("temperature", temperature)
                 put("responseMimeType", "application/json")
+                put("responseSchema", buildCardResponseSchema())
             }
         }.toString()
 
@@ -371,9 +385,15 @@ class GeminiApiClientImpl(
         mode: CardExtractionMode,
     ): List<GeneratedCardProposal> {
         val endpoint = "$BASE_URL/$model:generateContent?key=$apiKey"
+        val systemInstruction = buildCardExtractionSystemInstruction(mode = mode, isThemeScoped = false)
         val prompt = buildKnowledgeExtractionPrompt(title = title, url = url, content = content, mode = mode)
 
         val requestBody = buildJsonObject {
+            putJsonObject("systemInstruction") {
+                putJsonArray("parts") {
+                    add(buildJsonObject { put("text", systemInstruction) })
+                }
+            }
             putJsonArray("contents") {
                 add(
                     buildJsonObject {
@@ -386,6 +406,7 @@ class GeminiApiClientImpl(
             putJsonObject("generationConfig") {
                 put("temperature", temperature)
                 put("responseMimeType", "application/json")
+                put("responseSchema", buildCardResponseSchema())
             }
         }.toString()
 
@@ -398,37 +419,119 @@ class GeminiApiClientImpl(
         return parseCardsFromGeminiResponse(response.body, sourceUrl = url, sourceTitle = title)
     }
 
+    private fun buildThemeResponseSchema(): JsonObject = buildJsonObject {
+        put("type", "ARRAY")
+        put("description", "記事から特定された主要テーマ（章・トピック）のリスト")
+        putJsonObject("items") {
+            put("type", "STRING")
+        }
+    }
+
+    private fun buildCardResponseSchema(): JsonObject = buildJsonObject {
+        put("type", "ARRAY")
+        put("description", "抽出された単語帳カードのリスト")
+        putJsonObject("items") {
+            put("type", "OBJECT")
+            putJsonObject("properties") {
+                putJsonObject("front") {
+                    put("type", "STRING")
+                    put("description", "暗記・想起の対象となる用語名・概念名・固有名詞（名詞句。疑問文や文章は不可）")
+                }
+                putJsonObject("back") {
+                    put("type", "STRING")
+                    put("description", "frontが何であるかを一目で想起できる核となる定義または要点（体言止め、または短い1文）")
+                }
+                putJsonObject("userSupplement") {
+                    put("type", "STRING")
+                    put("description", "記事内でその用語が登場した具体的な文脈、背景エピソード、根拠データ、筆者の主張との関わり（1〜3文）")
+                }
+            }
+            putJsonArray("required") {
+                add(kotlinx.serialization.json.JsonPrimitive("front"))
+                add(kotlinx.serialization.json.JsonPrimitive("back"))
+                add(kotlinx.serialization.json.JsonPrimitive("userSupplement"))
+            }
+        }
+    }
+
+    internal fun buildThemeExtractionSystemInstruction(mode: CardExtractionMode): String {
+        val scaleCriteria = when (mode) {
+            CardExtractionMode.CORE -> "記事全体を貫く中心テーマを1〜2個特定する。"
+            CardExtractionMode.SMART -> "記事のジャンルに応じてテーマ分割の粒度を調整する。単一トピックのコラム・エッセイ・ニュースは1〜2個、複数の章や観点を持つ解説・事典記事は主要トピックごとに3〜5個に分割する。"
+            CardExtractionMode.KNOWLEDGE -> "記事全体の知識を漏れなく体系化できるよう、扱われている主要な章・領域・トピックごとに3〜7個のテーマに分割する。"
+        }
+        return """
+            提供されたWeb記事の構成を分析し、知識を単語帳カードとして抽出するための主要テーマ（章・トピック）のリストを特定する。
+
+            【テーマ特定の基準】
+            - $scaleCriteria
+            - 各テーマ名は、対象領域が明確にわかる簡潔な名詞句（例: "地理・自然環境", "歴史とアイヌ文化", "産業と農業"）とする。
+        """.trimIndent()
+    }
+
     internal fun buildThemeExtractionPrompt(
         title: String,
         url: String,
         content: String,
         mode: CardExtractionMode,
+    ): String = """
+        タイトル: $title
+        URL: $url
+        抽出モード: ${mode.label}
+
+        本文:
+        $content
+    """.trimIndent()
+
+    internal fun buildCardExtractionSystemInstruction(
+        mode: CardExtractionMode,
+        isThemeScoped: Boolean,
     ): String {
-        val scaleGuidance = when (mode) {
-            CardExtractionMode.CORE -> "記事の最も根幹となる中核テーマを1つ（最大でも2つ）特定してください。"
-            CardExtractionMode.SMART -> "記事の性質（事典解説、論説エッセイ、ニュース等）を見極め、読者が最も効率的に暗記・復習できるテーマ構成（単一の話題なら1〜2個、多岐にわたる解説記事なら3〜5個程度）を柔軟に特定してください。"
-            CardExtractionMode.KNOWLEDGE -> "記事全体を余さず体系的に網羅するため、扱われている主要な章・トピック・テーマ（大作記事なら3〜7個程度）を漏れなくリストアップしてください。"
+        val modeCriteria = when (mode) {
+            CardExtractionMode.CORE -> """
+                【抽出基準：コア概念・要旨の凝縮】
+                - 記事の中心命題（メインメッセージ）、思考の枠組み、議論の骨格をなす最重要概念のみを抽出する。
+                - 主張を補強するためだけの一過性の具体例、付随的な固有名詞、トリビアは除外する。
+            """.trimIndent()
+            CardExtractionMode.SMART -> """
+                【抽出基準：スマート自動最適化】
+                - 記事のジャンルを判別して抽出対象を最適化する：
+                  ・事典・技術解説・教材記事の場合：その領域の基本概念（幹）と、理解に不可欠な専門用語・固有名詞・仕組みを抽出する。
+                  ・論説・エッセイ・コラムの場合：筆者の中心的な主張・キー概念に加え、議論の転換点や象徴的な対比として機能している重要キーワードを抽出する。
+            """.trimIndent()
+            CardExtractionMode.KNOWLEDGE -> """
+                【抽出基準：ナレッジ徹底網羅】
+                - 階層的な網羅（幹から枝葉まで網羅）：その領域の大前提となる基本概念・最重要用語（幹）を必ず含めた上で、文中に登場する専門用語・固有名詞・歴史的事項・制度・統計データなどの詳細知識（枝葉）まで網羅的に抽出する。
+                - 基本概念を省略して細かい固有名詞だけを抽出してはならない（常にコア概念の上位集合とすること）。
+            """.trimIndent()
+        }
+        val scopeRule = if (isThemeScoped) {
+            "\n- 指定された「対象テーマ」に関連する用語・概念・事象を記事本文から抽出する（記事全体との関わりやテーマをまたぐ基本概念も含めてよい）。"
+        } else {
+            ""
         }
 
         return """
-            あなたは教材作成と文章分析の専門家です。
-            以下のWeb記事を読み、フラッシュカード（単語帳）を網羅的に生成するための【主要テーマ（章・トピック）】を1つないし複数挙げてください。
+            提供されたWeb記事から知識を抽出し、フラッシュカード（単語帳）の配列を生成する。
 
-            【記事情報】
-            タイトル: $title
-            URL: $url
-            本文:
-            $content
+            【各フィールドの定義】
+            - front（表面）: 暗記・想起の対象となる用語名・概念名・固有名詞（名詞句）。疑問文（「〜とは」「なぜ〜か」）や文章にはしない。
+            - back（裏面）: frontが何であるかを一目で想起できる核となる定義または要点（体言止め、または短い1文）。記事固有のエピソードは含めず、用語の本質的な定義に絞る。
+            - userSupplement（補足メモ）: 記事内でその用語が登場した具体的な文脈、背景エピソード、根拠データ、筆者の主張との関わり（1〜3文）。
 
-            【テーマ特定のルール】
-            1. 記事の規模や内容に応じて、単一の話題なら1つ、多岐にわたる記事なら複数の独立したテーマを特定してください。
-            2. $scaleGuidance
-            3. 各テーマ名は、その領域の知識が想起しやすい具体的で簡潔な名前（例:「地理・自然環境」「歴史とアイヌ文化」「産業と農業」「交通インフラ」など）にしてください。
-            4. 出力は必ず以下のJSON配列形式のみを出力してください（Markdownコードブロックは不要です）：
-            [
-              "テーマ名1",
-              "テーマ名2"
-            ]
+            $modeCriteria$scopeRule
+
+            【出力例（Good）】
+            - front: "メタ認知"
+              back: "自身の思考や認知状態を客観的に把握・制御する能力。"
+              userSupplement: "人間は文章を自ら書く過程で自分が何を考えているかを知るメタ認知を養っており、AI代筆に頼るとこの能力開発が放棄されると指摘されている。"
+            - front: "石狩平野"
+              back: "北海道中西部、石狩川流域に広がる道内最大の沖積平野。"
+              userSupplement: "泥炭地の客土事業や排水改良によって日本有数の稲作地帯へと発展した。"
+
+            【避けるべき例（Bad）】
+            - front: "なぜAIに文章を書かせると作文能力が低下するのか？"（※疑問文・長文になっている）
+            - back: "米国での研究によるとAIを使うと作文能力が低下し、人間は書くことを通じてメタ認知を養っているから。"（※定義ではなく長文の理由説明になっている。文脈はuserSupplementに分けること）
         """.trimIndent()
     }
 
@@ -438,114 +541,29 @@ class GeminiApiClientImpl(
         content: String,
         theme: String,
         mode: CardExtractionMode,
-    ): String {
-        val modeInstruction = when (mode) {
-            CardExtractionMode.CORE -> """
-                4. 抽出の姿勢（コア概念・要旨の凝縮）:
-                   - この記事・テーマの最も中核的な中心命題・思考の枠組み・不可欠な基本概念（コア）のみを厳選してください。
-                   - 単なる具体例や固有名詞・付随エピソード（トリビア）は除外してください。
-            """.trimIndent()
-            CardExtractionMode.SMART -> """
-                4. 抽出の姿勢（スマート自動最適化）:
-                   - 記事の性質に応じ、事典・解説文であれば専門用語を網羅的に、論説・エッセイであれば筆者の主張・キー概念を中心に、読者が最も暗記・復習すべき知識を最適に抽出してください。
-                   - その分野の基本概念・中核用語を押さえつつ、理解に必要な重要キーワードを過不足なく抽出してください。
-            """.trimIndent()
-            CardExtractionMode.KNOWLEDGE -> """
-                4. 抽出の姿勢（ナレッジ徹底網羅）:
-                   - このテーマの根幹となる最重要用語（幹）を確実に含めた上で、文中に登場する専門用語・固有名称・背景データ・付随エピソードなどの細部に至るまで、単語帳として学習価値のある知識を余さず徹底的に拾い上げてください。
-                   - 【重要】基本概念を省略してマニアックな枝葉だけにしてはいけません。幹から枝葉まで網羅してください。
-            """.trimIndent()
-        }
+    ): String = """
+        対象テーマ: $theme
+        抽出モード: ${mode.label}
+        タイトル: $title
+        URL: $url
 
-        return """
-            あなたは効率的な暗記・学習（単語帳・フラッシュカード）を支援する専門のアシスタントです。
-            以下のWeb記事の中から、【指定されたテーマ】に属する重要用語・知識を抽出し、Aidomari単語帳カード形式のリストを作成してください。
-
-            【記事情報】
-            タイトル: $title
-            URL: $url
-            本文:
-            $content
-
-            【抽出対象のテーマ】
-            $theme
-
-            【単語帳カード生成ルール】
-            1. 表面 (front):
-               - このテーマにおいて中核となる重要キーワード・専門用語・概念（見出し語名詞、3〜15文字程度）。
-               - 疑問文や長文（「〜とは何か？」等）は禁止です。
-            2. 裏面 (back):
-               - その用語の核となる簡潔な定義・意味・要点（20〜30文字程度の極めて簡潔かつシャープな短文、1文以内）。
-               - パッと見て想起できる文章にしてください。
-            3. 補足メモ (userSupplement):
-               - このテーマにおける具体的な文脈、詳細な背景・理由・付随データ（1〜3文程度）。
-            $modeInstruction
-               - 指定テーマ【$theme】に関する知識に集中し、他の無関係な話題は含めないでください。
-            5. 出力は必ず以下のJSON配列形式のみを出力してください（Markdownコードブロックは不要です）：
-            [
-              {
-                "front": "重要キーワード",
-                "back": "簡潔な定義・要点（20〜30文字）",
-                "userSupplement": "文脈・背景・詳細解説"
-              }
-            ]
-        """.trimIndent()
-    }
+        本文:
+        $content
+    """.trimIndent()
 
     private fun buildKnowledgeExtractionPrompt(
         title: String,
         url: String,
         content: String,
         mode: CardExtractionMode,
-    ): String {
-        val modeInstruction = when (mode) {
-            CardExtractionMode.CORE -> """
-                4. 抽出の姿勢（コア概念・要旨の凝縮）:
-                   - この記事を成立させている最も中核的な中心命題・思考の枠組み・不可欠な基本概念（コア）のみを厳選してください。
-                   - 派生的な論点や単なる具体例・固有名詞などのトリビアは削ぎ落とし、記事の背骨となる用語のみに絞り込んでください。
-            """.trimIndent()
-            CardExtractionMode.SMART -> """
-                4. 抽出の姿勢（スマート自動最適化）:
-                   - 記事の性質（事典解説、論説エッセイ、ニュース等）を見極め、事典であれば重要用語・専門用語を網羅し、エッセイであれば筆者の主張・キー概念を中心に、読者がその文章から得るべき最適な知識を過不足なく抽出してください。
-            """.trimIndent()
-            CardExtractionMode.KNOWLEDGE -> """
-                4. 抽出の姿勢（ナレッジ徹底網羅）:
-                   - 記事の根幹となる最重要概念（幹）を確実に含めた上で、文中に登場する固有名称・専門用語・付随データ・背景エピソードなどの細部に至るまで、単語帳として学習価値のある知識を余さず徹底的に拾い上げてください。
-                   - 【重要】基本概念を省略してマニアックな枝葉だけにしてはいけません。幹から枝葉まで網羅してください。
-            """.trimIndent()
-        }
+    ): String = """
+        抽出モード: ${mode.label}
+        タイトル: $title
+        URL: $url
 
-        return """
-            あなたは効率的な暗記・学習（単語帳・フラッシュカード）を支援する専門のアシスタントです。
-            以下のWeb記事を読み、読者が「このページから得られたはずの重要用語・概念・知識」を抽出して、Aidomari単語帳カード形式のリストを作成してください。
-
-            【記事情報】
-            タイトル: $title
-            URL: $url
-            本文:
-            $content
-
-            【単語帳カード生成ルール】
-            1. 表面 (front):
-               - 記事の理解において中核となる重要キーワード・専門用語・概念（見出し語名詞、3〜15文字程度）。
-               - 疑問文や長文（「〜とは何か？」「なぜ〜か？」）は絶対に禁止です。純粋な用語名・概念名にしてください。
-            2. 裏面 (back):
-               - その用語の核となる簡潔な定義・意味・要点（20〜30文字程度の極めて簡潔かつシャープな短文、1文以内）。
-               - 単語帳のカード裏面に大きく表示されるため、パッと見て数秒で想起・暗記できる文章にしてください。長文や論述調の説明は絶対に書かないでください。
-            3. 補足メモ (userSupplement):
-               - 記事内での具体的な文脈、詳細な背景・理由・因果関係・付随データ（1〜3文程度）。
-               - 詳しい解説や引用はすべてここに記述してください。
-            $modeInstruction
-            5. 出力は必ず以下のJSON配列形式のみを出力してください（Markdownコードブロックは不要です）：
-            [
-              {
-                "front": "重要キーワード",
-                "back": "簡潔な定義・要点（20〜30文字）",
-                "userSupplement": "記事の背景・文脈・詳細な解説"
-              }
-            ]
-        """.trimIndent()
-    }
+        本文:
+        $content
+    """.trimIndent()
 
     internal fun parseThemesFromGeminiResponse(responseJson: String): List<String> {
         val root = json.parseToJsonElement(responseJson).jsonObject
