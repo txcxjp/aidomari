@@ -1,5 +1,6 @@
 package com.aidomari.app.ui.digest
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -67,12 +70,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.aidomari.app.core.ai.GeminiApiClientImpl
 import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.domain.model.ai.CardExtractionMode
@@ -115,6 +117,26 @@ fun BrowsingDigestScreen(
             snackbarHostState.showSnackbar(msg)
             viewModel.clearMessages()
         }
+    }
+
+    if (uiState.reviewArticle != null) {
+        CardReviewDialog(
+            article = uiState.reviewArticle!!,
+            candidates = uiState.candidateCards,
+            subjects = uiState.subjects,
+            selectedSubjectId = uiState.selectedSubjectId,
+            newDeckName = uiState.newDeckName,
+            onSubjectSelect = { viewModel.selectSubject(it) },
+            onDeckNameChange = { viewModel.updateNewDeckName(it) },
+            onToggleSelect = { viewModel.toggleCardSelection(it) },
+            onSelectAll = { viewModel.selectAllCandidates(it) },
+            onCandidateChange = { id, f, b, s -> viewModel.updateCandidate(id, f, b, s) },
+            onSave = { viewModel.saveSelectedCards() },
+            onDismiss = { viewModel.closeReview() },
+            modifier = modifier,
+            snackbarHostState = snackbarHostState,
+        )
+        return
     }
 
     Scaffold(
@@ -259,24 +281,6 @@ fun BrowsingDigestScreen(
                 }
             }
         }
-    }
-
-    // カード候補レビューダイアログ
-    if (uiState.reviewArticle != null) {
-        CardReviewDialog(
-            article = uiState.reviewArticle!!,
-            candidates = uiState.candidateCards,
-            subjects = uiState.subjects,
-            selectedSubjectId = uiState.selectedSubjectId,
-            newDeckName = uiState.newDeckName,
-            onSubjectSelect = { viewModel.selectSubject(it) },
-            onDeckNameChange = { viewModel.updateNewDeckName(it) },
-            onToggleSelect = { viewModel.toggleCardSelection(it) },
-            onSelectAll = { viewModel.selectAllCandidates(it) },
-            onCandidateChange = { id, f, b, s -> viewModel.updateCandidate(id, f, b, s) },
-            onSave = { viewModel.saveSelectedCards() },
-            onDismiss = { viewModel.closeReview() },
-        )
     }
 
     // Gemini設定ダイアログ
@@ -654,133 +658,138 @@ fun CardReviewDialog(
     onCandidateChange: (String, String, String, String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val selectedCount = candidates.count { it.isSelected }
     var isSubjectDropdownExpanded by remember { mutableStateOf(false) }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text("生成カードの精査・承認", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Text(
-                                article.title.take(30),
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onDismiss) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
-                        }
-                    },
-                    actions = {
-                        TextButton(
-                            onClick = { onSelectAll(selectedCount != candidates.size) },
-                        ) {
-                            Text(if (selectedCount == candidates.size) "全解除" else "全選択", fontSize = 12.sp)
-                        }
-                    },
-                )
-            },
-            bottomBar = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                        .padding(16.dp),
-                ) {
-                    // 保存先設定セクション
-                    Text("保存先設定", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(6.dp))
+    BackHandler(onBack = onDismiss)
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        // 科目選択ドロップダウン
-                        ExposedDropdownMenuBox(
-                            expanded = isSubjectDropdownExpanded,
-                            onExpandedChange = { isSubjectDropdownExpanded = it },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            val currentSubjectName = subjects.firstOrNull { it.id == selectedSubjectId }?.name ?: "新規科目を作成"
-                            OutlinedTextField(
-                                value = currentSubjectName,
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSubjectDropdownExpanded) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                label = { Text("科目", fontSize = 10.sp) },
-                                singleLine = true,
-                            )
-                            ExposedDropdownMenu(
-                                expanded = isSubjectDropdownExpanded,
-                                onDismissRequest = { isSubjectDropdownExpanded = false },
-                            ) {
-                                subjects.forEach { sub ->
-                                    DropdownMenuItem(
-                                        text = { Text(sub.name) },
-                                        onClick = {
-                                            onSubjectSelect(sub.id)
-                                            isSubjectDropdownExpanded = false
-                                        },
-                                    )
-                                }
-                            }
-                        }
-
-                        // デッキ名
-                        OutlinedTextField(
-                            value = newDeckName,
-                            onValueChange = onDeckNameChange,
-                            label = { Text("デッキ名", fontSize = 10.sp) },
-                            singleLine = true,
-                            modifier = Modifier.weight(1.2f),
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("生成カードの精査・承認", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            article.title.take(30),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
-
-                    Spacer(Modifier.height(12.dp))
-
-                    // 承認・保存ボタン
-                    Button(
-                        onClick = onSave,
-                        enabled = selectedCount > 0,
-                        modifier = Modifier.fillMaxWidth().height(44.dp),
-                    ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("${selectedCount}枚のカードをデッキに登録", fontWeight = FontWeight.Bold)
+                },
+                navigationIcon = {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                     }
-                }
-            },
-        ) { padding ->
-            LazyColumn(
+                },
+                actions = {
+                    TextButton(
+                        onClick = { onSelectAll(selectedCount != candidates.size) },
+                    ) {
+                        Text(if (selectedCount == candidates.size) "全解除" else "全選択", fontSize = 12.sp)
+                    }
+                },
+            )
+        },
+        bottomBar = {
+            Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
-                items(candidates, key = { it.id }) { candidate ->
-                    CandidateCardItem(
-                        candidate = candidate,
-                        onToggle = { onToggleSelect(candidate.id) },
-                        onChange = { f, b, s -> onCandidateChange(candidate.id, f, b, s) },
+                // 保存先設定セクション
+                Text("保存先設定", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(6.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // 科目選択ドロップダウン
+                    ExposedDropdownMenuBox(
+                        expanded = isSubjectDropdownExpanded,
+                        onExpandedChange = { isSubjectDropdownExpanded = it },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        val currentSubjectName = subjects.firstOrNull { it.id == selectedSubjectId }?.name ?: "新規科目を作成"
+                        OutlinedTextField(
+                            value = currentSubjectName,
+                            onValueChange = {},
+                            readOnly = true,
+                            textStyle = TextStyle(fontSize = 13.sp),
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSubjectDropdownExpanded) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                            label = { Text("科目", fontSize = 10.sp) },
+                            singleLine = true,
+                        )
+                        ExposedDropdownMenu(
+                            expanded = isSubjectDropdownExpanded,
+                            onDismissRequest = { isSubjectDropdownExpanded = false },
+                        ) {
+                            subjects.forEach { sub ->
+                                DropdownMenuItem(
+                                    text = { Text(sub.name) },
+                                    onClick = {
+                                        onSubjectSelect(sub.id)
+                                        isSubjectDropdownExpanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    // デッキ名
+                    OutlinedTextField(
+                        value = newDeckName,
+                        onValueChange = onDeckNameChange,
+                        textStyle = TextStyle(fontSize = 13.sp),
+                        label = { Text("デッキ名", fontSize = 10.sp) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1.2f),
                     )
                 }
+
+                Spacer(Modifier.height(10.dp))
+
+                // 承認・保存ボタン
+                Button(
+                    onClick = onSave,
+                    enabled = selectedCount > 0,
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("${selectedCount}枚のカードをデッキに登録", fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            items(candidates, key = { it.id }) { candidate ->
+                CandidateCardItem(
+                    candidate = candidate,
+                    onToggle = { onToggleSelect(candidate.id) },
+                    onChange = { f, b, s -> onCandidateChange(candidate.id, f, b, s) },
+                )
             }
         }
     }
