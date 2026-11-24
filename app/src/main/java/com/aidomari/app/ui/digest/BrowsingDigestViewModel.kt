@@ -98,7 +98,7 @@ class BrowsingDigestViewModel(
             it.copy(
                 isGenerating = true,
                 generatingArticleId = article.id,
-                generationProgressMessage = "生成準備中...",
+                generationProgressMessage = "作成準備中...",
                 generationProgressFraction = 0.05f,
                 selectedMode = mode,
                 errorMessage = null,
@@ -162,13 +162,13 @@ class BrowsingDigestViewModel(
                             reviewArticle = article,
                             candidateCards = candidates,
                             newDeckName = defaultDeckName,
-                            errorMessage = if (candidates.isEmpty()) "カード候補が生成されませんでした。本文が短すぎる可能性があります。" else null,
+                            errorMessage = if (candidates.isEmpty()) "カード候補を作成できませんでした。本文が短すぎる可能性があります。" else null,
                         )
                     }
                     if (candidates.isNotEmpty()) {
                         notificationController?.onGenerationCompleted(article.title, candidates.size)
                     } else {
-                        notificationController?.onGenerationFailed(article.title, "カード候補が生成されませんでした")
+                        notificationController?.onGenerationFailed(article.title, "カード候補を作成できませんでした")
                     }
                 },
                 onFailure = { error ->
@@ -179,7 +179,7 @@ class BrowsingDigestViewModel(
                             generatingArticleId = null,
                             generationProgressMessage = null,
                             generationProgressFraction = null,
-                            errorMessage = "カード生成に失敗しました: $errorMsg",
+                            errorMessage = "カード作成に失敗しました: $errorMsg",
                         )
                     }
                     notificationController?.onGenerationFailed(article.title, errorMsg)

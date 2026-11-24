@@ -22,7 +22,7 @@ sealed interface GenerationProgress {
         val generatedCardsSoFar: Int,
     ) : GenerationProgress {
         val fraction: Float get() = if (totalThemes > 0) currentThemeIndex.toFloat() / totalThemes.toFloat() else 0f
-        val displayMessage: String get() = "テーマ ($currentThemeIndex/$totalThemes) を生成中: $currentThemeName (${generatedCardsSoFar}問抽出済)"
+        val displayMessage: String get() = "テーマ ($currentThemeIndex/$totalThemes) を作成中: $currentThemeName (${generatedCardsSoFar}問抽出済)"
     }
     data class Deduplicating(val totalExtracted: Int) : GenerationProgress {
         val displayMessage: String get() = "重複チェック & 統合中... (計${totalExtracted}問)"

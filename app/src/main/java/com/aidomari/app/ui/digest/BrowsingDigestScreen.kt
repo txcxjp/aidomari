@@ -25,15 +25,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Style
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -217,7 +218,7 @@ fun BrowsingDigestScreen(
                                 fontSize = 13.sp,
                             )
                             Text(
-                                "カードの自動生成を利用するには、Google AI StudioのAPIキーを登録してください。",
+                                "カードの自動作成を利用するには、Google AI StudioのAPIキーを登録してください。",
                                 fontSize = 11.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -328,9 +329,9 @@ fun ExtractionModeSelectorBar(
                 CardExtractionMode.entries.forEach { mode ->
                     val isSelected = mode == selectedMode
                     val icon: ImageVector = when (mode) {
-                        CardExtractionMode.SMART -> Icons.Default.AutoAwesome
-                        CardExtractionMode.CORE -> Icons.Default.Star
-                        CardExtractionMode.KNOWLEDGE -> Icons.Default.Book
+                        CardExtractionMode.SMART -> Icons.Default.Explore
+                        CardExtractionMode.CORE -> Icons.Default.Lightbulb
+                        CardExtractionMode.KNOWLEDGE -> Icons.Default.EditNote
                     }
                     val bgColor = if (isSelected) {
                         MaterialTheme.colorScheme.primary
@@ -612,16 +613,16 @@ fun ArticleItemCard(
                                 strokeWidth = 2.dp,
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text("生成中...", fontSize = 12.sp)
+                            Text("作成中...", fontSize = 12.sp)
                         } else {
                             Icon(
-                                Icons.Default.AutoAwesome,
+                                Icons.Default.Style,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                "カード生成",
+                                "カード作成",
                                 fontSize = 12.sp,
                             )
                         }
@@ -666,7 +667,7 @@ fun CardReviewDialog(
                 title = {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("生成カードの精査・承認", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text("作成カードの確認・登録", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.width(8.dp))
                             Box(
                                 modifier = Modifier

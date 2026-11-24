@@ -35,7 +35,7 @@ class AndroidCardGenerationNotificationController(
         CardGenerationService.startOrUpdate(
             context = appContext,
             title = formatProgressTitle(articleTitle),
-            message = "生成準備中...",
+            message = "作成準備中...",
             progressPercent = 5,
         )
     }
@@ -45,7 +45,7 @@ class AndroidCardGenerationNotificationController(
         CardGenerationService.startOrUpdate(
             context = appContext,
             title = formatProgressTitle(articleTitle),
-            message = message,
+            message = "作成中... ($percent%)",
             progressPercent = percent,
         )
     }
@@ -54,7 +54,7 @@ class AndroidCardGenerationNotificationController(
         CardGenerationService.stop(appContext)
         val displayTitle = articleTitle.ifBlank { "Web記事" }.take(24)
         postResultNotification(
-            title = "カード候補の生成が完了しました（${cardCount}枚）",
+            title = "カードの作成が完了しました（${cardCount}枚）",
             text = "「$displayTitle」— タップして確認・デッキ登録",
         )
     }
@@ -63,7 +63,7 @@ class AndroidCardGenerationNotificationController(
         CardGenerationService.stop(appContext)
         val displayTitle = articleTitle.ifBlank { "Web記事" }.take(20)
         postResultNotification(
-            title = "カード生成が中断されました",
+            title = "カード作成が中断されました",
             text = "「$displayTitle」: $errorMessage",
         )
     }
@@ -77,7 +77,7 @@ class AndroidCardGenerationNotificationController(
 
     private fun formatProgressTitle(articleTitle: String): String {
         val clean = articleTitle.ifBlank { "Web記事" }.take(20)
-        return "カード生成中: $clean"
+        return "カード作成中: $clean"
     }
 
     private fun postResultNotification(title: String, text: String) {
@@ -108,7 +108,7 @@ class CardGenerationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val title = intent?.getStringExtra(EXTRA_TITLE) ?: "カード生成中..."
+        val title = intent?.getStringExtra(EXTRA_TITLE) ?: "カード作成中..."
         val message = intent?.getStringExtra(EXTRA_MESSAGE) ?: "処理中..."
         val progress = intent?.getIntExtra(EXTRA_PROGRESS, 0) ?: 0
 
@@ -156,10 +156,10 @@ class CardGenerationService : Service() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = NotificationChannel(
                     CHANNEL_ID,
-                    "カード自動生成の進捗",
+                    "カード作成の進捗",
                     NotificationManager.IMPORTANCE_LOW,
                 ).apply {
-                    description = "Web記事からのカード生成中に進捗と完了を通知します"
+                    description = "Web記事からのカード作成中に進捗と完了を通知します"
                 }
                 val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
                 nm?.createNotificationChannel(channel)
