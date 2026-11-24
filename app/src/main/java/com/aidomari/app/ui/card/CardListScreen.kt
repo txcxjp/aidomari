@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -48,7 +49,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -377,7 +381,7 @@ fun CardListContent(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
 
-                                if (card.isSnoozed || card.userQuestion.isNotBlank() || card.userSupplement.isNotBlank()) {
+                                if (card.isSnoozed || card.userQuestion.isNotBlank()) {
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -423,22 +427,32 @@ fun CardListContent(
                                                 ),
                                             )
                                         }
-                                        if (card.userSupplement.isNotBlank()) {
-                                            SuggestionChip(
-                                                onClick = { onEditCardClick(card) },
-                                                label = {
-                                                    Text(
-                                                        text = "メモ: ${card.userSupplement}",
-                                                        maxLines = 1,
-                                                        fontSize = 11.sp,
-                                                    )
-                                                },
-                                                colors = SuggestionChipDefaults.suggestionChipColors(
-                                                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                                                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                ),
-                                            )
+                                    }
+                                }
+
+                                if (card.userSupplement.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onEditCardClick(card) },
+                                    ) {
+                                        val primaryColor = MaterialTheme.colorScheme.primary
+                                        val memoText = buildAnnotatedString {
+                                            withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = primaryColor)) {
+                                                append("メモ: ")
+                                            }
+                                            append(card.userSupplement)
                                         }
+                                        Text(
+                                            text = memoText,
+                                            fontSize = 12.5.sp,
+                                            lineHeight = 18.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        )
                                     }
                                 }
                             }
