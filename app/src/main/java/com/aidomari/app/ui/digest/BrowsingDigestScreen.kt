@@ -274,7 +274,6 @@ fun BrowsingDigestScreen(
                         ArticleItemCard(
                             article = article,
                             isGenerating = uiState.isGenerating && uiState.generatingArticleId == article.id,
-                            progressMessage = if (uiState.generatingArticleId == article.id) uiState.generationProgressMessage else null,
                             progressFraction = if (uiState.generatingArticleId == article.id) uiState.generationProgressFraction else null,
                             onGenerateClick = { viewModel.generateCards(article) },
                             onDeleteClick = { viewModel.deleteArticle(article.id) },
@@ -400,7 +399,6 @@ fun ExtractionModeSelectorBar(
 fun ArticleItemCard(
     article: SourceArticle,
     isGenerating: Boolean,
-    progressMessage: String? = null,
     progressFraction: Float? = null,
     onGenerateClick: () -> Unit,
     onDeleteClick: () -> Unit,
@@ -528,50 +526,39 @@ fun ArticleItemCard(
                 }
             }
 
-            // 進捗バー表示
-            if (isGenerating && progressMessage != null) {
+            // 進捗バー表示（パーセンテージのみ）
+            if (isGenerating) {
                 Spacer(Modifier.height(8.dp))
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = progressMessage,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        if (progressFraction != null) {
-                            Text(
-                                text = "${(progressFraction * 100).toInt()}%",
-                                fontSize = 10.5.sp,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
                     if (progressFraction != null) {
                         LinearProgressIndicator(
-                            progress = { progressFraction },
+                            progress = { progressFraction.coerceIn(0f, 1f) },
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp)),
+                                .weight(1f)
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                        )
+                        Text(
+                            text = "${(progressFraction * 100).toInt().coerceIn(0, 100)}%",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
                         )
                     } else {
                         LinearProgressIndicator(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp)),
+                                .weight(1f)
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
                         )
                     }
                 }
