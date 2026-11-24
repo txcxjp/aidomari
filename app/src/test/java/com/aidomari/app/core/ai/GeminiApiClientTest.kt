@@ -509,8 +509,8 @@ class GeminiApiClientTest {
                         """.trimIndent(),
                     )
                 }
-                2 -> {
-                    // Call 2: First theme fails with 503 Overloaded
+                in 2..5 -> {
+                    // Calls 2-5: First theme fails with 503 Overloaded across initial attempt + 3 retries
                     HttpResponse(
                         statusCode = 503,
                         body = """
@@ -539,7 +539,156 @@ class GeminiApiClientTest {
         )
 
         assertTrue(result.isFailure)
-        assertEquals(2, callCount) // Stopped immediately at Call 2, never called Call 3
+        assertEquals(5, callCount) // 1 theme call + 1 initial attempt for theme 1 + 3 retries = 5 calls; theme 2 never called
         assertTrue(result.exceptionOrNull()?.message?.contains("503") == true)
+    }
+
+    @Test
+    fun generateCardsForTheme_when503Occurs_retriesAndSucceeds() = runTest {
+        var callCount = 0
+        val fakeTransport = FakeHttpTransport { _, _ ->
+            callCount++
+            if (callCount == 1) {
+                HttpResponse(
+                    statusCode = 503,
+                    body = """
+                    {
+                      "error": {
+                        "code": 503,
+                        "message": "The model is overloaded. Please try again later.",
+                        "status": "UNAVAILABLE"
+                      }
+                    }
+                    """.trimIndent(),
+                )
+            } else {
+                HttpResponse(
+                    statusCode = 200,
+                    body = """
+                    {
+                      "candidates": [
+                        {
+                          "content": {
+                            "parts": [
+                              { "text": "[{\"front\":\"復旧語\",\"back\":\"リトライ成功\",\"userSupplement\":\"補足\"}]" }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+            }
+        }
+
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+        val result = client.generateCardsForTheme(
+            title = "テスト",
+            url = "https://example.com",
+            content = "本文",
+            theme = "テーマ",
+            apiKey = "key",
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(2, callCount)
+        assertEquals("復旧語", result.getOrNull()?.first()?.front)
+    }
+
+    @Test
+    fun fetchAvailableModels_when503Occurs_retriesAndSucceeds() = runTest {
+        var callCount = 0
+        val fakeTransport = FakeHttpTransport(
+            getHandler = { _ ->
+                callCount++
+                if (callCount == 1) {
+                    HttpResponse(
+                        statusCode = 503,
+                        body = """
+                        {
+                          "error": {
+                            "code": 503,
+                            "message": "The model is overloaded. Please try again later.",
+                            "status": "UNAVAILABLE"
+                          }
+                        }
+                        """.trimIndent(),
+                    )
+                } else {
+                    HttpResponse(
+                        statusCode = 200,
+                        body = """
+                        {
+                          "models": [
+                            {
+                              "name": "models/gemini-2.5-flash",
+                              "supportedGenerationMethods": ["generateContent"]
+                            }
+                          ]
+                        }
+                        """.trimIndent(),
+                    )
+                }
+            },
+        )
+
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+        val result = client.fetchAvailableModels("key")
+
+        assertTrue(result.isSuccess)
+        assertEquals(2, callCount)
+        assertEquals(listOf("gemini-2.5-flash"), result.getOrNull())
+    }
+
+    @Test
+    fun generateCardsForTheme_when429Occurs_retriesAndSucceeds() = runTest {
+        var callCount = 0
+        val fakeTransport = FakeHttpTransport { _, _ ->
+            callCount++
+            if (callCount == 1) {
+                HttpResponse(
+                    statusCode = 429,
+                    body = """
+                    {
+                      "error": {
+                        "code": 429,
+                        "message": "Resource has been exhausted (e.g. check quota).",
+                        "status": "RESOURCE_EXHAUSTED"
+                      }
+                    }
+                    """.trimIndent(),
+                )
+            } else {
+                HttpResponse(
+                    statusCode = 200,
+                    body = """
+                    {
+                      "candidates": [
+                        {
+                          "content": {
+                            "parts": [
+                              { "text": "[{\"front\":\"レート制限復旧\",\"back\":\"リトライ成功\",\"userSupplement\":\"補足\"}]" }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+            }
+        }
+
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+        val result = client.generateCardsForTheme(
+            title = "テスト",
+            url = "https://example.com",
+            content = "本文",
+            theme = "テーマ",
+            apiKey = "key",
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(2, callCount)
+        assertEquals("レート制限復旧", result.getOrNull()?.first()?.front)
     }
 }

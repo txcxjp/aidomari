@@ -72,7 +72,62 @@ class GeminiApiClientImpl(
         ignoreUnknownKeys = true
         isLenient = true
     },
+    private val maxRetries: Int = DEFAULT_MAX_RETRIES,
+    private val initialRetryDelayMs: Long = DEFAULT_INITIAL_RETRY_DELAY_MS,
 ) : GeminiApiClient {
+
+    private suspend fun postWithRetry(
+        endpoint: String,
+        jsonBody: String,
+        headers: Map<String, String> = emptyMap(),
+    ): HttpResponse {
+        var currentDelay = initialRetryDelayMs
+        var lastResponse: HttpResponse? = null
+        for (attempt in 0..maxRetries) {
+            try {
+                val response = httpTransport.post(endpoint, jsonBody, headers)
+                if (response.statusCode != 503 && response.statusCode != 429) {
+                    return response
+                }
+                lastResponse = response
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (attempt >= maxRetries) throw e
+            }
+            if (attempt < maxRetries) {
+                kotlinx.coroutines.delay(currentDelay)
+                currentDelay *= 2
+            }
+        }
+        return lastResponse ?: httpTransport.post(endpoint, jsonBody, headers)
+    }
+
+    private suspend fun getWithRetry(
+        endpoint: String,
+        headers: Map<String, String> = emptyMap(),
+    ): HttpResponse {
+        var currentDelay = initialRetryDelayMs
+        var lastResponse: HttpResponse? = null
+        for (attempt in 0..maxRetries) {
+            try {
+                val response = httpTransport.get(endpoint, headers)
+                if (response.statusCode != 503 && response.statusCode != 429) {
+                    return response
+                }
+                lastResponse = response
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (attempt >= maxRetries) throw e
+            }
+            if (attempt < maxRetries) {
+                kotlinx.coroutines.delay(currentDelay)
+                currentDelay *= 2
+            }
+        }
+        return lastResponse ?: httpTransport.get(endpoint, headers)
+    }
 
     override suspend fun testConnection(apiKey: String, model: String): Result<Boolean> = runCatching {
         require(apiKey.isNotBlank()) { "APIキーが入力されていません" }
@@ -97,7 +152,7 @@ class GeminiApiClientImpl(
             }
         }.toString()
 
-        val response = httpTransport.post(endpoint, requestBody)
+        val response = postWithRetry(endpoint, requestBody)
         if (response.isSuccessful) {
             true
         } else {
@@ -110,7 +165,7 @@ class GeminiApiClientImpl(
         require(apiKey.isNotBlank()) { "APIキーが入力されていません" }
 
         val endpoint = "$BASE_URL?key=$apiKey"
-        val response = httpTransport.get(endpoint)
+        val response = getWithRetry(endpoint)
         if (!response.isSuccessful) {
             val errorMsg = parseErrorMessage(response.body, response.statusCode)
             throw IllegalArgumentException(errorMsg)
@@ -180,7 +235,7 @@ class GeminiApiClientImpl(
             }
         }.toString()
 
-        val response = httpTransport.post(endpoint, requestBody)
+        val response = postWithRetry(endpoint, requestBody)
         if (!response.isSuccessful) {
             val errorMsg = parseErrorMessage(response.body, response.statusCode)
             throw IllegalStateException(errorMsg)
@@ -228,7 +283,7 @@ class GeminiApiClientImpl(
             }
         }.toString()
 
-        val response = httpTransport.post(endpoint, requestBody)
+        val response = postWithRetry(endpoint, requestBody)
         if (!response.isSuccessful) {
             val errorMsg = parseErrorMessage(response.body, response.statusCode)
             throw IllegalStateException(errorMsg)
@@ -268,6 +323,9 @@ class GeminiApiClientImpl(
 
         val allProposals = mutableListOf<GeneratedCardProposal>()
         for ((index, theme) in themes.withIndex()) {
+            if (index > 0) {
+                kotlinx.coroutines.delay(300L)
+            }
             onProgress(
                 GenerationProgress.GeneratingThemeCards(
                     currentThemeIndex = index + 1,
@@ -331,7 +389,7 @@ class GeminiApiClientImpl(
             }
         }.toString()
 
-        val response = httpTransport.post(endpoint, requestBody)
+        val response = postWithRetry(endpoint, requestBody)
         if (!response.isSuccessful) {
             val errorMsg = parseErrorMessage(response.body, response.statusCode)
             throw IllegalStateException(errorMsg)
@@ -635,11 +693,14 @@ class GeminiApiClientImpl(
             400 -> "APIキーが無効、またはリクエスト形式が不正です (400)"
             403 -> "APIキーの権限がないか、許可されていない操作です (403)"
             429 -> "APIの利用上限（レート制限）に達しました。少し待ってから再試行してください (429)"
+            503 -> "Geminiサーバーが一時的に過負荷です。少し時間をおいて再試行してください (503)"
             else -> "通信エラーが発生しました (HTTP $statusCode)"
         }
     }
 
     companion object {
         private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+        internal const val DEFAULT_MAX_RETRIES = 3
+        internal const val DEFAULT_INITIAL_RETRY_DELAY_MS = 1000L
     }
 }
