@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Star
@@ -42,6 +44,16 @@ fun CardFaceFront(
     onEditClick: (() -> Unit)? = null,
 ) {
     val isDescriptionFirst = studyDirection == StudyDirection.DESCRIPTION_TO_TERM
+    val promptText = if (isDescriptionFirst) card.description else card.term
+    val (promptFontSize, promptLineHeight) = when {
+        promptText.length <= 14 -> 32.sp to 40.sp
+        promptText.length <= 28 -> 26.sp to 34.sp
+        promptText.length <= 55 -> 21.sp to 30.sp
+        else -> 18.sp to 27.sp
+    }
+    val promptTextAlign = if (promptText.length > 55) TextAlign.Start else TextAlign.Center
+    val scrollState = rememberScrollState()
+
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -74,18 +86,21 @@ fun CardFaceFront(
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 48.dp)
+                .verticalScroll(scrollState, enabled = scrollState.maxValue > 0),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = if (isDescriptionFirst) card.description else card.term,
+                text = promptText,
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = if (isDescriptionFirst) 28.sp else 32.sp,
+                    fontSize = promptFontSize,
+                    lineHeight = promptLineHeight,
                 ),
-                textAlign = TextAlign.Center,
+                textAlign = promptTextAlign,
                 color = MaterialTheme.colorScheme.onSurface,
+                modifier = if (promptText.length > 55) Modifier.fillMaxWidth() else Modifier,
             )
 
             if (card.userQuestion.isNotBlank()) {

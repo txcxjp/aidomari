@@ -139,4 +139,54 @@ class CardFaceReverseTest {
         composeTestRule.onNodeWithText("Prospect").assertIsDisplayed().performClick()
         assertEquals("c2", clickedCard?.id)
     }
+
+    @Test
+    fun cardFace_longDescriptionInDescriptionFirstDirection_displaysCleanlyOnBothFaces() {
+        val longDescription =
+            "ある選択を行ったことで断念せざるを得なかった他の代替選択肢のうち、最も価値が高かったものから得られたはずの最大利益。"
+        val longCard = Card(
+            id = "c-long",
+            deckId = "d1",
+            term = "機会費用",
+            description = longDescription,
+            userSupplement = "意思決定の比較評価において重要な概念。",
+        )
+
+        composeTestRule.setContent {
+            CardFaceFront(
+                card = longCard,
+                onSpeak = {},
+                studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
+            )
+        }
+        composeTestRule.onNodeWithText(longDescription).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Speak").assertIsDisplayed()
+    }
+
+    @Test
+    fun cardFaceBack_longDescriptionInDescriptionFirstDirection_displaysAnswerAndActions() {
+        val longDescription =
+            "ある選択を行ったことで断念せざるを得なかった他の代替選択肢のうち、最も価値が高かったものから得られたはずの最大利益。"
+        val longCard = Card(
+            id = "c-long-back",
+            deckId = "d1",
+            term = "機会費用",
+            description = longDescription,
+            userSupplement = "意思決定の比較評価において重要な概念。",
+        )
+
+        composeTestRule.setContent {
+            CardFaceBack(
+                card = longCard,
+                onDone = {},
+                onRetry = {},
+                studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
+                onSpeak = {},
+            )
+        }
+        composeTestRule.onNodeWithText("機会費用").assertIsDisplayed()
+        composeTestRule.onNodeWithText(longDescription).assertIsDisplayed()
+        composeTestRule.onNodeWithText("覚えた").assertIsDisplayed()
+        composeTestRule.onNodeWithText("もう一度").assertIsDisplayed()
+    }
 }
