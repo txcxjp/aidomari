@@ -11,12 +11,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -452,15 +455,83 @@ fun ArticleItemCard(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            // 本文抜粋
+            // 本文抜粋 / 全文プレビュー
             if (article.extractedText.isNotBlank()) {
                 Spacer(Modifier.height(6.dp))
-                Text(
-                    text = if (expanded) article.extractedText else article.extractedText.take(120) + (if (article.extractedText.length > 120) "..." else ""),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 16.sp,
-                )
+                if (expanded) {
+                    val previewScrollState = rememberScrollState()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f))
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                                shape = RoundedCornerShape(8.dp),
+                            ),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "全文プレビュー（枠内スクロール）",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .clickable { expanded = false }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ExpandLess,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Spacer(Modifier.width(2.dp))
+                                Text(
+                                    text = "閉じる",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 240.dp)
+                                .verticalScroll(previewScrollState)
+                                .padding(10.dp),
+                        ) {
+                            Text(
+                                text = article.extractedText,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                lineHeight = 17.sp,
+                            )
+                        }
+                    }
+                } else {
+                    val snippet = article.extractedText.take(120) +
+                        if (article.extractedText.length > 120) "..." else ""
+                    Text(
+                        text = snippet,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 16.sp,
+                    )
+                }
             }
 
             // 進捗バー表示
