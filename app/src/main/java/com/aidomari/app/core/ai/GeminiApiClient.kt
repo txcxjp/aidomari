@@ -531,9 +531,9 @@ class GeminiApiClientImpl(
             - front: "メタ認知"
               back: "自身の思考や認知状態を客観的に把握・制御する能力。"
               userSupplement: "人間は文章を自ら書く過程で自分が何を考えているかを知るメタ認知を養っており、AI代筆に頼るとこの能力開発が放棄されると指摘されている。"
-            - front: "石狩平野"
-              back: "北海道中西部、石狩川流域に広がる道内最大の沖積平野。"
-              userSupplement: "泥炭地の客土事業や排水改良によって日本有数の稲作地帯へと発展した。"
+            - front: "墾田永年私財法"
+              back: "743年に発布された、開墾した土地の永代私有を認める法令。"
+              userSupplement: "班田収授法の維持が困難になる中で、貴族や寺社による大規模な土地開墾と荘園の発達を促す契機となった。"
 
             【避けるべき例（Bad）】
             - front: "酪農" / "道の駅"（※一般名詞単体になっており、他デッキと混ざった際に北海道のどの固有名詞・地域の話か判別できない。「根釧台地」など記事固有の対象・固有名詞を抽出すること）
@@ -633,6 +633,8 @@ class GeminiApiClientImpl(
             b.userSupplement.isBlank() -> a.userSupplement
             a.userSupplement.contains(b.userSupplement) -> a.userSupplement
             b.userSupplement.contains(a.userSupplement) -> b.userSupplement
+            a.userSupplement.length >= 45 && b.userSupplement.length >= 45 ->
+                if (b.userSupplement.length > a.userSupplement.length) b.userSupplement else a.userSupplement
             else -> "${a.userSupplement}\n${b.userSupplement}"
         }
         return a.copy(back = bestBack, userSupplement = combinedSupplement)
