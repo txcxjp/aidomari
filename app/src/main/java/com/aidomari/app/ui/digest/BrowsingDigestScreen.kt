@@ -2,6 +2,7 @@ package com.aidomari.app.ui.digest
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,13 +20,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AssistChip
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -44,9 +46,6 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -64,6 +63,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -217,30 +218,11 @@ fun BrowsingDigestScreen(
             }
 
             // 抽出モードセレクター
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = "抽出モード",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                SingleChoiceSegmentedButtonRow {
-                    CardExtractionMode.entries.forEachIndexed { index, mode ->
-                        SegmentedButton(
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = CardExtractionMode.entries.size),
-                            onClick = { viewModel.selectMode(mode) },
-                            selected = uiState.selectedMode == mode,
-                            label = { Text(mode.label, fontSize = 11.sp) },
-                        )
-                    }
-                }
-            }
+            ExtractionModeSelectorBar(
+                selectedMode = uiState.selectedMode,
+                onSelectMode = { viewModel.selectMode(it) },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
 
             // 記事リスト
             val articles = uiState.filteredArticles
@@ -294,16 +276,11 @@ fun BrowsingDigestScreen(
             subjects = uiState.subjects,
             selectedSubjectId = uiState.selectedSubjectId,
             newDeckName = uiState.newDeckName,
-            selectedMode = uiState.selectedMode,
-            isGenerating = uiState.isGenerating,
-            progressMessage = uiState.generationProgressMessage,
-            progressFraction = uiState.generationProgressFraction,
             onSubjectSelect = { viewModel.selectSubject(it) },
             onDeckNameChange = { viewModel.updateNewDeckName(it) },
             onToggleSelect = { viewModel.toggleCardSelection(it) },
             onSelectAll = { viewModel.selectAllCandidates(it) },
             onCandidateChange = { id, f, b, s -> viewModel.updateCandidate(id, f, b, s) },
-            onRegenerateWithMode = { mode -> viewModel.generateCards(uiState.reviewArticle!!, mode) },
             onSave = { viewModel.saveSelectedCards() },
             onDismiss = { viewModel.closeReview() },
         )
@@ -321,6 +298,102 @@ fun BrowsingDigestScreen(
             onFetchModels = { key -> geminiClient.fetchAvailableModels(key) },
             onDismissRequest = { showGeminiSettings = false },
         )
+    }
+}
+
+@Composable
+fun ExtractionModeSelectorBar(
+    selectedMode: CardExtractionMode,
+    onSelectMode: (CardExtractionMode) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f))
+                    .padding(3.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CardExtractionMode.entries.forEach { mode ->
+                    val isSelected = mode == selectedMode
+                    val icon: ImageVector = when (mode) {
+                        CardExtractionMode.SMART -> Icons.Default.AutoAwesome
+                        CardExtractionMode.CORE -> Icons.Default.Star
+                        CardExtractionMode.KNOWLEDGE -> Icons.Default.Book
+                    }
+                    val bgColor = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        Color.Transparent
+                    }
+                    val contentColor = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(bgColor)
+                            .clickable(enabled = enabled) { onSelectMode(mode) }
+                            .padding(vertical = 7.dp, horizontal = 6.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = contentColor,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = mode.label,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = contentColor,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = selectedMode.description,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }
 
@@ -533,16 +606,11 @@ fun CardReviewDialog(
     subjects: List<com.aidomari.app.domain.model.Subject>,
     selectedSubjectId: String?,
     newDeckName: String,
-    selectedMode: CardExtractionMode,
-    isGenerating: Boolean = false,
-    progressMessage: String? = null,
-    progressFraction: Float? = null,
     onSubjectSelect: (String) -> Unit,
     onDeckNameChange: (String) -> Unit,
     onToggleSelect: (String) -> Unit,
     onSelectAll: (Boolean) -> Unit,
     onCandidateChange: (String, String, String, String) -> Unit,
-    onRegenerateWithMode: (CardExtractionMode) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -647,7 +715,7 @@ fun CardReviewDialog(
                     // 承認・保存ボタン
                     Button(
                         onClick = onSave,
-                        enabled = selectedCount > 0 && !isGenerating,
+                        enabled = selectedCount > 0,
                         modifier = Modifier.fillMaxWidth().height(44.dp),
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -657,98 +725,20 @@ fun CardReviewDialog(
                 }
             },
         ) { padding ->
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
+                    .padding(padding)
+                    .padding(horizontal = 16.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                // 抽出の深さの切り替え & 再生成バー
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = "モード: ${selectedMode.label}",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            CardExtractionMode.entries.forEach { mode ->
-                                if (mode != selectedMode) {
-                                    AssistChip(
-                                        onClick = { onRegenerateWithMode(mode) },
-                                        enabled = !isGenerating,
-                                        label = { Text("${mode.label}で再生成", fontSize = 10.5.sp) },
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (isGenerating) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(24.dp),
-                        ) {
-                            if (progressFraction != null) {
-                                LinearProgressIndicator(
-                                    progress = { progressFraction },
-                                    modifier = Modifier
-                                        .fillMaxWidth(0.7f)
-                                        .height(6.dp)
-                                        .clip(RoundedCornerShape(3.dp)),
-                                )
-                            } else {
-                                CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                            }
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                text = progressMessage ?: "カードを再生成中...",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            if (progressFraction != null) {
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = "${(progressFraction * 100).toInt()}%",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .padding(horizontal = 16.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        items(candidates, key = { it.id }) { candidate ->
-                            CandidateCardItem(
-                                candidate = candidate,
-                                onToggle = { onToggleSelect(candidate.id) },
-                                onChange = { f, b, s -> onCandidateChange(candidate.id, f, b, s) },
-                            )
-                        }
-                    }
+                items(candidates, key = { it.id }) { candidate ->
+                    CandidateCardItem(
+                        candidate = candidate,
+                        onToggle = { onToggleSelect(candidate.id) },
+                        onChange = { f, b, s -> onCandidateChange(candidate.id, f, b, s) },
+                    )
                 }
             }
         }
