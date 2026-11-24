@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -127,6 +128,7 @@ fun BrowsingDigestScreen(
             selectedSubjectId = uiState.selectedSubjectId,
             newDeckName = uiState.newDeckName,
             onSubjectSelect = { viewModel.selectSubject(it) },
+            onCreateSubject = { viewModel.createSubject(it) },
             onDeckNameChange = { viewModel.updateNewDeckName(it) },
             onToggleSelect = { viewModel.toggleCardSelection(it) },
             onSelectAll = { viewModel.selectAllCandidates(it) },
@@ -652,6 +654,7 @@ fun CardReviewDialog(
     selectedSubjectId: String?,
     newDeckName: String,
     onSubjectSelect: (String) -> Unit,
+    onCreateSubject: (String) -> Unit = {},
     onDeckNameChange: (String) -> Unit,
     onToggleSelect: (String) -> Unit,
     onSelectAll: (Boolean) -> Unit,
@@ -663,6 +666,8 @@ fun CardReviewDialog(
 ) {
     val selectedCount = candidates.count { it.isSelected }
     var isSubjectDropdownExpanded by remember { mutableStateOf(false) }
+    var showCreateSubjectDialog by remember { mutableStateOf(false) }
+    var newSubjectNameInput by remember { mutableStateOf("") }
 
     BackHandler(onBack = onDismiss)
 
@@ -763,6 +768,20 @@ fun CardReviewDialog(
                                     },
                                 )
                             }
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = "＋ 新規科目を作成...",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                },
+                                onClick = {
+                                    isSubjectDropdownExpanded = false
+                                    newSubjectNameInput = ""
+                                    showCreateSubjectDialog = true
+                                },
+                            )
                         }
                     }
 
@@ -808,6 +827,40 @@ fun CardReviewDialog(
                 )
             }
         }
+    }
+
+    if (showCreateSubjectDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateSubjectDialog = false },
+            title = { Text("新規科目の作成", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = newSubjectNameInput,
+                    onValueChange = { newSubjectNameInput = it },
+                    label = { Text("科目名") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newSubjectNameInput.isNotBlank()) {
+                            onCreateSubject(newSubjectNameInput)
+                            showCreateSubjectDialog = false
+                        }
+                    },
+                    enabled = newSubjectNameInput.isNotBlank(),
+                ) {
+                    Text("作成", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateSubjectDialog = false }) {
+                    Text("キャンセル")
+                }
+            },
+        )
     }
 }
 

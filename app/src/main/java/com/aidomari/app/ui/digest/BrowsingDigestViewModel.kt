@@ -61,6 +61,22 @@ class BrowsingDigestViewModel(
         _uiState.update { it.copy(selectedSubjectId = subjectId) }
     }
 
+    fun createSubject(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return
+        viewModelScope.launch {
+            val newSubject = Subject(
+                id = UUID.randomUUID().toString(),
+                name = trimmed,
+                ttsLanguage = "ja",
+            )
+            wordsRepository.saveSubject(newSubject)
+            _uiState.update {
+                it.copy(selectedSubjectId = newSubject.id)
+            }
+        }
+    }
+
     fun selectMode(mode: CardExtractionMode) {
         _uiState.update { it.copy(selectedMode = mode) }
     }

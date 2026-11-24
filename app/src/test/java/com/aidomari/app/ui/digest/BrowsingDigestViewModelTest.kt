@@ -331,6 +331,17 @@ class BrowsingDigestViewModelTest {
         viewModel.closeReview()
         assertEquals(1, fakeNotificationController.clearedCount)
     }
+
+    @Test
+    fun createSubject_savesNewSubjectAndSelectsIt() = runTest {
+        viewModel.createSubject("社会・地理")
+        advanceUntilIdle()
+
+        assertEquals(1, fakeWordsRepository.subjectsList.size)
+        val created = fakeWordsRepository.subjectsList.single()
+        assertEquals("社会・地理", created.name)
+        assertEquals(created.id, viewModel.uiState.value.selectedSubjectId)
+    }
 }
 
 // === Fakes ===
