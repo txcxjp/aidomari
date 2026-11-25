@@ -5,6 +5,11 @@
 (function () {
   'use strict';
 
+  if (globalThis.__aidomariContentScriptLoaded) {
+    return;
+  }
+  globalThis.__aidomariContentScriptLoaded = true;
+
   // メッセージリスナー
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'extract') {

@@ -126,10 +126,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   } else if (info.menuItemId === 'aidomari-send-page') {
     // ページから本文抽出
     try {
-      // extractor.js と content_script.js を実行
+      // extractor.js と content_script.js を実行（先頭スラッシュで拡張機能ルートからのパスを明示）
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['extractor.js', 'content_script.js']
+        files: ['/extractor.js', '/content_script.js']
       });
 
       chrome.tabs.sendMessage(tab.id, { action: 'extract' }, async (response) => {

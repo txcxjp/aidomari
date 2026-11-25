@@ -60,7 +60,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       activeTab = tab;
 
-      if (!tab || !tab.id || tab.url?.startsWith('chrome://') || tab.url?.startsWith('about:')) {
+      const internalSchemes = ['chrome://', 'chrome-extension://', 'edge://', 'about:', 'moz-extension://', 'resource://'];
+      if (!tab || !tab.id || internalSchemes.some((scheme) => tab.url?.startsWith(scheme))) {
         showError('ブラウザ内部ページからは記事を抽出できません。Webページを開いてください。');
         return;
       }
@@ -73,10 +74,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         articleDomainEl.textContent = 'Webページ';
       }
 
-      // content_script.js と extractor.js を注入
+      // content_script.js と extractor.js を注入（Firefoxでは先頭スラッシュがないとpopup/配下として解決される）
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['extractor.js', 'content_script.js']
+        files: ['/extractor.js', '/content_script.js']
       });
 
       chrome.tabs.sendMessage(tab.id, { action: 'extract' }, (response) => {
