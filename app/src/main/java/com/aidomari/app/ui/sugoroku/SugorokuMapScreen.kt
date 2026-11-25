@@ -787,6 +787,7 @@ fun SugorokuMapContent(
                                     x = curX,
                                     bubbleY = curY - 26.dp.toPx() + playerFloatY * 1.5f,
                                     renderCache = renderCache,
+                                    previewBitmap = landmark.type.tapPreviewDrawableResId?.let(getLandmarkBitmap),
                                 )
                             }
 
@@ -806,6 +807,7 @@ fun SugorokuMapContent(
                                         x = tappedCx,
                                         bubbleY = tappedCy - halfH * 0.85f,
                                         renderCache = renderCache,
+                                        previewBitmap = tapped.type.tapPreviewDrawableResId?.let(getLandmarkBitmap),
                                     )
                                 }
                             }
@@ -1688,6 +1690,7 @@ private fun DrawScope.drawSpeechBubble(
     x: Float,
     bubbleY: Float,
     renderCache: SugorokuRenderCache,
+    previewBitmap: ImageBitmap? = null,
 ) {
     val textPaint = renderCache.bubbleTextPaint
     val bubblePaint = renderCache.bubbleFillPaint
@@ -1698,10 +1701,20 @@ private fun DrawScope.drawSpeechBubble(
     val textWidth = textBounds.width().toFloat()
     val textHeight = textBounds.height().toFloat()
 
+    val maxPreviewH = 26.dp.toPx()
+    val maxPreviewW = 34.dp.toPx()
+    val (previewW, previewH) = if (previewBitmap != null && previewBitmap.width > 0 && previewBitmap.height > 0) {
+        val ratio = minOf(maxPreviewW / previewBitmap.width, maxPreviewH / previewBitmap.height)
+        (previewBitmap.width * ratio) to (previewBitmap.height * ratio)
+    } else {
+        0f to 0f
+    }
+    val previewGap = if (previewW > 0f) 6.dp.toPx() else 0f
+
     val padH = 8.dp.toPx()
     val padV = 5.dp.toPx()
-    val bubbleWidth = textWidth + padH * 2
-    val bubbleHeight = textHeight + padV * 2
+    val bubbleWidth = textWidth + padH * 2 + previewW + previewGap
+    val bubbleHeight = maxOf(textHeight, previewH) + padV * 2
 
     val left = x - bubbleWidth / 2f
     val top = bubbleY - bubbleHeight
@@ -1722,6 +1735,22 @@ private fun DrawScope.drawSpeechBubble(
     drawContext.canvas.nativeCanvas.drawPath(tailPath, bubblePaint)
     drawContext.canvas.nativeCanvas.drawPath(tailPath, borderPaint)
 
-    val textY = top + padV + textHeight
-    drawContext.canvas.nativeCanvas.drawText(text, x, textY, textPaint)
+    if (previewBitmap != null && previewW > 0f && previewH > 0f) {
+        drawImage(
+            image = previewBitmap,
+            dstOffset = IntOffset(
+                x = (left + padH).roundToInt(),
+                y = (top + (bubbleHeight - previewH) * 0.5f).roundToInt(),
+            ),
+            dstSize = IntSize(previewW.roundToInt().coerceAtLeast(1), previewH.roundToInt().coerceAtLeast(1)),
+        )
+    }
+
+    val textCenterX = if (previewW > 0f) {
+        left + padH + previewW + previewGap + textWidth * 0.5f
+    } else {
+        x
+    }
+    val textY = top + (bubbleHeight - textHeight) * 0.5f + textHeight
+    drawContext.canvas.nativeCanvas.drawText(text, textCenterX, textY, textPaint)
 }

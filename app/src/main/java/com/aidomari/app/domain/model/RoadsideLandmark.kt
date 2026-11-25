@@ -39,6 +39,7 @@ enum class RoadsideLandmarkType(
     val baseDisplayHeightDp: Float,
     val motionStyle: LandmarkMotionStyle = LandmarkMotionStyle.NONE,
     val animFrame2DrawableResId: Int? = null,
+    val tapPreviewDrawableResId: Int? = null,
 ) {
     CAPE_LIGHTHOUSE(
         defaultDialogue = "「青い海と函館・入船漁港沖の紅白灯台が見える！」",
@@ -2004,8 +2005,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "rishiri_fuji_island",
                 name = "利尻富士の島影",
-                x = 239.20f,
-                y = 44.50f,
+                x = 217.20f,
+                y = 41.90f,
                 type = RoadsideLandmarkType.RISHIRI_FUJI_ISLAND,
                 scale = 1.02f,
                 isMajorRegional = true,
@@ -2261,8 +2262,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "atsuta_sunset_coast",
                 name = "石狩厚田の夕日と海岸断崖",
-                x = 230.98f,
-                y = 196.70f,
+                x = 230.00f,
+                y = 202.00f,
                 type = RoadsideLandmarkType.ATSUTA_SUNSET_COAST,
                 scale = 0.88f,
             ),
@@ -2368,8 +2369,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "shimamui_shakotan_blue",
                 name = "積丹・島武意海岸と積丹ブルー",
-                x = 169.17f,
-                y = 204.25f,
+                x = 169.60f,
+                y = 203.90f,
                 type = RoadsideLandmarkType.SHIMAMUI_SHAKOTAN_BLUE,
                 scale = 0.88f,
                 isMajorRegional = true,
