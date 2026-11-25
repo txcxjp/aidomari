@@ -1,10 +1,15 @@
 package com.aidomari.app.ui.study
 
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.StudyDirection
@@ -16,6 +21,7 @@ import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -426,6 +432,68 @@ class StudyScreenTest {
 
         // Card flipped (ウラ面: 解答) -> speaks front (target English word)
         assertEquals(listOf("旅、旅行", "journey"), spokenTexts)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun keyboardShortcuts_matchMobileGestureBehavior() {
+        fakeRepository.decks.clear()
+        fakeRepository.cards.clear()
+        fakeRepository.decks.add(deckWithoutAutoContinue.copy(splitSize = 3))
+        fakeRepository.cards.addAll(
+            listOf(
+                Card(id = "c1", deckId = "deck-manual", term = "First", description = "意味1", orderIndex = 0),
+                Card(id = "c2", deckId = "deck-manual", term = "Second", description = "意味2", orderIndex = 1),
+                Card(id = "c3", deckId = "deck-manual", term = "Third", description = "意味3", orderIndex = 2),
+            ),
+        )
+
+        composeTestRule.setContent {
+            StudyScreen(
+                deckId = "deck-manual",
+                partIndex = 0,
+                viewModel = viewModel,
+                onNavigateBack = {},
+                onNavigateToPart = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Front face: Left flips to back (does NOT mark retry yet)
+        composeTestRule.onRoot().performKeyInput {
+            pressKey(Key.DirectionLeft)
+        }
+        composeTestRule.waitForIdle()
+        assertTrue(viewModel.uiState.value.isFlipped)
+        assertEquals("c1", viewModel.uiState.value.currentCard?.id)
+        assertEquals(0, viewModel.uiState.value.retryCount)
+
+        // Back face: Left marks retry and advances to c2
+        composeTestRule.onRoot().performKeyInput {
+            pressKey(Key.DirectionLeft)
+        }
+        composeTestRule.waitForIdle()
+        assertFalse(viewModel.uiState.value.isFlipped)
+        assertEquals("c2", viewModel.uiState.value.currentCard?.id)
+        assertEquals(1, viewModel.uiState.value.retryCount)
+
+        // Front face on c2: Right flips to back (does NOT mark done yet)
+        composeTestRule.onRoot().performKeyInput {
+            pressKey(Key.DirectionRight)
+        }
+        composeTestRule.waitForIdle()
+        assertTrue(viewModel.uiState.value.isFlipped)
+        assertEquals("c2", viewModel.uiState.value.currentCard?.id)
+        assertEquals(0, viewModel.uiState.value.completedCount)
+
+        // Back face on c2: Right marks done and advances to c3
+        composeTestRule.onRoot().performKeyInput {
+            pressKey(Key.DirectionRight)
+        }
+        composeTestRule.waitForIdle()
+        assertFalse(viewModel.uiState.value.isFlipped)
+        assertEquals("c3", viewModel.uiState.value.currentCard?.id)
+        assertEquals(1, viewModel.uiState.value.completedCount)
     }
 
     private class FakeStudyWordsRepository : WordsRepository {

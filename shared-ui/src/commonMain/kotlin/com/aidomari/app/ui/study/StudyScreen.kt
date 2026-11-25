@@ -314,11 +314,19 @@ fun StudyContent(
                         true
                     }
                     Key.DirectionRight, Key.D -> {
-                        onMarkDone()
+                        if (!uiState.isFlipped) {
+                            onFlipCard()
+                        } else {
+                            onMarkDone()
+                        }
                         true
                     }
                     Key.DirectionLeft, Key.A -> {
-                        onMarkRetry()
+                        if (!uiState.isFlipped) {
+                            onFlipCard()
+                        } else {
+                            onMarkRetry()
+                        }
                         true
                     }
                     Key.R -> {
