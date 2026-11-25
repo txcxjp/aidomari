@@ -697,8 +697,8 @@ enum class RoadsideLandmarkType(
     SOYA_NORTHERNMOST_MONUMENT(
         defaultDialogue = "「日本最北端・宗谷岬の碑についに到着！」",
         drawableResId = R.drawable.landmark_soya_northernmost_monument,
-        baseDisplayWidthDp = 122.0f,
-        baseDisplayHeightDp = 138.7f,
+        baseDisplayWidthDp = 126.0f,
+        baseDisplayHeightDp = 134.9f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     SOYA_WHITE_SHELL_PATH(
@@ -709,10 +709,10 @@ enum class RoadsideLandmarkType(
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     NORTH_45_LATITUDE_TOWER(
-        defaultDialogue = "「北緯45度線のモニュメント塔だ！」",
+        defaultDialogue = "「枝幸・北緯45度線のモニュメントと電子基準点だ！」",
         drawableResId = R.drawable.landmark_north_45_latitude_tower,
-        baseDisplayWidthDp = 124.0f,
-        baseDisplayHeightDp = 168.4f,
+        baseDisplayWidthDp = 114.0f,
+        baseDisplayHeightDp = 110.4f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     USTAIBE_SENJOIWA_ROCKS(
@@ -753,8 +753,8 @@ enum class RoadsideLandmarkType(
     ABASHIRI_RED_BRICK_GATE(
         defaultDialogue = "「博物館網走監獄の重厚な赤れんが正門だ！」",
         drawableResId = R.drawable.landmark_abashiri_red_brick_gate,
-        baseDisplayWidthDp = 166.0f,
-        baseDisplayHeightDp = 49.0f,
+        baseDisplayWidthDp = 162.0f,
+        baseDisplayHeightDp = 75.9f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     KOSHIMIZU_NOROKKO_TRAIN(
@@ -1076,14 +1076,14 @@ enum class RoadsideLandmarkType(
         defaultDialogue = "「音標岬の断崖にハマナスが咲いて、オホーツクの波が砕けてる！」",
         drawableResId = R.drawable.landmark_otoppu_cape_coastal_cliff,
         baseDisplayWidthDp = 136.0f,
-        baseDisplayHeightDp = 136.0f,
-        motionStyle = LandmarkMotionStyle.COASTAL_WAVE_CRASH,
+        baseDisplayHeightDp = 128.8f,
+        motionStyle = LandmarkMotionStyle.NONE,
     ),
     OUMU_KEGANI_CRAB_POT(
         defaultDialogue = "「雄武港の浜ゆで毛ガニ！大鍋からアツアツのいい湯気！」",
         drawableResId = R.drawable.landmark_oumu_kegani_crab_pot,
-        baseDisplayWidthDp = 122.0f,
-        baseDisplayHeightDp = 145.6f,
+        baseDisplayWidthDp = 132.0f,
+        baseDisplayHeightDp = 131.7f,
         motionStyle = LandmarkMotionStyle.ONSEN_STEAM,
     ),
     OKOPPE_KIHA22_TRAIN(
@@ -1110,8 +1110,8 @@ enum class RoadsideLandmarkType(
     SHARI_ROAD_TO_HEAVEN(
         defaultDialogue = "「斜里の『天に続く道』！どこまでも真っ直ぐ空へ伸びてるよ」",
         drawableResId = R.drawable.landmark_shari_road_to_heaven,
-        baseDisplayWidthDp = 138.0f,
-        baseDisplayHeightDp = 115.9f,
+        baseDisplayWidthDp = 142.0f,
+        baseDisplayHeightDp = 120.4f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
 }
@@ -1661,10 +1661,10 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "soya_harbor_seals",
                 name = "宗谷岬沖のアザラシ",
-                x = 262.10f,
-                y = 11.45f,
+                x = 260.45f,
+                y = 12.10f,
                 type = RoadsideLandmarkType.COASTAL_SEALS,
-                scale = 0.96f,
+                scale = 0.88f,
                 isMajorRegional = false,
             ),
             RoadsideLandmark(
@@ -2022,19 +2022,19 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "soya_northernmost_monument",
                 name = "宗谷岬・日本最北端の地の碑",
-                x = 263.48f,
-                y = 13.45f,
+                x = 262.85f,
+                y = 11.45f,
                 type = RoadsideLandmarkType.SOYA_NORTHERNMOST_MONUMENT,
-                scale = 0.92f,
+                scale = 0.88f,
                 isMajorRegional = true,
             ),
             RoadsideLandmark(
                 id = "soya_white_shell_path",
                 name = "宗谷丘陵の白い道と羊",
-                x = 265.15f,
-                y = 18.75f,
+                x = 263.35f,
+                y = 15.35f,
                 type = RoadsideLandmarkType.SOYA_WHITE_SHELL_PATH,
-                scale = 0.96f,
+                scale = 0.94f,
             ),
             RoadsideLandmark(
                 id = "log_cabin_cheese_dairy",
@@ -2046,7 +2046,7 @@ data class RoadsideLandmark(
             ),
             RoadsideLandmark(
                 id = "north_45_latitude_tower",
-                name = "北緯45度線のモニュメント塔",
+                name = "北緯45度線のモニュメント",
                 x = 300.43f,
                 y = 59.38f,
                 type = RoadsideLandmarkType.NORTH_45_LATITUDE_TOWER,
@@ -2124,10 +2124,10 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "koshimizu_norokko_train",
                 name = "小清水原生花園のノロッコ列車",
-                x = 421.60f,
-                y = 157.35f,
+                x = 421.42f,
+                y = 154.70f,
                 type = RoadsideLandmarkType.KOSHIMIZU_NOROKKO_TRAIN,
-                scale = 0.96f,
+                scale = 0.86f,
                 isMajorRegional = true,
             ),
             RoadsideLandmark(
@@ -2443,8 +2443,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "otoppu_cape_coastal_cliff",
                 name = "雄武・音標岬の断崖とハマナス",
-                x = 318.45f,
-                y = 86.64f,
+                x = 319.80f,
+                y = 85.15f,
                 type = RoadsideLandmarkType.OTOPPU_CAPE_COASTAL_CLIFF,
                 scale = 0.88f,
             ),
@@ -2478,8 +2478,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "notoro_cape_lighthouse",
                 name = "能取岬と白黒灯台",
-                x = 402.00f,
-                y = 138.60f,
+                x = 410.20f,
+                y = 139.15f,
                 type = RoadsideLandmarkType.NOTORO_CAPE_LIGHTHOUSE,
                 scale = 0.90f,
                 isMajorRegional = true,
