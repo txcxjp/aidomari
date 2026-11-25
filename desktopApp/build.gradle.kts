@@ -36,7 +36,7 @@ compose.desktop {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "Aidomari"
             packageVersion = "2.0.0"
-            description = "Aidomari (相泊) 単語帳・自動デッキ学習アプリ"
+            description = "Aidomari Flashcard and Study Desktop Application"
             vendor = "Aidomari"
             modules("java.sql", "java.prefs", "java.desktop", "java.naming")
 

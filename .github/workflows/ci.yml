@@ -134,6 +134,14 @@ jobs:
       - name: Create Windows Distributable
         run: gradle :desktopApp:createDistributable --stacktrace
 
+      - name: Upload Windows jpackage Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-jpackage-logs
+          path: desktopApp/build/compose/logs/
+          if-no-files-found: ignore
+
       - name: Upload Windows Desktop Distributable
         uses: actions/upload-artifact@v4
         with:
