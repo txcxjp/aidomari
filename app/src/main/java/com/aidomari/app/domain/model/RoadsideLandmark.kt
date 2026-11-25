@@ -697,15 +697,15 @@ enum class RoadsideLandmarkType(
     SOYA_NORTHERNMOST_MONUMENT(
         defaultDialogue = "「日本最北端・宗谷岬の碑についに到着！」",
         drawableResId = R.drawable.landmark_soya_northernmost_monument,
-        baseDisplayWidthDp = 132.0f,
-        baseDisplayHeightDp = 90.0f,
-        motionStyle = LandmarkMotionStyle.COASTAL_WAVE_CRASH,
+        baseDisplayWidthDp = 122.0f,
+        baseDisplayHeightDp = 138.7f,
+        motionStyle = LandmarkMotionStyle.NONE,
     ),
     SOYA_WHITE_SHELL_PATH(
         defaultDialogue = "「宗谷丘陵の白い貝殻の道が緑の丘に続いてる！」",
         drawableResId = R.drawable.landmark_soya_white_shell_path,
-        baseDisplayWidthDp = 148.0f,
-        baseDisplayHeightDp = 71.4f,
+        baseDisplayWidthDp = 144.0f,
+        baseDisplayHeightDp = 96.8f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     NORTH_45_LATITUDE_TOWER(
@@ -725,8 +725,8 @@ enum class RoadsideLandmarkType(
     OMU_HINODE_GLASS_PYRAMID(
         defaultDialogue = "「雄武・日の出岬のガラスピラミッド展望台がきらめいてる！」",
         drawableResId = R.drawable.landmark_omu_hinode_glass_pyramid,
-        baseDisplayWidthDp = 146.0f,
-        baseDisplayHeightDp = 91.0f,
+        baseDisplayWidthDp = 138.0f,
+        baseDisplayHeightDp = 98.1f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     MOMBETSU_GIANT_CRAB_CLAW(
@@ -753,8 +753,8 @@ enum class RoadsideLandmarkType(
     ABASHIRI_RED_BRICK_GATE(
         defaultDialogue = "「博物館網走監獄の重厚な赤れんが正門だ！」",
         drawableResId = R.drawable.landmark_abashiri_red_brick_gate,
-        baseDisplayWidthDp = 156.0f,
-        baseDisplayHeightDp = 74.0f,
+        baseDisplayWidthDp = 166.0f,
+        baseDisplayHeightDp = 49.0f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     KOSHIMIZU_NOROKKO_TRAIN(
@@ -767,9 +767,9 @@ enum class RoadsideLandmarkType(
     OSHINKOSHIN_TWIN_FALLS(
         defaultDialogue = "「知床八景・オシンコシンの滝が二筋に分かれて豪快！」",
         drawableResId = R.drawable.landmark_oshinkoshin_twin_falls,
-        baseDisplayWidthDp = 146.0f,
-        baseDisplayHeightDp = 87.5f,
-        motionStyle = LandmarkMotionStyle.COASTAL_WAVE_CRASH,
+        baseDisplayWidthDp = 114.0f,
+        baseDisplayHeightDp = 147.0f,
+        motionStyle = LandmarkMotionStyle.RIVER_SHIMMER,
     ),
     UTORO_GODZILLA_ROCK_CRUISER(
         defaultDialogue = "「ウトロのゴジラ岩と知床観光船だ！」",
@@ -942,8 +942,8 @@ enum class RoadsideLandmarkType(
     ESANUKA_ENDLESS_STRAIGHT_ROAD(
         defaultDialogue = "「猿払エサヌカ線の果てしない一本道！地平線までまっすぐ続いてる！」",
         drawableResId = R.drawable.landmark_esanuka_endless_straight_road,
-        baseDisplayWidthDp = 156.0f,
-        baseDisplayHeightDp = 81.7f,
+        baseDisplayWidthDp = 142.0f,
+        baseDisplayHeightDp = 71.6f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     OKOPPE_HOLSTEIN_GRAZING(
@@ -2022,25 +2022,25 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "soya_northernmost_monument",
                 name = "宗谷岬・日本最北端の地の碑",
-                x = 262.31f,
-                y = 12.06f,
+                x = 263.48f,
+                y = 13.45f,
                 type = RoadsideLandmarkType.SOYA_NORTHERNMOST_MONUMENT,
-                scale = 0.96f,
+                scale = 0.92f,
                 isMajorRegional = true,
             ),
             RoadsideLandmark(
                 id = "soya_white_shell_path",
                 name = "宗谷丘陵の白い道と羊",
-                x = 266.08f,
-                y = 19.13f,
+                x = 265.15f,
+                y = 18.75f,
                 type = RoadsideLandmarkType.SOYA_WHITE_SHELL_PATH,
                 scale = 0.96f,
             ),
             RoadsideLandmark(
                 id = "log_cabin_cheese_dairy",
                 name = "猿払のチーズ工房とミルク缶",
-                x = 279.75f,
-                y = 34.11f,
+                x = 277.80f,
+                y = 33.85f,
                 type = RoadsideLandmarkType.LOG_CABIN_CHEESE_DAIRY,
                 scale = 0.96f,
             ),
@@ -2072,10 +2072,10 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "omu_hinode_glass_pyramid",
                 name = "雄武・日の出岬のガラスピラミッド",
-                x = 334.07f,
-                y = 102.55f,
+                x = 335.12f,
+                y = 101.52f,
                 type = RoadsideLandmarkType.OMU_HINODE_GLASS_PYRAMID,
-                scale = 0.96f,
+                scale = 0.88f,
             ),
             RoadsideLandmark(
                 id = "mombetsu_garinko_icebreaker",
@@ -2098,8 +2098,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "shima_enaga_trio",
                 name = "湧別の木の実とシマエナガ3羽",
-                x = 377.30f,
-                y = 137.29f,
+                x = 376.00f,
+                y = 139.00f,
                 type = RoadsideLandmarkType.SHIMA_ENAGA_TRIO,
                 scale = 0.94f,
             ),
@@ -2124,8 +2124,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "koshimizu_norokko_train",
                 name = "小清水原生花園のノロッコ列車",
-                x = 421.10f,
-                y = 154.71f,
+                x = 421.60f,
+                y = 157.35f,
                 type = RoadsideLandmarkType.KOSHIMIZU_NOROKKO_TRAIN,
                 scale = 0.96f,
                 isMajorRegional = true,
@@ -2141,8 +2141,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "oshinkoshin_twin_falls",
                 name = "知床・オシンコシンの滝",
-                x = 454.86f,
-                y = 146.09f,
+                x = 454.90f,
+                y = 146.18f,
                 type = RoadsideLandmarkType.OSHINKOSHIN_TWIN_FALLS,
                 scale = 0.96f,
                 isMajorRegional = true,
@@ -2285,10 +2285,10 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "esanuka_endless_straight_road",
                 name = "猿払エサヌカ線の果てしない一本道",
-                x = 298.07f,
-                y = 55.20f,
+                x = 284.10f,
+                y = 39.65f,
                 type = RoadsideLandmarkType.ESANUKA_ENDLESS_STRAIGHT_ROAD,
-                scale = 0.88f,
+                scale = 0.92f,
             ),
             RoadsideLandmark(
                 id = "okoppe_holstein_grazing",
