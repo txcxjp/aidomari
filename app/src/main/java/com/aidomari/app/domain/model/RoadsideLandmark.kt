@@ -41,7 +41,7 @@ enum class RoadsideLandmarkType(
     val animFrame2DrawableResId: Int? = null,
 ) {
     CAPE_LIGHTHOUSE(
-        defaultDialogue = "「青い海と白い灯台が見える！」",
+        defaultDialogue = "「青い海と函館・入船漁港沖の紅白灯台が見える！」",
         drawableResId = R.drawable.landmark_cape_lighthouse,
         baseDisplayWidthDp = 142f,
         baseDisplayHeightDp = 82.6f,
@@ -898,10 +898,10 @@ enum class RoadsideLandmarkType(
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     YOICHI_APPLE_CHERRY_ORCHARD(
-        defaultDialogue = "「余市果樹園のリンゴとサクランボ！甘い実がたわわに実ってる！」",
+        defaultDialogue = "「余市果樹園のさくらんぼの木とりんごの木！収穫カゴがいっぱい！」",
         drawableResId = R.drawable.landmark_yoichi_apple_cherry_orchard,
-        baseDisplayWidthDp = 136.0f,
-        baseDisplayHeightDp = 161.6f,
+        baseDisplayWidthDp = 152.0f,
+        baseDisplayHeightDp = 96.2f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     ZENIBAKO_COASTAL_WAVES(
@@ -1087,7 +1087,7 @@ enum class RoadsideLandmarkType(
         motionStyle = LandmarkMotionStyle.ONSEN_STEAM,
     ),
     OKOPPE_KIHA22_TRAIN(
-        defaultDialogue = "「興部の名寄本線跡に佇む、懐かしいキハ22形気動車！」",
+        defaultDialogue = "「かつて名寄本線を走った懐かしいキハ22形気動車！道の駅おこっぺに受け継がれてるよ」",
         drawableResId = R.drawable.landmark_okoppe_kiha22_train,
         baseDisplayWidthDp = 140.0f,
         baseDisplayHeightDp = 97.3f,
@@ -1147,7 +1147,7 @@ data class RoadsideLandmark(
             ),
             RoadsideLandmark(
                 id = "hako_cape_lighthouse",
-                name = "立待・穴澗岬灯台",
+                name = "函館・入船防波堤の灯台",
                 x = 183.55f,
                 y = 343.52f,
                 type = RoadsideLandmarkType.CAPE_LIGHTHOUSE,
@@ -1912,8 +1912,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "ishikari_red_white_lighthouse",
                 name = "石狩灯台とハマナス",
-                x = 230.75f,
-                y = 209.15f,
+                x = 226.40f,
+                y = 214.45f,
                 type = RoadsideLandmarkType.ISHIKARI_RED_WHITE_LIGHTHOUSE,
                 scale = 0.94f,
             ),
@@ -2004,8 +2004,8 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "rishiri_fuji_island",
                 name = "利尻富士の島影",
-                x = 245.55f,
-                y = 57.60f,
+                x = 239.20f,
+                y = 44.50f,
                 type = RoadsideLandmarkType.RISHIRI_FUJI_ISLAND,
                 scale = 1.02f,
                 isMajorRegional = true,
@@ -2212,11 +2212,11 @@ data class RoadsideLandmark(
             ),
             RoadsideLandmark(
                 id = "yoichi_apple_cherry_orchard",
-                name = "余市果樹園のリンゴ＆サクランボの木",
+                name = "余市果樹園のさくらんぼ＆りんごの木",
                 x = 188.13f,
                 y = 219.40f,
                 type = RoadsideLandmarkType.YOICHI_APPLE_CHERRY_ORCHARD,
-                scale = 0.88f,
+                scale = 0.86f,
             ),
             RoadsideLandmark(
                 id = "zenibako_coastal_waves",
