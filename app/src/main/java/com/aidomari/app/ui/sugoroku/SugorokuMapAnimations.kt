@@ -459,6 +459,7 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
             val (lanternRelX, lanternRelY) = when (landmarkType) {
                 RoadsideLandmarkType.BENKEI_CAPE_LIGHTHOUSE -> 0.02f to -0.27f
                 RoadsideLandmarkType.ISHIKARI_RED_WHITE_LIGHTHOUSE -> -0.02f to -0.29f
+                RoadsideLandmarkType.NOTORO_CAPE_LIGHTHOUSE -> -0.14f to -0.41f
                 else -> -0.03f to -0.34f
             }
             val lanternX = cx + lanternRelX * wPx
@@ -494,6 +495,7 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
                 RoadsideLandmarkType.SAKAZUKI_COASTAL_ROTENBURO -> cx - wPx * 0.02f to cy - hPx * 0.10f
                 RoadsideLandmarkType.SESEKI_SEA_ROTENBURO -> cx + wPx * 0.04f to cy - hPx * 0.06f
                 RoadsideLandmarkType.TESHIO_SHIJIMI_BUCKET -> cx + wPx * 0.18f to cy - hPx * 0.14f
+                RoadsideLandmarkType.OUMU_KEGANI_CRAB_POT -> cx to cy - hPx * 0.14f
                 else -> cx - wPx * 0.23f to cy - hPx * 0.04f
             }
             val inkW = (wPx * 0.0052f).coerceAtLeast(0.85f)
