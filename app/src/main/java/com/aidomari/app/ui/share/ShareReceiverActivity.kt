@@ -137,25 +137,27 @@ fun ShareReceiverScreen(
     var fetchError by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    val targetUrl = parsed.url ?: "text://share/${System.currentTimeMillis()}"
-    val domain = if (parsed.url != null) {
-        parsed.url.substringAfter("://").substringBefore("/")
+    val parsedUrl = parsed.url
+    val targetUrl = parsedUrl ?: "text://share/${System.currentTimeMillis()}"
+    val domain = if (parsedUrl != null) {
+        parsedUrl.substringAfter("://").substringBefore("/")
     } else {
         "text.share"
     }
     val isExcluded = remember(targetUrl, domain) {
-        parsed.url != null && PrivacyFilter.isExcluded(targetUrl, domain)
+        parsedUrl != null && PrivacyFilter.isExcluded(targetUrl, domain)
     }
 
     LaunchedEffect(parsed) {
-        if (parsed.isUrlOnly && parsed.url != null) {
+        if (parsed.isUrlOnly && parsedUrl != null) {
             isLoading = true
-            val result = fetcher.fetchArticle(parsed.url)
+            val result = fetcher.fetchArticle(parsedUrl)
             if (result.isSuccess) {
                 val fetched = result.getOrNull()
                 if (fetched != null) {
-                    if (!fetched.title.isNullOrBlank() && (title.isBlank() || title == "共有記事" || title == domain)) {
-                        title = fetched.title
+                    val fetchedTitle = fetched.title
+                    if (!fetchedTitle.isNullOrBlank() && (title.isBlank() || title == "共有記事" || title == domain)) {
+                        title = fetchedTitle
                     }
                     content = fetched.content
                 }

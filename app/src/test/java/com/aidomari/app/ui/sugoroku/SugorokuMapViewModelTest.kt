@@ -6,6 +6,7 @@ import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.model.SugorokuProgress
+import com.aidomari.app.domain.model.advanceByDistance
 import com.aidomari.app.domain.repository.WordsRepository
 import com.aidomari.app.domain.util.SugorokuWalkingCalculator
 import kotlinx.coroutines.Dispatchers

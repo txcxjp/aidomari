@@ -18,6 +18,7 @@ import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.model.SugorokuProgress
+import com.aidomari.app.domain.model.advanceByDistance
 import com.aidomari.app.domain.repository.WordsRepository
 import com.aidomari.app.domain.util.CardSnoozeCalculator
 import com.aidomari.app.domain.util.PastDayDecksCalculator
