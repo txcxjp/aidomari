@@ -10,13 +10,13 @@ import kotlinx.coroutines.flow.asStateFlow
  * Developer and debug preferences for Hokkaido Sugoroku travel simulations.
  * Available in debug builds to accelerate travel speed for verification.
  */
-class SugorokuDebugPreferences(context: Context) {
+class SugorokuDebugPreferences(context: Context) : SugorokuSpeedProvider {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val _speedMultiplier = MutableStateFlow(loadSpeedMultiplier())
-    val speedMultiplier: StateFlow<Float> = _speedMultiplier.asStateFlow()
+    override val speedMultiplier: StateFlow<Float> = _speedMultiplier.asStateFlow()
 
     private fun loadSpeedMultiplier(): Float = prefs.getFloat(KEY_SPEED_MULTIPLIER, 1.0f)
 

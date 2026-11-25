@@ -54,14 +54,16 @@
 
 ## 技術構成
 
-- **言語**: Kotlin 2.0.21
+- **言語・UI**: Kotlin 2.0.21 / Compose Multiplatform 1.7.3（Android & Desktop JVM）
 - **モジュール構成**:
   - `:shared-core`: ドメインモデル、計算ロジック、Gemini API クライアント、インポーター/エクスポーター、関連項目エンジン、ローカル受信サーバー等の純粋 Kotlin/JVM モジュール
-  - `:app`: Android UI（Jetpack Compose / Material 3）、Room DB、TTS、ロック画面学習、共有受信、すごろくマップ
-- **データベース**: Room 2.6.1（SQLite / KSP、スキーマバージョン 10）
+  - `:shared-ui`: 教科・デッキ・カード管理、学習画面、自動デッキ作成、カレンダー、テーマ設定などの共有 Compose Multiplatform UI / ViewModel（Android / Desktop）
+  - `:app`: Android エントリポイント、Room DB、Android TTS、ロック画面学習、共有受信、すごろくマップ
+  - `:desktopApp`: Windows / デスクトップ向け JVM エントリポイント、SQLite 永続化、デスクトップファイル選択／音声読み上げ
+- **データベース**: Room 2.6.1（Android / スキーマバージョン 10）、sqlite-jdbc（Desktop / 同一スキーマ）
 - **非同期処理**: Kotlin Coroutines & Flow
 - **品質・テスト**: Spotless (ktlint), Android Lint, JUnit4, Robolectric, Compose UI Test
-- **CI**: GitHub Actions（フォーマット検証・Android Lint・単体テスト・デバッグ APK ビルド）
+- **CI**: GitHub Actions（フォーマット検証・Android Lint・単体テスト・デバッグ APK / Windows デスクトップビルド）
 
 ---
 
@@ -75,11 +77,15 @@ cd aidomari
 # フォーマットの適用
 ./gradlew spotlessApply
 
-# 単体テストの実行（共通モジュール＋アプリ）
-./gradlew :shared-core:test testDebugUnitTest
+# 単体テストの実行（共通・デスクトップ・Android）
+./gradlew :shared-core:test :desktopApp:test testDebugUnitTest
 
-# デバッグ APK のビルド
+# デスクトップアプリを起動（PC ローカル動作確認）
+./gradlew :desktopApp:run
+
+# デバッグ APK / デスクトップ配布パッケージのビルド
 ./gradlew assembleDebug
+./gradlew :desktopApp:createDistributable
 ```
 
 ---

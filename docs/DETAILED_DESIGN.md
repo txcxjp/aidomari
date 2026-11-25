@@ -19,19 +19,31 @@
 
 ## 1. 全体構成とパッケージ一覧
 
-システム全体は `:shared-core`（純粋 Kotlin/JVM 層）と `:app`（Android UI / Room / OS連携層）に分かれています。
+システム全体は `:shared-core`（純粋 Kotlin/JVM 層）、`:shared-ui`（Android / Desktop 共通の Compose UI・ViewModel 層）、`:app`（Android 固有機能・Room DB 層）、`:desktopApp`（Desktop JVM 固有機能・SQLite DB 層）に分かれています。
 
 ```mermaid
 graph TD
-    subgraph UI ["UI Layer (:app)"]
-        Activity[MainActivity] --> NavHost[AidomariNavHost]
-        NavHost --> SubjectScreen[SubjectListScreen]
+    subgraph SharedUI ["Shared UI & ViewModel (:shared-ui)"]
+        NavHost[SharedAidomariNavHost] --> SubjectScreen[SharedSubjectListScreen]
         NavHost --> DeckScreen[DeckListScreen]
         NavHost --> StudyScreen[StudyScreen]
         NavHost --> CardListScreen[CardListScreen]
         NavHost --> DigestScreen[BrowsingDigestScreen]
         NavHost --> CalendarScreen[CalendarScreen]
-        NavHost --> SugorokuScreen[SugorokuMapScreen]
+    end
+
+    subgraph AndroidApp ["Android Entry & Extras (:app)"]
+        Activity[MainActivity] --> AndroidNavHost[AidomariNavHost]
+        AndroidNavHost --> NavHost
+        AndroidNavHost --> SugorokuScreen[SugorokuMapScreen]
+        WordsRepoImpl[WordsRepositoryImpl / RoomDB v10]
+        ArticleRepoImpl[SourceArticleRepositoryImpl]
+    end
+
+    subgraph DesktopApp ["Desktop Entry (:desktopApp)"]
+        DesktopMain[Main.kt / Window] --> NavHost
+        DesktopWordsRepo[DesktopWordsRepository / SQLite]
+        DesktopArticleRepo[DesktopSourceArticleRepository]
     end
 
     subgraph Shared ["Domain & Core (:shared-core)"]
@@ -43,16 +55,11 @@ graph TD
         Ingest[LocalIngestServer]
     end
 
-    subgraph Data ["Data Layer (:app)"]
-        WordsRepo --> WordsRepoImpl[WordsRepositoryImpl]
-        ArticleRepo --> ArticleRepoImpl[SourceArticleRepositoryImpl]
-        WordsRepoImpl --> AidomariDao[AidomariDao]
-        ArticleRepoImpl --> SourceArticleDao[SourceArticleDao]
-        AidomariDao --> RoomDB[(AidomariDatabase v10)]
-        SourceArticleDao --> RoomDB
-    end
-
-    UI --> Shared
+    SharedUI --> Shared
+    WordsRepoImpl --> WordsRepo
+    ArticleRepoImpl --> ArticleRepo
+    DesktopWordsRepo --> WordsRepo
+    DesktopArticleRepo --> ArticleRepo
 ```
 
 ### 主なパッケージ構成
@@ -60,18 +67,26 @@ graph TD
   - `domain/model/`: `Subject`, `Deck`, `StudyDirection`, `Card`, `StudySession`, `CardStudyLog`, `DailyStudyStats`, `PastDayDeck`, `SugorokuNode`, `SugorokuProgress`, `ai/*`, `article/*`
   - `domain/repository/`: `WordsRepository`, `SourceArticleRepository`
   - `domain/util/`: `CardSnoozeCalculator`, `PastDayDecksCalculator`, `StudyStatsCalculator`, `SugorokuWalkingCalculator`
-  - `core/ai/`: `GeminiApiClient`, `GeminiConfig`, `HttpTransport`, `DefaultHttpsUrlConnectionTransport`, `CardGenerationNotificationController`
+  - `core/ai/`: `GeminiApiClient`, `GeminiConfig`, `GeminiConfigStore`, `HttpTransport`, `DefaultHttpsUrlConnectionTransport`, `CardGenerationNotificationController`
+  - `core/debug/`: `SugorokuSpeedProvider`
   - `core/importer/`: `WordsDataImporter`, `WordsDataExporter`
   - `core/keyword/`: `KeywordEngine`
   - `core/privacy/`: `PrivacyFilter`
   - `core/server/`: `LocalIngestServer`, `LocalIngestServerManager`
   - `core/share/`: `ShareArticleFetcher`, `ShareIntentParser`
-  - `core/tts/`: `TtsTextSanitizer`
+  - `core/tts/`: `TtsSpeaker`, `TtsTextSanitizer`
+- **`:shared-ui` (`shared-ui/src/{commonMain,androidMain,desktopMain}/kotlin/com/aidomari/app/`)**:
+  - `ui/`: 共有 ViewModel・Compose 画面（`subject`, `deck`, `card`, `study`, `digest`, `calendar`, `settings`, `theme`, `navigation`, `components`, `preview`）
+  - `ui/platform/`: `PlatformBackHandler`, `PlatformSystemBarsEffect`, `PlatformVolumeKeyEffect`, `rememberPlatformJsonFileHandler` 等の `expect` / `actual` 抽象
 - **`:app` (`app/src/main/java/com/aidomari/app/`)**:
   - `core/database/`: `AidomariDatabase`, `AidomariDao`, `SourceArticleDao`, `entity/*`, `WordsRepositoryImpl`, `SourceArticleRepositoryImpl`, `SampleData`
-  - `core/lockscreen/`, `core/input/`, `core/tts/`, `core/ai/CardGenerationService`, `core/ai/GeminiPreferences`, `core/debug/`
+  - `core/lockscreen/`, `core/tts/TtsManager`, `core/ai/CardGenerationService`, `core/ai/GeminiPreferences`, `core/debug/SugorokuDebugPreferences`
   - `domain/model/`: Android リソース・アセットに紐づくすごろく用モデル（`Act1TravelRoute`, `HokkaidoRoadNetwork`, `RoadsideLandmark`, `TravelerCompanion` 等）
-  - `ui/`: 各画面と共通コンポーネント（`StudyDirectionSelector` 等）
+  - `ui/sugoroku/`, `ui/lockscreen/`, `ui/share/`, `AidomariNavHost`, `SubjectListScreen`（Android 用ラッパー）
+- **`:desktopApp` (`desktopApp/src/main/kotlin/com/aidomari/app/desktop/`)**:
+  - `Main.kt`: Compose Desktop ウィンドウ・`LocalIngestServerManager` 起動
+  - `DesktopDatabase`, `DesktopWordsRepository`, `DesktopSourceArticleRepository`: `sqlite-jdbc` 永続化
+  - `DesktopConfigStores`, `DesktopTtsSpeaker`, `DesktopAppDirs`: 設定保存・OS別データパス（Windows `%APPDATA%\Aidomari` 等）・読み上げ
 
 ---
 

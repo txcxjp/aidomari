@@ -6,13 +6,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class GeminiPreferences(context: Context) {
+class GeminiPreferences(context: Context) : GeminiConfigStore {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val _config = MutableStateFlow(loadConfig())
-    val config: StateFlow<GeminiConfig> = _config.asStateFlow()
+    override val config: StateFlow<GeminiConfig> = _config.asStateFlow()
 
     private fun loadConfig(): GeminiConfig {
         val key = prefs.getString(KEY_API_KEY, "") ?: ""
@@ -22,7 +22,7 @@ class GeminiPreferences(context: Context) {
         return GeminiConfig(apiKey = key, modelName = model, temperature = temp)
     }
 
-    fun updateConfig(config: GeminiConfig) {
+    override fun updateConfig(config: GeminiConfig) {
         val trimmedKey = config.apiKey.trim()
         val effectiveModel = config.modelName.trim().ifBlank { GeminiConfig.DEFAULT_MODEL }
         prefs.edit()

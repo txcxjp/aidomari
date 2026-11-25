@@ -4,7 +4,7 @@
 
 複数教科の管理、デッキのパート分割、関連項目リンク、音量キー操作、学習セッションの保存、学習ログ、Web記事からの自動デッキ作成といった要素が互いに噛み合うよう、ドメイン層とプラットフォーム固有層を分けて構成しています。
 
-PC 版対応（Compose Multiplatform Desktop）に向けた段階的整理として、Android API に依存しないコア機能は `:shared-core` モジュールへ分離しています。
+PC 版対応（Compose Multiplatform Desktop）に向けて、`:shared-core`（ドメイン・純粋ロジック）と `:shared-ui`（共有 Compose UI / ViewModel）を分離し、`:app`（Android）と `:desktopApp`（Windows / デスクトップ JVM）の両方から参照する構成としています。すごろくマップおよびロック画面学習は引き続き `:app` 側で扱います。
 
 ### 名称「相泊（Aidomari）」について
 - 知床半島の道道終点にある地名「相泊」から採っています。
@@ -20,9 +20,15 @@ aidomari/
 │                  # domain（モデル・リポジトリIF・計算ロジック）、Gemini APIクライアント、
 │                  # インポーター/エクスポーター、KeywordEngine、PrivacyFilter、
 │                  # LocalIngestServer、ShareArticleFetcher、TtsTextSanitizer
+├── shared-ui/     # Compose Multiplatform 共有 UI / ViewModel モジュール (Android + Desktop)
+│                  # 教科・デッキ・カード管理、学習画面（キーボード操作含む）、
+│                  # 自動デッキ作成画面、カレンダー、テーマ設定、SharedAidomariNavHost
 ├── app/           # Android アプリモジュール
-│                  # Jetpack Compose UI、ViewModel、Room Database、TTS、
-│                  # ロック画面学習、Android共有インテント、すごろくマップ描画
+│                  # Room Database、Android TTS、ロック画面学習、Android共有インテント、
+│                  # すごろくマップ描画、Android 用画面ラッパー
+├── desktopApp/    # デスクトップ（Windows 想定）JVM アプリモジュール
+│                  # SQLite (sqlite-jdbc) リポジトリ、Preferences 設定保存、Desktop TTS、
+│                  # LocalIngestServer 起動エントリポイント
 └── extensions/
     └── aidomari-browser/  # Chrome / Firefox 向け記事送信 WebExtension
 ```

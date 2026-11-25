@@ -7,7 +7,8 @@ import java.util.Locale
 open class TtsManager(
     context: Context? = null,
     private val initTts: Boolean = true,
-) : TextToSpeech.OnInitListener {
+) : TextToSpeech.OnInitListener,
+    TtsSpeaker {
 
     private var tts: TextToSpeech? = if (context != null && initTts) {
         TextToSpeech(context.applicationContext, this)
@@ -25,7 +26,7 @@ open class TtsManager(
         }
     }
 
-    fun setSpeechRate(rate: Float) {
+    override fun setSpeechRate(rate: Float) {
         currentSpeechRate = rate.coerceIn(0.5f, 2.0f)
         if (isInitialized) {
             tts?.setSpeechRate(currentSpeechRate)
@@ -36,7 +37,7 @@ open class TtsManager(
 
     fun isReady(): Boolean = isInitialized
 
-    fun speak(text: String, languageTag: String = "auto", speechRate: Float? = null) {
+    override fun speak(text: String, languageTag: String, speechRate: Float?) {
         if (speechRate != null) {
             setSpeechRate(speechRate)
         }
@@ -48,11 +49,11 @@ open class TtsManager(
         tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, "utterance_${System.currentTimeMillis()}")
     }
 
-    fun stop() {
+    override fun stop() {
         tts?.stop()
     }
 
-    fun shutdown() {
+    override fun shutdown() {
         tts?.stop()
         tts?.shutdown()
         tts = null

@@ -11,7 +11,9 @@
 - **Gradle**: 8.10.2（Gradle Wrapper 同梱）
 - **モジュール**:
   - `:shared-core`（純粋 Kotlin / JVM ライブラリ）
+  - `:shared-ui`（Compose Multiplatform 共有 UI / ViewModel）
   - `:app`（Android アプリ）
+  - `:desktopApp`（デスクトップ JVM アプリ）
 
 ---
 
@@ -25,11 +27,12 @@
 ```
 
 ### 単体テストの実行
-共通モジュールと Android アプリの両方を実行する場合：
+共通モジュール、デスクトップ、Android アプリを実行する場合：
 ```bash
-./gradlew :shared-core:test testDebugUnitTest
+./gradlew :shared-core:test :desktopApp:test testDebugUnitTest
 ```
 - `:shared-core` の結果: `shared-core/build/reports/tests/test/index.html`
+- `:desktopApp` の結果: `desktopApp/build/reports/tests/test/index.html`
 - `:app` の結果: `app/build/reports/tests/testDebugUnitTest/index.html`
 
 ### Android Lint の実行
@@ -38,11 +41,14 @@
 ```
 解析結果は `app/build/reports/lint-results-debug.html` に出力されます。
 
-### デバッグ APK のビルド
+### デバッグ APK / デスクトップアプリの起動・パッケージ作成
 ```bash
 ./gradlew assembleDebug
+./gradlew :desktopApp:run
+./gradlew :desktopApp:createDistributable
 ```
-出力先: `app/build/outputs/apk/debug/app-debug.apk`
+- APK 出力先: `app/build/outputs/apk/debug/app-debug.apk`
+- Desktop 配布イメージ: `desktopApp/build/compose/binaries/main/app/`
 
 ---
 
@@ -53,15 +59,18 @@
 ```mermaid
 flowchart TD
     Trigger["push / pull_request"] --> Quality["code-quality\n- gradle spotlessCheck\n- gradle lintDebug"]
-    Trigger --> Test["unit-test\n- gradle :shared-core:test testDebugUnitTest"]
-    Quality --> Build["build-apk\n- gradle assembleDebug"]
-    Test --> Build
+    Trigger --> Test["unit-test\n- gradle :shared-core:test :desktopApp:test testDebugUnitTest"]
+    Quality --> BuildApk["build-apk\n- gradle assembleDebug"]
+    Test --> BuildApk
+    Quality --> BuildWin["build-desktop-windows (windows-latest)\n- gradle :desktopApp:createDistributable"]
+    Test --> BuildWin
 ```
 
 主なアップロード成果物（Artifacts）：
 - `aidomari-debug-apk`: `app/build/outputs/apk/debug/app-debug.apk`
+- `aidomari-windows-desktop`: `desktopApp/build/compose/binaries/main/app/`
 - `lint-report`: `app/build/reports/lint-results-debug.html`
-- `test-results`: `app/build/reports/tests/testDebugUnitTest/`
+- `test-results`: 各モジュールのテストレポート (`shared-core`, `desktopApp`, `app`)
 
 ---
 
@@ -82,6 +91,7 @@ flowchart TD
 ## 6. テスト方針
 
 - **`:shared-core` の純粋 JVM テスト**: ドメインモデル、計算ロジック、Gemini API パーサ・プロンプト構築、`WordsDataImporter` / `Exporter`、`KeywordEngine`、`ShareArticleFetcher`、`PrivacyFilter` などは Android SDK や Robolectric に依存せず高速に検証します。
+- **`:desktopApp` の永続化テスト**: `sqlite-jdbc` を用いた `DesktopWordsRepository` / `DesktopSourceArticleRepository` の CRUD・カスケード削除・検索・スヌーズ・`LocalIngestServer` 受信連携を JVM 単体テストで検証します。
 - **`:app` の単体テスト・UI テスト**: Room DAO（In-Memory SQLite）、ViewModel、Compose 画面・ダイアログ、統合シナリオテスト（`app/src/test/java/com/aidomari/app/scenario/`）を実行します。
 - **統合シナリオテストの扱い**: 新機能の追加や画面フロー・DB スキーマに関わる変更時は、`FakeRepository` だけの検証にとどまらず、実 SQLite（In-Memory Room）を含めた整合性確認を追加・更新します。
 
