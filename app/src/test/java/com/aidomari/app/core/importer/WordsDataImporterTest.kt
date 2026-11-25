@@ -2,6 +2,7 @@ package com.aidomari.app.core.importer
 
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
@@ -48,8 +49,8 @@ class WordsDataImporterTest {
 
         assertEquals("英単語ブック1", fakeRepository.decks.first().name)
         assertEquals(2, fakeRepository.cards.size)
-        assertEquals("apple", fakeRepository.cards[0].front)
-        assertEquals("りんご", fakeRepository.cards[0].back)
+        assertEquals("apple", fakeRepository.cards[0].term)
+        assertEquals("りんご", fakeRepository.cards[0].description)
     }
 
     @Test
@@ -95,12 +96,13 @@ class WordsDataImporterTest {
         val deck = fakeRepository.decks.first()
         assertEquals(subject.id, deck.subjectId)
         assertEquals("ターゲット1900", deck.name)
+        assertEquals(StudyDirection.TERM_TO_DESCRIPTION, deck.studyDirection)
         assertTrue(deck.shuffleMode)
         assertTrue(deck.autoContinue)
 
         val card = fakeRepository.cards.first()
-        assertEquals("concern", card.front)
-        assertEquals("関係・関心", card.back)
+        assertEquals("concern", card.term)
+        assertEquals("関係・関心", card.description)
         assertEquals("メモ問題", card.userQuestion)
         assertEquals("補足メモ", card.userSupplement)
         assertTrue(card.isBookmarked) // bookmark_id > 0
@@ -157,11 +159,11 @@ class WordsDataImporterTest {
         assertTrue(fakeRepository.cards.all { it.deckId == deck.id })
         assertEquals(
             listOf("concern", "deliver", "establish", "feature"),
-            fakeRepository.cards.map { it.front },
+            fakeRepository.cards.map { it.term },
         )
         assertEquals(
             listOf("関係・関心", "配達する", "設立する", "特徴"),
-            fakeRepository.cards.map { it.back },
+            fakeRepository.cards.map { it.description },
         )
         assertEquals(listOf(0, 1, 2, 3), fakeRepository.cards.map { it.orderIndex })
     }
@@ -249,7 +251,7 @@ class WordsDataImporterTest {
         assertTrue(fakeRepository.cards.all { it.deckId == deck.id })
         assertEquals(
             listOf("apple", "banana", "cherry", "date"),
-            fakeRepository.cards.map { it.front },
+            fakeRepository.cards.map { it.term },
         )
         assertEquals(listOf(0, 1, 2, 3), fakeRepository.cards.map { it.orderIndex })
     }
@@ -287,7 +289,46 @@ class WordsDataImporterTest {
         assertEquals("世界史", fakeRepository.subjects.first().name)
         assertEquals("ja-JP", fakeRepository.subjects.first().ttsLanguage)
         assertEquals("古代オリエント", fakeRepository.decks.first().name)
-        assertEquals("ハンムラビ法典", fakeRepository.cards.first().front)
+        assertEquals("ハンムラビ法典", fakeRepository.cards.first().term)
+    }
+
+    @Test
+    fun importModernFormat_supportsStudyDirectionTermDescriptionAndLegacyReverseMode() = runBlocking {
+        val json = """
+            {
+              "subjects": [
+                {
+                  "name": "歴史",
+                  "decks": [
+                    {
+                      "name": "新形式",
+                      "studyDirection": "DESCRIPTION_TO_TERM",
+                      "cards": [
+                        { "term": "墾田永年私財法", "description": "743年の法令" }
+                      ]
+                    },
+                    {
+                      "name": "旧形式",
+                      "reverseMode": true,
+                      "cards": [
+                        { "front": "大化の改新", "back": "645年の改革" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val result = importer.importJson(json)
+        assertTrue(result.isSuccess)
+        assertEquals(2, fakeRepository.decks.size)
+        assertEquals(StudyDirection.DESCRIPTION_TO_TERM, fakeRepository.decks[0].studyDirection)
+        assertEquals(StudyDirection.DESCRIPTION_TO_TERM, fakeRepository.decks[1].studyDirection)
+        assertEquals("墾田永年私財法", fakeRepository.cards[0].term)
+        assertEquals("743年の法令", fakeRepository.cards[0].description)
+        assertEquals("大化の改新", fakeRepository.cards[1].term)
+        assertEquals("645年の改革", fakeRepository.cards[1].description)
     }
 
     // In-memory fake repository for testing

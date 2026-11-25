@@ -186,7 +186,7 @@ fun KeywordBottomSheet(
             AlertDialog(
                 onDismissRequest = { cardToDelete = null },
                 title = { Text(text = "カードを削除") },
-                text = { Text(text = "「${target.front}」を削除しますか？\nこの操作は取り消せません。") },
+                text = { Text(text = "「${target.term}」を削除しますか？\nこの操作は取り消せません。") },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -292,7 +292,7 @@ fun KeywordSheetContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = currentCard.front,
+                text = currentCard.term,
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 28.sp,
@@ -319,7 +319,7 @@ fun KeywordSheetContent(
                     }
                 }
 
-                IconButton(onClick = { onSpeak(currentCard.front) }) {
+                IconButton(onClick = { onSpeak(currentCard.term) }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = "Speak",
@@ -450,7 +450,7 @@ fun KeywordSheetContent(
                 .padding(vertical = 8.dp),
         ) {
             KeywordText(
-                text = currentCard.back,
+                text = currentCard.description,
                 candidateCards = allSubjectCards,
                 currentCardId = currentCard.id,
                 onKeywordClick = onKeywordClick,

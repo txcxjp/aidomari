@@ -1,5 +1,6 @@
 package com.aidomari.app.core.importer
 
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
@@ -19,6 +20,7 @@ data class ExportDeck(
     val splitSize: Int = 50,
     val autoContinue: Boolean = false,
     val shuffleMode: Boolean = false,
+    val studyDirection: String = StudyDirection.TERM_TO_DESCRIPTION.name,
     val reverseMode: Boolean = false,
     val autoSpeak: Boolean = false,
     val speechRate: Float = 1.0f,
@@ -27,8 +29,8 @@ data class ExportDeck(
 
 @Serializable
 data class ExportCard(
-    val front: String,
-    val back: String,
+    val term: String,
+    val description: String,
     val userQuestion: String = "",
     val userSupplement: String = "",
     val isBookmarked: Boolean = false,
@@ -57,8 +59,8 @@ class WordsDataExporter(
                 val cards = repository.getCardsByDeckSync(deck.id)
                 val exportCards = cards.map { card ->
                     ExportCard(
-                        front = card.front,
-                        back = card.back,
+                        term = card.term,
+                        description = card.description,
                         userQuestion = card.userQuestion,
                         userSupplement = card.userSupplement,
                         isBookmarked = card.isBookmarked,
@@ -69,7 +71,8 @@ class WordsDataExporter(
                     splitSize = deck.splitSize,
                     autoContinue = deck.autoContinue,
                     shuffleMode = deck.shuffleMode,
-                    reverseMode = deck.reverseMode,
+                    studyDirection = deck.studyDirection.name,
+                    reverseMode = deck.studyDirection == StudyDirection.DESCRIPTION_TO_TERM,
                     autoSpeak = deck.autoSpeak,
                     speechRate = deck.speechRate,
                     cards = exportCards,

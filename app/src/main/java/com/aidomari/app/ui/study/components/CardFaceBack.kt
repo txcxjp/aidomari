@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aidomari.app.core.keyword.KeywordEngine
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.ui.preview.PreviewSampleData
 import com.aidomari.app.ui.theme.AidomariTheme
 import com.aidomari.app.ui.theme.ThemePreviews
@@ -52,11 +53,12 @@ fun CardFaceBack(
     modifier: Modifier = Modifier,
     candidateCards: List<DomainCard> = emptyList(),
     onKeywordClick: (DomainCard) -> Unit = {},
-    isReverse: Boolean = false,
+    studyDirection: StudyDirection = StudyDirection.TERM_TO_DESCRIPTION,
     onSpeak: (() -> Unit)? = null,
     onEditClick: (() -> Unit)? = null,
     onSnooze: (() -> Unit)? = null,
 ) {
+    val isDescriptionFirst = studyDirection == StudyDirection.DESCRIPTION_TO_TERM
     val scrollState = rememberScrollState()
     val keywordEngine = remember { KeywordEngine() }
     val relatedCards = remember(card, candidateCards) {
@@ -96,44 +98,65 @@ fun CardFaceBack(
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 40.dp)
+                .padding(start = 8.dp, end = 8.dp, top = 44.dp, bottom = 56.dp)
                 .verticalScroll(scrollState, enabled = scrollState.maxValue > 0),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            if (isReverse) {
-                // In reverse mode, answer is the target word (card.front)
+            if (isDescriptionFirst) {
+                val (termFontSize, termLineHeight) = if (card.term.length <= 16) {
+                    30.sp to 38.sp
+                } else {
+                    24.sp to 32.sp
+                }
+                val (secondaryFontSize, secondaryLineHeight) = if (card.description.length <= 60) {
+                    16.sp to 24.sp
+                } else {
+                    14.5.sp to 22.sp
+                }
+                val secondaryTextAlign = if (card.description.length > 60) TextAlign.Start else TextAlign.Center
+                // When description is shown first, answer is card.term
                 Text(
-                    text = card.front,
+                    text = card.term,
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 30.sp,
+                        fontSize = termFontSize,
+                        lineHeight = termLineHeight,
                     ),
                     textAlign = TextAlign.Center,
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                // Also display meaning and keyword links
+                // Also display description and keyword links
                 KeywordText(
-                    text = card.back,
+                    text = card.description,
                     candidateCards = candidateCards,
                     currentCardId = card.id,
                     onKeywordClick = onKeywordClick,
                     style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = secondaryFontSize,
+                        lineHeight = secondaryLineHeight,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     ),
-                    textAlign = TextAlign.Center,
+                    textAlign = secondaryTextAlign,
                 )
             } else {
+                val (descFontSize, descLineHeight) = when {
+                    card.description.length <= 24 -> 24.sp to 32.sp
+                    card.description.length <= 60 -> 20.sp to 28.sp
+                    else -> 17.sp to 25.sp
+                }
+                val descTextAlign = if (card.description.length > 60) TextAlign.Start else TextAlign.Center
                 KeywordText(
-                    text = card.back,
+                    text = card.description,
                     candidateCards = candidateCards,
                     currentCardId = card.id,
                     onKeywordClick = onKeywordClick,
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
+                        fontSize = descFontSize,
+                        lineHeight = descLineHeight,
                     ),
-                    textAlign = TextAlign.Center,
+                    textAlign = descTextAlign,
                 )
             }
 
@@ -246,7 +269,7 @@ private fun CardFaceBackPreview() {
             onRetry = {},
             candidateCards = PreviewSampleData.sampleCards,
             onKeywordClick = {},
-            isReverse = false,
+            studyDirection = StudyDirection.TERM_TO_DESCRIPTION,
             onSpeak = {},
             onEditClick = {},
         )

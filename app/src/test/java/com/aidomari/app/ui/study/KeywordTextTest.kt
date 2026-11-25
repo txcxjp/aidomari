@@ -21,15 +21,15 @@ class KeywordTextTest {
     private val cardApple = Card(
         id = "c1",
         deckId = "d1",
-        front = "apple",
-        back = "A sweet red fruit",
+        term = "apple",
+        description = "A sweet red fruit",
     )
 
     private val cardFruit = Card(
         id = "c2",
         deckId = "d1",
-        front = "fruit",
-        back = "Plant product containing seeds",
+        term = "fruit",
+        description = "Plant product containing seeds",
     )
 
     @Test

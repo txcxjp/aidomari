@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.aidomari.app.domain.model.Card
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.ui.study.components.CardFaceBack
 import com.aidomari.app.ui.study.components.CardFaceFront
 import org.junit.Assert.assertEquals
@@ -26,8 +27,8 @@ class CardFaceReverseTest {
     private val testCard = Card(
         id = "c1",
         deckId = "d1",
-        front = "Perspective",
-        back = "視点・観点",
+        term = "Perspective",
+        description = "視点・観点",
         userQuestion = "How do you use it?",
         userSupplement = "Point of view",
     )
@@ -39,7 +40,7 @@ class CardFaceReverseTest {
             CardFaceFront(
                 card = testCard,
                 onSpeak = { spoken = true },
-                isReverse = false,
+                studyDirection = StudyDirection.TERM_TO_DESCRIPTION,
             )
         }
 
@@ -56,7 +57,7 @@ class CardFaceReverseTest {
             CardFaceFront(
                 card = testCard,
                 onSpeak = { spoken = true },
-                isReverse = true,
+                studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
             )
         }
 
@@ -77,7 +78,7 @@ class CardFaceReverseTest {
                 card = testCard,
                 onDone = { doneClicked = true },
                 onRetry = { retryClicked = true },
-                isReverse = true,
+                studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
                 onSpeak = { spoken = true },
             )
         }
@@ -103,7 +104,7 @@ class CardFaceReverseTest {
                 card = testCard,
                 onDone = {},
                 onRetry = {},
-                isReverse = false,
+                studyDirection = StudyDirection.TERM_TO_DESCRIPTION,
                 onSpeak = { spoken = true },
             )
         }
@@ -118,8 +119,8 @@ class CardFaceReverseTest {
         val relatedCard = Card(
             id = "c2",
             deckId = "d1",
-            front = "Prospect",
-            back = "見通し・展望 (shares root with perspective)",
+            term = "Prospect",
+            description = "見通し・展望 (shares root with perspective)",
         )
         var clickedCard: Card? = null
 
@@ -137,5 +138,55 @@ class CardFaceReverseTest {
         composeTestRule.onNodeWithText("関連項目 (1)").performClick()
         composeTestRule.onNodeWithText("Prospect").assertIsDisplayed().performClick()
         assertEquals("c2", clickedCard?.id)
+    }
+
+    @Test
+    fun cardFace_longDescriptionInDescriptionFirstDirection_displaysCleanlyOnBothFaces() {
+        val longDescription =
+            "ある選択を行ったことで断念せざるを得なかった他の代替選択肢のうち、最も価値が高かったものから得られたはずの最大利益。"
+        val longCard = Card(
+            id = "c-long",
+            deckId = "d1",
+            term = "機会費用",
+            description = longDescription,
+            userSupplement = "意思決定の比較評価において重要な概念。",
+        )
+
+        composeTestRule.setContent {
+            CardFaceFront(
+                card = longCard,
+                onSpeak = {},
+                studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
+            )
+        }
+        composeTestRule.onNodeWithText(longDescription).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Speak").assertIsDisplayed()
+    }
+
+    @Test
+    fun cardFaceBack_longDescriptionInDescriptionFirstDirection_displaysAnswerAndActions() {
+        val longDescription =
+            "ある選択を行ったことで断念せざるを得なかった他の代替選択肢のうち、最も価値が高かったものから得られたはずの最大利益。"
+        val longCard = Card(
+            id = "c-long-back",
+            deckId = "d1",
+            term = "機会費用",
+            description = longDescription,
+            userSupplement = "意思決定の比較評価において重要な概念。",
+        )
+
+        composeTestRule.setContent {
+            CardFaceBack(
+                card = longCard,
+                onDone = {},
+                onRetry = {},
+                studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
+                onSpeak = {},
+            )
+        }
+        composeTestRule.onNodeWithText("機会費用").assertIsDisplayed()
+        composeTestRule.onNodeWithText(longDescription).assertIsDisplayed()
+        composeTestRule.onNodeWithText("覚えた").assertIsDisplayed()
+        composeTestRule.onNodeWithText("もう一度").assertIsDisplayed()
     }
 }

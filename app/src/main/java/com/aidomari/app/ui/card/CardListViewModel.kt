@@ -59,8 +59,8 @@ class CardListViewModel(
         val trimmed = query.trim().lowercase()
         if (trimmed.isEmpty()) return cards
         return cards.filter { card ->
-            card.front.lowercase().contains(trimmed) ||
-                card.back.lowercase().contains(trimmed) ||
+            card.term.lowercase().contains(trimmed) ||
+                card.description.lowercase().contains(trimmed) ||
                 card.userQuestion.lowercase().contains(trimmed) ||
                 card.userSupplement.lowercase().contains(trimmed)
         }
@@ -77,23 +77,23 @@ class CardListViewModel(
 
     fun saveCard(
         cardId: String?,
-        front: String,
-        back: String,
+        term: String,
+        description: String,
         userQuestion: String = "",
         userSupplement: String = "",
     ) {
-        val trimmedFront = front.trim()
-        val trimmedBack = back.trim()
+        val trimmedTerm = term.trim()
+        val trimmedDescription = description.trim()
         val trimmedQuestion = userQuestion.trim()
         val trimmedSupplement = userSupplement.trim()
 
-        if (trimmedFront.isEmpty() || trimmedBack.isEmpty()) return
+        if (trimmedTerm.isEmpty() || trimmedDescription.isEmpty()) return
 
         val existingCard = _uiState.value.cards.find { it.id == cardId }
         val cardToSave = if (existingCard != null) {
             existingCard.copy(
-                front = trimmedFront,
-                back = trimmedBack,
+                term = trimmedTerm,
+                description = trimmedDescription,
                 userQuestion = trimmedQuestion,
                 userSupplement = trimmedSupplement,
             )
@@ -101,8 +101,8 @@ class CardListViewModel(
             Card(
                 id = cardId ?: UUID.randomUUID().toString(),
                 deckId = deckId,
-                front = trimmedFront,
-                back = trimmedBack,
+                term = trimmedTerm,
+                description = trimmedDescription,
                 userQuestion = trimmedQuestion,
                 userSupplement = trimmedSupplement,
                 orderIndex = _uiState.value.cards.size,

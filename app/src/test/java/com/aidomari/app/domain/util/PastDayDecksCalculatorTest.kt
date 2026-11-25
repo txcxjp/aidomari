@@ -18,8 +18,8 @@ class PastDayDecksCalculatorTest {
     private fun createCard(id: String): Card = Card(
         id = id,
         deckId = "deck-1",
-        front = "front-$id",
-        back = "back-$id",
+        term = "term-$id",
+        description = "description-$id",
     )
 
     private fun epochMillisFor(date: LocalDate, hour: Int = 12): Long =

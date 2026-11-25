@@ -20,8 +20,8 @@ class RelatedItemsSectionTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val card1 = Card(id = "c1", deckId = "d1", front = "Eloquent", back = "雄弁な")
-    private val card2 = Card(id = "c2", deckId = "d1", front = "Eloquence", back = "雄弁さ")
+    private val card1 = Card(id = "c1", deckId = "d1", term = "Eloquent", description = "雄弁な")
+    private val card2 = Card(id = "c2", deckId = "d1", term = "Eloquence", description = "雄弁さ")
 
     @Test
     fun relatedItemsSection_rendersNothingWhenListEmpty() {

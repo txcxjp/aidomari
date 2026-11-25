@@ -6,6 +6,7 @@ import com.aidomari.app.core.lockscreen.LockScreenPreferences
 import com.aidomari.app.core.lockscreen.LockScreenTarget
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.repository.WordsRepository
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +61,7 @@ class LockScreenStudyViewModelTest {
     fun loadRandomCard_whenCardsExist_populatesCardAndLanguage() = runTest {
         val subject = Subject(id = "sub-1", name = "英語", ttsLanguage = "en-US")
         val deck = Deck(id = "deck-1", subjectId = "sub-1", name = "単語帳")
-        val card = Card(id = "card-1", deckId = "deck-1", front = "apple", back = "りんご")
+        val card = Card(id = "card-1", deckId = "deck-1", term = "apple", description = "りんご")
         fakeRepository.subjects.add(subject)
         fakeRepository.decks.add(deck)
         fakeRepository.cards.add(card)
@@ -71,17 +72,23 @@ class LockScreenStudyViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertNotNull(state.card)
-        assertEquals("apple", state.card?.front)
+        assertEquals("apple", state.card?.term)
         assertEquals("en-US", state.ttsLanguage)
-        assertFalse(state.isReverse)
+        assertEquals(StudyDirection.TERM_TO_DESCRIPTION, state.studyDirection)
         assertEquals(1.0f, state.speechRate, 0.01f)
     }
 
     @Test
-    fun loadRandomCard_whenDeckHasReverseMode_setsIsReverseTrue() = runTest {
+    fun loadRandomCard_whenDeckHasDescriptionToTermDirection_setsStudyDirectionCorrectly() = runTest {
         val subject = Subject(id = "sub-1", name = "英語", ttsLanguage = "en-US")
-        val deck = Deck(id = "deck-1", subjectId = "sub-1", name = "単語帳", reverseMode = true, speechRate = 1.25f)
-        val card = Card(id = "card-1", deckId = "deck-1", front = "apple", back = "りんご")
+        val deck = Deck(
+            id = "deck-1",
+            subjectId = "sub-1",
+            name = "単語帳",
+            studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
+            speechRate = 1.25f,
+        )
+        val card = Card(id = "card-1", deckId = "deck-1", term = "apple", description = "りんご")
         fakeRepository.subjects.add(subject)
         fakeRepository.decks.add(deck)
         fakeRepository.cards.add(card)
@@ -90,7 +97,7 @@ class LockScreenStudyViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertTrue(state.isReverse)
+        assertEquals(StudyDirection.DESCRIPTION_TO_TERM, state.studyDirection)
         assertEquals(1.25f, state.speechRate, 0.01f)
     }
 
@@ -125,7 +132,7 @@ class LockScreenStudyViewModelTest {
                 daysThreshold = 7,
             ),
         )
-        val daysAgoCard = Card(id = "card-days-ago", deckId = "deck-1", front = "old", back = "古い")
+        val daysAgoCard = Card(id = "card-days-ago", deckId = "deck-1", term = "old", description = "古い")
         fakeRepository.cardOverDaysAgo = daysAgoCard
 
         viewModel = LockScreenStudyViewModel(fakeRepository, preferences)
@@ -146,7 +153,7 @@ class LockScreenStudyViewModelTest {
             ),
         )
         fakeRepository.cardOverDaysAgo = null
-        val oldestCard = Card(id = "card-oldest", deckId = "deck-1", front = "oldest", back = "最古")
+        val oldestCard = Card(id = "card-oldest", deckId = "deck-1", term = "oldest", description = "最古")
         fakeRepository.oldestStudiedCard = oldestCard
 
         viewModel = LockScreenStudyViewModel(fakeRepository, preferences)
@@ -177,7 +184,7 @@ class LockScreenStudyViewModelTest {
 
     @Test
     fun markDone_recordsStudyLogWithTrueAndCallsCallback() = runTest {
-        val card = Card(id = "card-1", deckId = "deck-1", front = "test", back = "テスト")
+        val card = Card(id = "card-1", deckId = "deck-1", term = "test", description = "テスト")
         fakeRepository.cards.add(card)
 
         viewModel = LockScreenStudyViewModel(fakeRepository, preferences)
@@ -193,7 +200,7 @@ class LockScreenStudyViewModelTest {
 
     @Test
     fun markRetry_setsBookmarkAndCallsCallback() = runTest {
-        val card = Card(id = "card-1", deckId = "deck-1", front = "test", back = "テスト", isBookmarked = false)
+        val card = Card(id = "card-1", deckId = "deck-1", term = "test", description = "テスト", isBookmarked = false)
         fakeRepository.cards.add(card)
 
         viewModel = LockScreenStudyViewModel(fakeRepository, preferences)
@@ -211,8 +218,8 @@ class LockScreenStudyViewModelTest {
     @Test
     fun targetBookmarkOnly_requestsOnlyBookmarkedCard() = runTest {
         preferences.setTarget(LockScreenTarget.BOOKMARK_ONLY)
-        val normalCard = Card(id = "card-1", deckId = "deck-1", front = "normal", back = "通常", isBookmarked = false)
-        val bookmarkCard = Card(id = "card-2", deckId = "deck-1", front = "bookmark", back = "ブックマーク", isBookmarked = true)
+        val normalCard = Card(id = "card-1", deckId = "deck-1", term = "normal", description = "通常", isBookmarked = false)
+        val bookmarkCard = Card(id = "card-2", deckId = "deck-1", term = "bookmark", description = "ブックマーク", isBookmarked = true)
         fakeRepository.cards.addAll(listOf(normalCard, bookmarkCard))
 
         viewModel = LockScreenStudyViewModel(fakeRepository, preferences)

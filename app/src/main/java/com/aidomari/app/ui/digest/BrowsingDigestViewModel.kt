@@ -7,6 +7,7 @@ import com.aidomari.app.core.ai.GeminiApiClient
 import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.model.ai.CardExtractionMode
 import com.aidomari.app.domain.model.article.ArticleStatus
@@ -81,6 +82,10 @@ class BrowsingDigestViewModel(
         _uiState.update { it.copy(selectedMode = mode) }
     }
 
+    fun selectStudyDirection(direction: StudyDirection) {
+        _uiState.update { it.copy(selectedStudyDirection = direction) }
+    }
+
     fun updateNewDeckName(name: String) {
         _uiState.update { it.copy(newDeckName = name) }
     }
@@ -140,8 +145,8 @@ class BrowsingDigestViewModel(
                 onSuccess = { proposals ->
                     val candidates = proposals.map { proposal ->
                         CardCandidateItem(
-                            front = proposal.front,
-                            back = proposal.back,
+                            term = proposal.term,
+                            description = proposal.description,
                             supplement = proposal.userSupplement.ifBlank {
                                 "出典: ${proposal.sourceTitle}\n${proposal.sourceUrl}"
                             },
@@ -162,6 +167,7 @@ class BrowsingDigestViewModel(
                             reviewArticle = article,
                             candidateCards = candidates,
                             newDeckName = defaultDeckName,
+                            selectedStudyDirection = StudyDirection.DESCRIPTION_TO_TERM,
                             errorMessage = if (candidates.isEmpty()) "カード候補を作成できませんでした。本文が短すぎる可能性があります。" else null,
                         )
                     }
@@ -204,10 +210,10 @@ class BrowsingDigestViewModel(
         }
     }
 
-    fun updateCandidate(candidateId: String, front: String, back: String, supplement: String) {
+    fun updateCandidate(candidateId: String, term: String, description: String, supplement: String) {
         _uiState.update { state ->
             val updated = state.candidateCards.map {
-                if (it.id == candidateId) it.copy(front = front, back = back, supplement = supplement) else it
+                if (it.id == candidateId) it.copy(term = term, description = description, supplement = supplement) else it
             }
             state.copy(candidateCards = updated)
         }
@@ -226,7 +232,7 @@ class BrowsingDigestViewModel(
     fun saveSelectedCards(createNewSubjectIfNone: Boolean = true) {
         val state = _uiState.value
         val article = state.reviewArticle ?: return
-        val selectedCandidates = state.candidateCards.filter { it.isSelected && it.front.isNotBlank() && it.back.isNotBlank() }
+        val selectedCandidates = state.candidateCards.filter { it.isSelected && it.term.isNotBlank() && it.description.isNotBlank() }
 
         if (selectedCandidates.isEmpty()) {
             _uiState.update { it.copy(errorMessage = "登録するカードが選択されていません") }
@@ -265,6 +271,7 @@ class BrowsingDigestViewModel(
                     name = deckName,
                     splitSize = 50,
                     autoContinue = true,
+                    studyDirection = state.selectedStudyDirection,
                 )
                 wordsRepository.saveDeck(deck)
 
@@ -274,8 +281,8 @@ class BrowsingDigestViewModel(
                     Card(
                         id = UUID.randomUUID().toString(),
                         deckId = deckId,
-                        front = candidate.front.trim(),
-                        back = candidate.back.trim(),
+                        term = candidate.term.trim(),
+                        description = candidate.description.trim(),
                         userSupplement = candidate.supplement.trim(),
                         orderIndex = index,
                         createdAt = now,

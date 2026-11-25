@@ -40,8 +40,8 @@ class CardListViewModelTest {
     private val card1 = Card(
         id = "c1",
         deckId = "deck-1",
-        front = "apple",
-        back = "りんご",
+        term = "apple",
+        description = "りんご",
         userQuestion = "赤い果物は？",
         userSupplement = "青森名産",
         isBookmarked = false,
@@ -50,8 +50,8 @@ class CardListViewModelTest {
     private val card2 = Card(
         id = "c2",
         deckId = "deck-1",
-        front = "banana",
-        back = "バナナ",
+        term = "banana",
+        description = "バナナ",
         isBookmarked = true,
     )
 
@@ -86,23 +86,23 @@ class CardListViewModelTest {
     }
 
     @Test
-    fun onSearchQueryChanged_filtersCardsByFrontBackAndNotes() = runTest {
+    fun onSearchQueryChanged_filtersCardsByTermDescriptionAndNotes() = runTest {
         advanceUntilIdle()
 
-        // Filter by front
+        // Filter by term
         viewModel.onSearchQueryChanged("apple")
         assertEquals(1, viewModel.uiState.value.filteredCards.size)
-        assertEquals("apple", viewModel.uiState.value.filteredCards[0].front)
+        assertEquals("apple", viewModel.uiState.value.filteredCards[0].term)
 
-        // Filter by meaning
+        // Filter by description
         viewModel.onSearchQueryChanged("バナナ")
         assertEquals(1, viewModel.uiState.value.filteredCards.size)
-        assertEquals("banana", viewModel.uiState.value.filteredCards[0].front)
+        assertEquals("banana", viewModel.uiState.value.filteredCards[0].term)
 
         // Filter by supplement note
         viewModel.onSearchQueryChanged("青森")
         assertEquals(1, viewModel.uiState.value.filteredCards.size)
-        assertEquals("apple", viewModel.uiState.value.filteredCards[0].front)
+        assertEquals("apple", viewModel.uiState.value.filteredCards[0].term)
 
         // Clear filter
         viewModel.onSearchQueryChanged("")
@@ -131,8 +131,8 @@ class CardListViewModelTest {
 
         viewModel.saveCard(
             cardId = null,
-            front = "cherry",
-            back = "さくらんぼ",
+            term = "cherry",
+            description = "さくらんぼ",
             userQuestion = "山形名産は？",
             userSupplement = "佐藤錦",
         )
@@ -140,13 +140,13 @@ class CardListViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals(3, state.cards.size)
-        val addedCard = state.cards.find { it.front == "cherry" }
+        val addedCard = state.cards.find { it.term == "cherry" }
         assertNotNull(addedCard)
-        assertEquals("さくらんぼ", addedCard?.back)
+        assertEquals("さくらんぼ", addedCard?.description)
         assertEquals("山形名産は？", addedCard?.userQuestion)
         assertEquals("佐藤錦", addedCard?.userSupplement)
 
-        val repoCard = fakeRepository.cards.find { it.front == "cherry" }
+        val repoCard = fakeRepository.cards.find { it.term == "cherry" }
         assertNotNull(repoCard)
     }
 
@@ -156,8 +156,8 @@ class CardListViewModelTest {
 
         viewModel.saveCard(
             cardId = "c1",
-            front = "apple (updated)",
-            back = "リンゴ（更新）",
+            term = "apple (updated)",
+            description = "リンゴ（更新）",
             userQuestion = "Q",
             userSupplement = "Memo",
         )
@@ -166,11 +166,11 @@ class CardListViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(2, state.cards.size)
         val updatedCard = state.cards.find { it.id == "c1" }
-        assertEquals("apple (updated)", updatedCard?.front)
-        assertEquals("リンゴ（更新）", updatedCard?.back)
+        assertEquals("apple (updated)", updatedCard?.term)
+        assertEquals("リンゴ（更新）", updatedCard?.description)
 
         val repoCard = fakeRepository.cards.find { it.id == "c1" }
-        assertEquals("apple (updated)", repoCard?.front)
+        assertEquals("apple (updated)", repoCard?.term)
     }
 
     @Test
@@ -182,7 +182,7 @@ class CardListViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals(1, state.cards.size)
-        assertEquals("banana", state.cards[0].front)
+        assertEquals("banana", state.cards[0].term)
 
         assertFalse(fakeRepository.cards.any { it.id == "c1" })
     }
@@ -316,7 +316,7 @@ class CardListViewModelTest {
         override fun getBookmarkedCardsBySubject(subjectId: String): Flow<List<Card>> =
             flowOf(cards.filter { it.isBookmarked })
         override suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card> =
-            cards.filter { it.front.contains(query) }
+            cards.filter { it.term.contains(query) }
         override suspend fun getAllCardsInSubject(subjectId: String): List<Card> = cards.toList()
         override suspend fun getSession(deckId: String): StudySession? = null
         override suspend fun saveSession(session: StudySession) {
@@ -325,7 +325,7 @@ class CardListViewModelTest {
         }
         override suspend fun getOrCreateBookmarkDeck(subjectId: String): Deck = deck
         override suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card? =
-            cards.find { it.front.equals(frontWord, ignoreCase = true) }
+            cards.find { it.term.equals(frontWord, ignoreCase = true) }
         override fun getSessionFlow(deckId: String): Flow<StudySession?> = flowOf(null)
     }
 }

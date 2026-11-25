@@ -29,16 +29,16 @@ import com.aidomari.app.ui.theme.ThemePreviews
 fun CardEditDialog(
     card: Card?,
     onDismissRequest: () -> Unit,
-    onSave: (front: String, back: String, userQuestion: String, userSupplement: String) -> Unit,
+    onSave: (term: String, description: String, userQuestion: String, userSupplement: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isEditMode = card != null
-    var frontText by remember(card) { mutableStateOf(card?.front ?: "") }
-    var backText by remember(card) { mutableStateOf(card?.back ?: "") }
+    var termText by remember(card) { mutableStateOf(card?.term ?: "") }
+    var descriptionText by remember(card) { mutableStateOf(card?.description ?: "") }
     var questionText by remember(card) { mutableStateOf(card?.userQuestion ?: "") }
     var supplementText by remember(card) { mutableStateOf(card?.userSupplement ?: "") }
 
-    val canSave = frontText.isNotBlank() && backText.isNotBlank()
+    val canSave = termText.isNotBlank() && descriptionText.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -60,9 +60,9 @@ fun CardEditDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedTextField(
-                    value = frontText,
-                    onValueChange = { frontText = it },
-                    label = { Text("表面（単語・見出し語）*") },
+                    value = termText,
+                    onValueChange = { termText = it },
+                    label = { Text("ことば（単語・見出し語）*") },
                     placeholder = { Text("例: serendipity") },
                     singleLine = true,
                     modifier = Modifier
@@ -71,9 +71,9 @@ fun CardEditDialog(
                 )
 
                 OutlinedTextField(
-                    value = backText,
-                    onValueChange = { backText = it },
-                    label = { Text("裏面（意味・訳・解答）*") },
+                    value = descriptionText,
+                    onValueChange = { descriptionText = it },
+                    label = { Text("説明（意味・定義）*") },
                     placeholder = { Text("例: 思いがけない発見、幸運な偶然") },
                     minLines = 3,
                     maxLines = 6,
@@ -85,7 +85,7 @@ fun CardEditDialog(
                 OutlinedTextField(
                     value = questionText,
                     onValueChange = { questionText = it },
-                    label = { Text("表面の質問（自分用クイズ）") },
+                    label = { Text("出題時の質問（自分用クイズ）") },
                     placeholder = { Text("例: 派生語は？ / 類義語は？") },
                     singleLine = false,
                     maxLines = 3,
@@ -97,7 +97,7 @@ fun CardEditDialog(
                 OutlinedTextField(
                     value = supplementText,
                     onValueChange = { supplementText = it },
-                    label = { Text("裏面の補足メモ（解説・例文など）") },
+                    label = { Text("補足メモ（解説・例文など）") },
                     placeholder = { Text("例: 語源: セレンディップの3人の王子") },
                     minLines = 3,
                     maxLines = 7,
@@ -111,7 +111,7 @@ fun CardEditDialog(
             Button(
                 onClick = {
                     if (canSave) {
-                        onSave(frontText, backText, questionText, supplementText)
+                        onSave(termText, descriptionText, questionText, supplementText)
                     }
                 },
                 enabled = canSave,

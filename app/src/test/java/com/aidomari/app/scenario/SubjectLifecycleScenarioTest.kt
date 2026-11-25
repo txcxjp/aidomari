@@ -63,8 +63,8 @@ class SubjectLifecycleScenarioTest {
         val dao = db.aidomariDao()
         val subject = SubjectEntity(id = "sub-1", name = "実戦英語", ttsLanguage = "en-US")
         val deck = DeckEntity(id = "deck-1", subjectId = "sub-1", name = "基礎英単語500", splitSize = 50)
-        val card1 = CardEntity(id = "card-1", deckId = "deck-1", front = "apple", back = "りんご")
-        val card2 = CardEntity(id = "card-2", deckId = "deck-1", front = "banana", back = "バナナ")
+        val card1 = CardEntity(id = "card-1", deckId = "deck-1", term = "apple", description = "りんご")
+        val card2 = CardEntity(id = "card-2", deckId = "deck-1", term = "banana", description = "バナナ")
 
         dao.insertSubject(subject)
         dao.insertDeck(deck)

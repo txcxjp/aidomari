@@ -136,13 +136,13 @@ class GeminiApiClientTest {
         assertTrue(result.isSuccess)
         val cards = result.getOrNull() ?: emptyList()
         assertEquals(2, cards.size)
-        assertEquals("Kotlin Coroutines", cards[0].front)
-        assertEquals("非同期処理を簡潔に書く軽量スレッド機構。", cards[0].back)
+        assertEquals("Kotlin Coroutines", cards[0].term)
+        assertEquals("非同期処理を簡潔に書く軽量スレッド機構。", cards[0].description)
         assertEquals("Jetpack ComposeやStateFlowと親和性が高い", cards[0].userSupplement)
         assertEquals("https://example.com/kotlin", cards[0].sourceUrl)
         assertEquals("Kotlin入門", cards[0].sourceTitle)
 
-        assertEquals("StateFlow", cards[1].front)
+        assertEquals("StateFlow", cards[1].term)
 
         // Verify prompt specifies flashcard rules, fallback knowledge mode, systemInstruction, responseSchema, and few-shot examples
         assertTrue(fakeTransport.lastBody.contains("単語帳"))
@@ -255,8 +255,42 @@ class GeminiApiClientTest {
         assertTrue(result.isSuccess)
         val cards = result.getOrNull() ?: emptyList()
         assertEquals(1, cards.size)
-        assertEquals("問1", cards[0].front)
-        assertEquals("答1", cards[0].back)
+        assertEquals("問1", cards[0].term)
+        assertEquals("答1", cards[0].description)
+    }
+
+    @Test
+    fun generateCardsForTheme_parsesTermAndDescriptionJsonFields() = runTest {
+        val responseJson = """
+            {
+              "candidates": [{
+                "content": {
+                  "parts": [{
+                    "text": "[{\"term\": \"機会費用\", \"description\": \"断念した選択肢で得られたはずの最大利益\", \"userSupplement\": \"意思決定の解説。\"}]"
+                  }]
+                }
+              }]
+            }
+        """.trimIndent()
+        val fakeTransport = FakeHttpTransport { _, _ ->
+            HttpResponse(statusCode = 200, body = responseJson)
+        }
+        val client = GeminiApiClientImpl(httpTransport = fakeTransport)
+
+        val result = client.generateCardsForTheme(
+            title = "経済学",
+            url = "https://example.com/econ",
+            content = "本文",
+            theme = "基本概念",
+            apiKey = "key",
+        )
+
+        assertTrue(result.isSuccess)
+        val cards = result.getOrNull() ?: emptyList()
+        assertEquals(1, cards.size)
+        assertEquals("機会費用", cards[0].term)
+        assertEquals("断念した選択肢で得られたはずの最大利益", cards[0].description)
+        assertEquals("意思決定の解説。", cards[0].userSupplement)
     }
 
     @Test
@@ -369,26 +403,26 @@ class GeminiApiClientTest {
     }
 
     @Test
-    fun deduplicateCardProposals_mergesDuplicateFronts_andCombinesSupplements() {
+    fun deduplicateCardProposals_mergesDuplicateTerms_andCombinesSupplements() {
         val client = GeminiApiClientImpl(httpTransport = FakeHttpTransport())
 
         val card1 = com.aidomari.app.domain.model.ai.GeneratedCardProposal(
-            front = "大雪山",
-            back = "北海道の中央部にある山群",
+            term = "大雪山",
+            description = "北海道の中央部にある山群",
             userSupplement = "最高峰は旭岳（標高2,291m）。",
             sourceUrl = "https://example.com",
             sourceTitle = "北海道",
         )
         val card2 = com.aidomari.app.domain.model.ai.GeneratedCardProposal(
-            front = "「大雪山」",
-            back = "北海道の屋根と呼ばれる山岳地帯",
+            term = "「大雪山」",
+            description = "北海道の屋根と呼ばれる山岳地帯",
             userSupplement = "日本最大の国立公園に指定されている。",
             sourceUrl = "https://example.com",
             sourceTitle = "北海道",
         )
         val card3 = com.aidomari.app.domain.model.ai.GeneratedCardProposal(
-            front = "知床半島",
-            back = "オホーツク海に面した世界自然遺産",
+            term = "知床半島",
+            description = "オホーツク海に面した世界自然遺産",
             userSupplement = "手付かずの原生自然が残る。",
             sourceUrl = "https://example.com",
             sourceTitle = "北海道",
@@ -397,7 +431,7 @@ class GeminiApiClientTest {
         val deduplicated = client.deduplicateCardProposals(listOf(card1, card2, card3))
 
         assertEquals(2, deduplicated.size)
-        val daisetuzan = deduplicated.first { it.front == "大雪山" }
+        val daisetuzan = deduplicated.first { it.term == "大雪山" }
         assertTrue(daisetuzan.userSupplement.contains("旭岳"))
         assertTrue(daisetuzan.userSupplement.contains("国立公園"))
     }
@@ -601,7 +635,7 @@ class GeminiApiClientTest {
 
         assertTrue(result.isSuccess)
         assertEquals(2, callCount)
-        assertEquals("復旧語", result.getOrNull()?.first()?.front)
+        assertEquals("復旧語", result.getOrNull()?.first()?.term)
     }
 
     @Test
@@ -698,7 +732,7 @@ class GeminiApiClientTest {
 
         assertTrue(result.isSuccess)
         assertEquals(2, callCount)
-        assertEquals("レート制限復旧", result.getOrNull()?.first()?.front)
+        assertEquals("レート制限復旧", result.getOrNull()?.first()?.term)
     }
 
     @Test
@@ -760,7 +794,7 @@ class GeminiApiClientTest {
         val cards = result.getOrNull() ?: emptyList()
         assertEquals(2, callCount)
         assertEquals(1, cards.size)
-        assertEquals("メタ認知能力", cards.single().front)
+        assertEquals("メタ認知能力", cards.single().term)
         assertTrue(requestBodies[0].contains("recommendedMode"))
         assertTrue(requestBodies[1].contains("コア概念・要旨の凝縮"))
         assertFalse(requestBodies[1].contains("他テーマ一覧"))

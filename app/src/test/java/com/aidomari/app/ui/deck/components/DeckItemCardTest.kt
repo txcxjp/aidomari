@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.DeckPart
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.ui.deck.DeckPartWithSession
 import com.aidomari.app.ui.deck.DeckWithPartsUiModel
 import org.junit.Assert.assertEquals
@@ -100,7 +101,7 @@ class DeckItemCardTest {
     }
 
     @Test
-    fun deckItemCard_displaysReverseModeAndAutoSpeakBadges_correctly() {
+    fun deckItemCard_displaysStudyDirectionAndAutoSpeakBadges_andTogglesDirection() {
         val deck = Deck(
             id = "deck-rev",
             subjectId = "sub-1",
@@ -108,7 +109,7 @@ class DeckItemCardTest {
             splitSize = 50,
             autoContinue = false,
             shuffleMode = true,
-            reverseMode = true,
+            studyDirection = StudyDirection.DESCRIPTION_TO_TERM,
             autoSpeak = true,
             speechRate = 1.0f,
         )
@@ -120,12 +121,15 @@ class DeckItemCardTest {
             totalCardCount = 0,
         )
 
+        var directionToggled = false
+
         composeTestRule.setContent {
             DeckItemCard(
                 item = item,
                 onPartClick = { _, _ -> },
                 onToggleShuffle = { },
                 onToggleAutoSpeak = { },
+                onToggleStudyDirection = { directionToggled = true },
                 onManageCardsClick = { },
                 onEditDeck = { },
                 onDeleteDeck = { },
@@ -135,9 +139,12 @@ class DeckItemCardTest {
         composeTestRule.onNodeWithText("テストブック (Part 1)").assertIsDisplayed()
         composeTestRule.onNodeWithText("0 単語").assertIsDisplayed()
         composeTestRule.onNodeWithText("シャッフル").assertIsDisplayed()
-        composeTestRule.onNodeWithText("裏面スタート").assertIsDisplayed()
+        composeTestRule.onNodeWithText(StudyDirection.DESCRIPTION_TO_TERM.label).assertIsDisplayed()
         composeTestRule.onNodeWithText("自動音声 (1.0x)").assertIsDisplayed()
         composeTestRule.onNodeWithText("Part 1 (0枚)").assertIsDisplayed()
+
+        composeTestRule.onNodeWithTag("StudyDirectionBadge_deck-rev").performClick()
+        assertTrue(directionToggled)
     }
 
     @Test

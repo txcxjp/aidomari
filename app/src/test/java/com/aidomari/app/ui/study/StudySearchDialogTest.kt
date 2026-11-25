@@ -25,16 +25,16 @@ class StudySearchDialogTest {
     private val cardApple = Card(
         id = "c1",
         deckId = "deck-1",
-        front = "Apple",
-        back = "りんご",
+        term = "Apple",
+        description = "りんご",
         userSupplement = "甘くて赤い果物",
     )
 
     private val cardBanana = Card(
         id = "c2",
         deckId = "deck-1",
-        front = "Banana",
-        back = "バナナ",
+        term = "Banana",
+        description = "バナナ",
     )
 
     @Test

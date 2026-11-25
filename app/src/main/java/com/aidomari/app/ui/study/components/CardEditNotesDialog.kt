@@ -61,34 +61,34 @@ fun CardEditNotesDialog(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = card.front,
+                            text = card.term,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            text = card.back,
+                            text = card.description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
 
-                // Question on front
+                // Question prompt
                 OutlinedTextField(
                     value = questionText,
                     onValueChange = { questionText = it },
-                    label = { Text("表面の質問（自分用クイズ）") },
+                    label = { Text("出題時の質問（自分用クイズ）") },
                     placeholder = { Text("例: 派生語は？ / 類義語は？") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = false,
                     maxLines = 3,
                 )
 
-                // Supplement note on back
+                // Supplement note
                 OutlinedTextField(
                     value = supplementText,
                     onValueChange = { supplementText = it },
-                    label = { Text("裏面の補足メモ（解説・例文など）") },
+                    label = { Text("補足メモ（解説・例文など）") },
                     placeholder = { Text("例: 例文: He is honest.\n注意: 前置詞はtoを使う") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,

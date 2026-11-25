@@ -14,6 +14,7 @@ import com.aidomari.app.domain.model.Deck
 import com.aidomari.app.domain.model.HokkaidoAct1Route
 import com.aidomari.app.domain.model.PastDayDeckType
 import com.aidomari.app.domain.model.PastDayGroup
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.model.SugorokuProgress
@@ -362,7 +363,7 @@ class WordsRepositoryImpl(
         splitSize = splitSize,
         autoContinue = autoContinue,
         shuffleMode = shuffleMode,
-        reverseMode = reverseMode,
+        studyDirection = if (reverseMode) StudyDirection.DESCRIPTION_TO_TERM else StudyDirection.TERM_TO_DESCRIPTION,
         autoSpeak = autoSpeak,
         speechRate = speechRate,
         sortOrder = sortOrder,
@@ -376,7 +377,7 @@ class WordsRepositoryImpl(
         splitSize = splitSize,
         autoContinue = autoContinue,
         shuffleMode = shuffleMode,
-        reverseMode = reverseMode,
+        reverseMode = studyDirection == StudyDirection.DESCRIPTION_TO_TERM,
         autoSpeak = autoSpeak,
         speechRate = speechRate,
         sortOrder = sortOrder,
@@ -386,8 +387,8 @@ class WordsRepositoryImpl(
     private fun CardEntity.toDomain() = Card(
         id = id,
         deckId = deckId,
-        front = front,
-        back = back,
+        term = term,
+        description = description,
         userQuestion = userQuestion,
         userSupplement = userSupplement,
         isBookmarked = isBookmarked,
@@ -400,8 +401,8 @@ class WordsRepositoryImpl(
     private fun Card.toEntity() = CardEntity(
         id = id,
         deckId = deckId,
-        front = front,
-        back = back,
+        term = term,
+        description = description,
         userQuestion = userQuestion,
         userSupplement = userSupplement,
         isBookmarked = isBookmarked,

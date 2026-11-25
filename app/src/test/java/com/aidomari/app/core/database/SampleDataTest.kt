@@ -75,18 +75,18 @@ class SampleDataTest {
 
         // Verify first card (Welcome card)
         val firstCard = cards.first()
-        assertEquals("Hello!", firstCard.front)
-        assertTrue(firstCard.back.contains("Aidomari（相泊）へようこそ"))
+        assertEquals("Hello!", firstCard.term)
+        assertTrue(firstCard.description.contains("Aidomari（相泊）へようこそ"))
         assertTrue(firstCard.isBookmarked)
 
         // Verify active recall card with ruby
-        val recallCard = cards.find { it.front == "active recall" }
+        val recallCard = cards.find { it.term == "active recall" }
         assertNotNull(recallCard)
-        assertTrue(recallCard!!.back.contains("[能動的想起|のうどうてきそうき]"))
+        assertTrue(recallCard!!.description.contains("[能動的想起|のうどうてきそうき]"))
 
         // Verify spaced repetition card
-        val spacedRepetitionCard = cards.find { it.front == "spaced repetition" }
+        val spacedRepetitionCard = cards.find { it.term == "spaced repetition" }
         assertNotNull(spacedRepetitionCard)
-        assertTrue(spacedRepetitionCard!!.back.contains("[分散学習|ぶんさんがくしゅう]"))
+        assertTrue(spacedRepetitionCard!!.description.contains("[分散学習|ぶんさんがくしゅう]"))
     }
 }

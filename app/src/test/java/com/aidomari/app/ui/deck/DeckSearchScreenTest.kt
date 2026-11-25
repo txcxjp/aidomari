@@ -44,8 +44,8 @@ class DeckSearchScreenTest {
         val card = Card(
             id = "c1",
             deckId = "d1",
-            front = "Enthusiastic",
-            back = "熱心な、熱狂的な",
+            term = "Enthusiastic",
+            description = "熱心な、熱狂的な",
             userSupplement = "Origin: Greek entheos",
         )
         fakeRepository.cardsList.add(card)
@@ -93,8 +93,8 @@ class DeckSearchScreenTest {
         val card = Card(
             id = "c1",
             deckId = "d1",
-            front = "Enthusiastic",
-            back = "熱心な",
+            term = "Enthusiastic",
+            description = "熱心な",
             isBookmarked = false,
         )
         fakeRepository.cardsList.add(card)
@@ -119,7 +119,7 @@ class DeckSearchScreenTest {
 
     @Test
     fun randomStudyCard_isDisplayedWhenSubjectHasCards() {
-        val card = Card(id = "c1", deckId = "d1", front = "Eloquent", back = "雄弁な")
+        val card = Card(id = "c1", deckId = "d1", term = "Eloquent", description = "雄弁な")
         fakeRepository.cardsList.add(card)
         fakeRepository.decksList.add(Deck(id = "d1", subjectId = "sub-1", name = "Deck 1"))
         fakeRepository.triggerDecksUpdate()
@@ -203,13 +203,13 @@ class DeckSearchScreenTest {
 
         override suspend fun searchCardsInSubject(subjectId: String, query: String): List<Card> =
             cardsList.filter {
-                it.front.contains(query, ignoreCase = true) ||
-                    it.back.contains(query, ignoreCase = true) ||
+                it.term.contains(query, ignoreCase = true) ||
+                    it.description.contains(query, ignoreCase = true) ||
                     it.userSupplement.contains(query, ignoreCase = true)
             }
 
         override suspend fun findCardByFrontInSubject(subjectId: String, frontWord: String): Card? =
-            cardsList.find { it.front == frontWord }
+            cardsList.find { it.term == frontWord }
 
         override suspend fun getAllCardsInSubject(subjectId: String): List<Card> = cardsList
 

@@ -141,7 +141,7 @@ fun DeckSearchContent(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     ) {
                                         Text(
-                                            text = card.front,
+                                            text = card.term,
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface,
@@ -166,7 +166,7 @@ fun DeckSearchContent(
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = card.back,
+                                        text = card.description,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 2,
@@ -182,7 +182,7 @@ fun DeckSearchContent(
                                     }
                                 }
 
-                                IconButton(onClick = { onSpeakText(card.front) }) {
+                                IconButton(onClick = { onSpeakText(card.term) }) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                                         contentDescription = "発音",

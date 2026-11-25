@@ -86,8 +86,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.aidomari.app.core.ai.GeminiApiClientImpl
 import com.aidomari.app.core.ai.GeminiPreferences
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.ai.CardExtractionMode
 import com.aidomari.app.domain.model.article.SourceArticle
+import com.aidomari.app.ui.components.StudyDirectionSelector
 import com.aidomari.app.ui.settings.GeminiSettingsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -143,6 +145,8 @@ fun BrowsingDigestScreen(
             onCandidateChange = { id, f, b, s -> viewModel.updateCandidate(id, f, b, s) },
             onSave = { viewModel.saveSelectedCards() },
             onDismiss = { viewModel.closeReview() },
+            selectedStudyDirection = uiState.selectedStudyDirection,
+            onStudyDirectionSelect = { viewModel.selectStudyDirection(it) },
             modifier = modifier,
             snackbarHostState = snackbarHostState,
         )
@@ -658,6 +662,8 @@ fun CardReviewDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    selectedStudyDirection: StudyDirection = StudyDirection.DESCRIPTION_TO_TERM,
+    onStudyDirectionSelect: (StudyDirection) -> Unit = {},
 ) {
     val selectedCount = candidates.count { it.isSelected }
     var isSubjectDropdownExpanded by remember { mutableStateOf(false) }
@@ -792,6 +798,18 @@ fun CardReviewDialog(
                     )
                 }
 
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "出題の向き",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(4.dp))
+                StudyDirectionSelector(
+                    selected = selectedStudyDirection,
+                    onSelect = onStudyDirectionSelect,
+                )
+
                 Spacer(Modifier.height(10.dp))
 
                 // 承認・保存ボタン
@@ -913,7 +931,7 @@ fun CandidateCardItem(
                     onCheckedChange = { onToggle() },
                 )
                 Text(
-                    text = candidate.front,
+                    text = candidate.term,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = 16.5.sp,
                         fontWeight = FontWeight.Bold,
@@ -940,7 +958,7 @@ fun CandidateCardItem(
                     .padding(start = 10.dp),
             ) {
                 Text(
-                    text = candidate.back,
+                    text = candidate.description,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         lineHeight = 20.sp,
                     ),
@@ -981,12 +999,12 @@ fun CandidateCardItem(
 private fun CandidateCardEditDialog(
     candidate: CardCandidateItem,
     onDismiss: () -> Unit,
-    onSave: (front: String, back: String, supplement: String) -> Unit,
+    onSave: (term: String, description: String, supplement: String) -> Unit,
 ) {
-    var front by remember(candidate.id) { mutableStateOf(candidate.front) }
-    var back by remember(candidate.id) { mutableStateOf(candidate.back) }
+    var term by remember(candidate.id) { mutableStateOf(candidate.term) }
+    var description by remember(candidate.id) { mutableStateOf(candidate.description) }
     var supplement by remember(candidate.id) { mutableStateOf(candidate.supplement) }
-    val canSave = front.isNotBlank() && back.isNotBlank()
+    val canSave = term.isNotBlank() && description.isNotBlank()
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -1037,17 +1055,17 @@ private fun CandidateCardEditDialog(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     OutlinedTextField(
-                        value = front,
-                        onValueChange = { front = it },
-                        label = { Text("表面（問題・用語）") },
+                        value = term,
+                        onValueChange = { term = it },
+                        label = { Text("ことば（単語・用語）") },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 1,
                         maxLines = 3,
                     )
                     OutlinedTextField(
-                        value = back,
-                        onValueChange = { back = it },
-                        label = { Text("裏面（解答・定義）") },
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("説明（意味・定義）") },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         maxLines = 6,
@@ -1076,7 +1094,7 @@ private fun CandidateCardEditDialog(
                     Button(
                         onClick = {
                             if (canSave) {
-                                onSave(front.trim(), back.trim(), supplement.trim())
+                                onSave(term.trim(), description.trim(), supplement.trim())
                             }
                         },
                         enabled = canSave,

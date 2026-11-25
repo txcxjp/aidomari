@@ -58,7 +58,7 @@ interface GeminiApiClient {
         temperature: Float = GeminiConfig.DEFAULT_TEMPERATURE,
         mode: CardExtractionMode = CardExtractionMode.SMART,
         otherThemes: List<String> = emptyList(),
-        alreadyExtractedFronts: List<String> = emptyList(),
+        alreadyExtractedTerms: List<String> = emptyList(),
     ): Result<List<GeneratedCardProposal>>
 
     suspend fun generateCardsFromArticle(
@@ -318,7 +318,7 @@ class GeminiApiClientImpl(
         temperature: Float,
         mode: CardExtractionMode,
         otherThemes: List<String>,
-        alreadyExtractedFronts: List<String>,
+        alreadyExtractedTerms: List<String>,
     ): Result<List<GeneratedCardProposal>> = runCatching {
         require(apiKey.isNotBlank()) { "APIキーが設定されていません" }
         require(content.isNotBlank()) { "解析対象の記事本文が空です" }
@@ -333,7 +333,7 @@ class GeminiApiClientImpl(
             theme = theme,
             mode = mode,
             otherThemes = otherThemes,
-            alreadyExtractedFronts = alreadyExtractedFronts,
+            alreadyExtractedTerms = alreadyExtractedTerms,
         )
 
         val requestBody = buildJsonObject {
@@ -453,7 +453,7 @@ class GeminiApiClientImpl(
                 temperature = temperature,
                 mode = effectiveMode,
                 otherThemes = themes.filter { it != theme },
-                alreadyExtractedFronts = allProposals.map { it.front }.distinct(),
+                alreadyExtractedTerms = allProposals.map { it.term }.distinct(),
             )
 
             val cards = themeCardsResult.getOrThrow()
@@ -561,16 +561,16 @@ class GeminiApiClientImpl(
         putJsonObject("items") {
             put("type", "OBJECT")
             putJsonObject("properties") {
-                putJsonObject("front") {
+                putJsonObject("term") {
                     put("type", "STRING")
                     put(
                         "description",
-                        "暗記・想起の対象となる固有名詞・専門用語・制度名・中核概念（名詞句。backの定義文から一意に逆引きできる用語とすること。単なる一般名詞や『〜の概要』『〜の動向』のような抽象的な見出し句・状況ラベル、疑問文は不可）",
+                        "暗記・想起の対象となる固有名詞・専門用語・制度名・中核概念（名詞句。descriptionの定義文から一意に逆引きできる用語とすること。単なる一般名詞や『〜の概要』『〜の動向』のような抽象的な見出し句・状況ラベル、疑問文は不可）",
                     )
                 }
-                putJsonObject("back") {
+                putJsonObject("description") {
                     put("type", "STRING")
-                    put("description", "frontが何であるかを一目で想起できる核となる定義・要点（体言止め、または常体の短い1文。記事本文の記述のみに忠実であること）")
+                    put("description", "termが何であるかを一目で想起できる核となる定義・要点（体言止め、または常体の短い1文。記事本文の記述のみに忠実であること）")
                 }
                 putJsonObject("userSupplement") {
                     put("type", "STRING")
@@ -578,8 +578,8 @@ class GeminiApiClientImpl(
                 }
             }
             putJsonArray("required") {
-                add(kotlinx.serialization.json.JsonPrimitive("front"))
-                add(kotlinx.serialization.json.JsonPrimitive("back"))
+                add(kotlinx.serialization.json.JsonPrimitive("term"))
+                add(kotlinx.serialization.json.JsonPrimitive("description"))
                 add(kotlinx.serialization.json.JsonPrimitive("userSupplement"))
             }
         }
@@ -670,11 +670,11 @@ class GeminiApiClientImpl(
             - 記事本文に書かれていない事実・経緯・原因・年号・関連づけを、推測や事前知識から書き足したり取り違えたりしてはならない。
 
             【各フィールドの定義】
-            - front（表面）: 暗記・想起の対象となる固有名詞・専門用語・制度名・中核概念（名詞句）。
-              ・双方向（リバースモード）成立の原則：frontを見てbackが言えるだけでなく、逆にback（定義文）だけを読んだときにも正解のfrontがただ1つに一意に定まる用語にすること（節見出しになっている重要な固有名詞や制度名も、1対1で定義できるなら積極的に抽出してよい）。
-              ・単なる一般名詞（例：「農業」「データベース」「法律」）や、抽象的な見出し句・状況ラベル（例：「〇〇の課題」「近年の動向」「一般的な分類」）は、裏面から一意に答えられないためfrontにしてはならない。
+            - term（ことば）: 暗記・想起の対象となる固有名詞・専門用語・制度名・中核概念（名詞句）。
+              ・双方向（用語先出し・説明先出し）成立の原則：termを見てdescriptionが言えるだけでなく、逆にdescription（定義文）だけを読んだときにも正解のtermがただ1つに一意に定まる用語にすること（節見出しになっている重要な固有名詞や制度名も、1対1で定義できるなら積極的に抽出してよい）。
+              ・単なる一般名詞（例：「農業」「データベース」「法律」）や、抽象的な見出し句・状況ラベル（例：「〇〇の課題」「近年の動向」「一般的な分類」）は、説明から一意に答えられないためtermにしてはならない。
               ・疑問文（「〜とは」「なぜ〜か」）や文章にはしない。
-            - back（裏面）: frontが何であるかを一目で想起できる核となる定義または要点。
+            - description（説明）: termが何であるかを一目で想起できる核となる定義または要点。
               ・文体は「体言止め（名詞止め）」または簡潔な1文（常体）に統一する。
               ・記事固有の細かいエピソードは含めず、本文の記述に忠実な本質的定義・役割に絞る。
             - userSupplement（補足メモ）: 記事内でその用語が登場した具体的な文脈、背景エピソード、根拠データ、筆者の主張との関わり（1〜3文）。
@@ -684,18 +684,18 @@ class GeminiApiClientImpl(
             $modeCriteria$scopeRule
 
             【出力例（Good）】
-            - front: "機会費用"
-              back: "ある選択を行ったことで断念せざるを得なかった他の選択肢から得られたはずの最大利益。"
+            - term: "機会費用"
+              description: "ある選択を行ったことで断念せざるを得なかった他の選択肢から得られたはずの最大利益。"
               userSupplement: "限られた予算や時間をどこに投じるかを判断する際、目に見える支出だけでなく機会費用を考慮する必要があると論じられている。"
-            - front: "墾田永年私財法"
-              back: "743年に発布された、開墾した土地の永代私有を認める法令。"
+            - term: "墾田永年私財法"
+              description: "743年に発布された、開墾した土地の永代私有を認める法令。"
               userSupplement: "班田収授法の維持が困難になる中で、貴族や寺社による大規模な土地開墾と荘園の発達を促す契機となった。"
 
             【避けるべき例（Bad）】
-            - front: "農業" / "法律"（※一般名詞単体になっており、他デッキと混ざった際にどの固有の概念・制度か判別できない。記事固有の固有名詞や専門用語を抽出すること）
-            - front: "日本の農業の課題" / "近年の動向" / "一般的な分類"（※1対1の用語ではなくテーマ句・状況ラベルになっており、何を答えるべきか定まらずリバースモードでも破綻する）
-            - front: "なぜインフレが起きると金利が上がるのか？"（※疑問文・長文になっている）
-            - back: "記事によると中央銀行は物価上昇を抑えるために政策金利を引き上げて景気を冷やしています。"（※定義ではなく長文の経過説明になっており、敬体が混ざっている）
+            - term: "農業" / "法律"（※一般名詞単体になっており、他デッキと混ざった際にどの固有の概念・制度か判別できない。記事固有の固有名詞や専門用語を抽出すること）
+            - term: "日本の農業の課題" / "近年の動向" / "一般的な分類"（※1対1の用語ではなくテーマ句・状況ラベルになっており、何を答えるべきか定まらず説明先出しでも破綻する）
+            - term: "なぜインフレが起きると金利が上がるのか？"（※疑問文・長文になっている）
+            - description: "記事によると中央銀行は物価上昇を抑えるために政策金利を引き上げて景気を冷やしています。"（※定義ではなく長文の経過説明になっており、敬体が混ざっている）
         """.trimIndent()
     }
 
@@ -706,10 +706,10 @@ class GeminiApiClientImpl(
         theme: String,
         mode: CardExtractionMode,
         otherThemes: List<String> = emptyList(),
-        alreadyExtractedFronts: List<String> = emptyList(),
+        alreadyExtractedTerms: List<String> = emptyList(),
     ): String {
         val othersText = if (otherThemes.isNotEmpty()) otherThemes.joinToString(", ") else "なし"
-        val alreadyText = if (alreadyExtractedFronts.isNotEmpty()) alreadyExtractedFronts.joinToString(", ") else "なし"
+        val alreadyText = if (alreadyExtractedTerms.isNotEmpty()) alreadyExtractedTerms.joinToString(", ") else "なし"
         return """
             対象テーマ: $theme
             他テーマ一覧（これらに属する用語は今回の抽出対象外）: $othersText
@@ -807,7 +807,7 @@ class GeminiApiClientImpl(
         val result = mutableListOf<GeneratedCardProposal>()
 
         for (card in cards) {
-            val normalized = normalizeFront(card.front)
+            val normalized = normalizeTerm(card.term)
             if (normalized.isBlank()) continue
 
             val existing = seenNormalized[normalized]
@@ -826,7 +826,7 @@ class GeminiApiClientImpl(
         return result
     }
 
-    internal fun normalizeFront(front: String): String = front.trim()
+    internal fun normalizeTerm(term: String): String = term.trim()
         .removePrefix("「").removeSuffix("」")
         .removePrefix("『").removeSuffix("』")
         .removePrefix("\"").removeSuffix("\"")
@@ -834,7 +834,7 @@ class GeminiApiClientImpl(
         .trim()
 
     internal fun mergeDuplicateCards(a: GeneratedCardProposal, b: GeneratedCardProposal): GeneratedCardProposal {
-        val bestBack = if (b.back.length > a.back.length) b.back else a.back
+        val bestDescription = if (b.description.length > a.description.length) b.description else a.description
         val combinedSupplement = when {
             a.userSupplement.isBlank() -> b.userSupplement
             b.userSupplement.isBlank() -> a.userSupplement
@@ -844,7 +844,7 @@ class GeminiApiClientImpl(
                 if (b.userSupplement.length > a.userSupplement.length) b.userSupplement else a.userSupplement
             else -> "${a.userSupplement}\n${b.userSupplement}"
         }
-        return a.copy(back = bestBack, userSupplement = combinedSupplement)
+        return a.copy(description = bestDescription, userSupplement = combinedSupplement)
     }
 
     private fun parseCardsFromGeminiResponse(
@@ -881,15 +881,15 @@ class GeminiApiClientImpl(
         val cards = mutableListOf<GeneratedCardProposal>()
         for (item in arrayElement) {
             if (item !is JsonObject) continue
-            val front = item["front"]?.jsonPrimitive?.content?.trim() ?: ""
-            val back = item["back"]?.jsonPrimitive?.content?.trim() ?: ""
+            val term = (item["term"] ?: item["front"])?.jsonPrimitive?.content?.trim() ?: ""
+            val description = (item["description"] ?: item["back"])?.jsonPrimitive?.content?.trim() ?: ""
             val supplement = item["userSupplement"]?.jsonPrimitive?.content?.trim() ?: ""
 
-            if (front.isNotBlank() && back.isNotBlank()) {
+            if (term.isNotBlank() && description.isNotBlank()) {
                 cards.add(
                     GeneratedCardProposal(
-                        front = front,
-                        back = back,
+                        term = term,
+                        description = description,
                         userSupplement = supplement,
                         sourceUrl = sourceUrl,
                         sourceTitle = sourceTitle,

@@ -212,15 +212,15 @@ fun StudySearchContent(
                                     .padding(12.dp),
                             ) {
                                 Text(
-                                    text = card.front,
+                                    text = card.term,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
-                                if (card.back.isNotBlank()) {
+                                if (card.description.isNotBlank()) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = card.back,
+                                        text = card.description,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 2,

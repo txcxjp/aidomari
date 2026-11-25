@@ -6,6 +6,7 @@ import com.aidomari.app.core.ai.GeminiApiClient
 import com.aidomari.app.core.ai.GeminiPreferences
 import com.aidomari.app.domain.model.Card
 import com.aidomari.app.domain.model.Deck
+import com.aidomari.app.domain.model.StudyDirection
 import com.aidomari.app.domain.model.StudySession
 import com.aidomari.app.domain.model.Subject
 import com.aidomari.app.domain.model.ai.CardExtractionMode
@@ -125,8 +126,8 @@ class BrowsingDigestViewModelTest {
     fun generateCards_populatesCandidateCardsOnSuccess() = runTest {
         geminiPreferences.setApiKey("valid_api_key")
         fakeGeminiApiClient.stubbedProposals = listOf(
-            GeneratedCardProposal(front = "問題1", back = "解答1", userSupplement = "補足1", sourceUrl = "https://example.com/1", sourceTitle = "テスト記事"),
-            GeneratedCardProposal(front = "問題2", back = "解答2", userSupplement = "補足2", sourceUrl = "https://example.com/1", sourceTitle = "テスト記事"),
+            GeneratedCardProposal(term = "問題1", description = "解答1", userSupplement = "補足1", sourceUrl = "https://example.com/1", sourceTitle = "テスト記事"),
+            GeneratedCardProposal(term = "問題2", description = "解答2", userSupplement = "補足2", sourceUrl = "https://example.com/1", sourceTitle = "テスト記事"),
         )
         val article = SourceArticle(id = "1", url = "https://example.com/1", domain = "example.com", title = "テスト記事", extractedText = "本文", status = ArticleStatus.PENDING)
 
@@ -139,8 +140,8 @@ class BrowsingDigestViewModelTest {
         assertNotNull(state.reviewArticle)
         assertEquals("テスト記事", state.reviewArticle!!.title)
         assertEquals(2, state.candidateCards.size)
-        assertEquals("問題1", state.candidateCards[0].front)
-        assertEquals("解答1", state.candidateCards[0].back)
+        assertEquals("問題1", state.candidateCards[0].term)
+        assertEquals("解答1", state.candidateCards[0].description)
         assertTrue(state.candidateCards[0].isSelected)
         assertTrue(state.candidateCards[1].isSelected)
         assertEquals(CardExtractionMode.SMART, fakeGeminiApiClient.lastMode)
@@ -175,8 +176,8 @@ class BrowsingDigestViewModelTest {
     fun toggleCardSelection_and_selectAll_worksCorrectly() = runTest {
         geminiPreferences.setApiKey("valid_api_key")
         fakeGeminiApiClient.stubbedProposals = listOf(
-            GeneratedCardProposal(front = "Q1", back = "A1"),
-            GeneratedCardProposal(front = "Q2", back = "A2"),
+            GeneratedCardProposal(term = "Q1", description = "A1"),
+            GeneratedCardProposal(term = "Q2", description = "A2"),
         )
         val article = SourceArticle(id = "1", url = "https://example.com", domain = "example.com", title = "記事", extractedText = "本文", status = ArticleStatus.PENDING)
 
@@ -242,7 +243,7 @@ class BrowsingDigestViewModelTest {
     fun updateCandidate_updatesContent() = runTest {
         geminiPreferences.setApiKey("valid_api_key")
         fakeGeminiApiClient.stubbedProposals = listOf(
-            GeneratedCardProposal(front = "旧表面", back = "旧裏面", userSupplement = "旧補足"),
+            GeneratedCardProposal(term = "旧表面", description = "旧裏面", userSupplement = "旧補足"),
         )
         val article = SourceArticle(id = "1", url = "https://example.com", domain = "example.com", title = "記事", extractedText = "本文", status = ArticleStatus.PENDING)
 
@@ -253,8 +254,8 @@ class BrowsingDigestViewModelTest {
         viewModel.updateCandidate(cardId, "新表面", "新裏面", "新補足")
 
         val updated = viewModel.uiState.value.candidateCards[0]
-        assertEquals("新表面", updated.front)
-        assertEquals("新裏面", updated.back)
+        assertEquals("新表面", updated.term)
+        assertEquals("新裏面", updated.description)
         assertEquals("新補足", updated.supplement)
     }
 
@@ -265,8 +266,8 @@ class BrowsingDigestViewModelTest {
 
         geminiPreferences.setApiKey("valid_api_key")
         fakeGeminiApiClient.stubbedProposals = listOf(
-            GeneratedCardProposal(front = "Q1", back = "A1"),
-            GeneratedCardProposal(front = "Q2", back = "A2"),
+            GeneratedCardProposal(term = "Q1", description = "A1"),
+            GeneratedCardProposal(term = "Q2", description = "A2"),
         )
         val article = SourceArticle(id = "art1", url = "https://example.com", domain = "example.com", title = "学習記事", extractedText = "本文", status = ArticleStatus.PENDING)
         fakeArticleRepository.setArticles(listOf(article))
@@ -290,8 +291,8 @@ class BrowsingDigestViewModelTest {
         assertEquals("テストデッキ", fakeWordsRepository.decksList[0].name)
         assertEquals("sub1", fakeWordsRepository.decksList[0].subjectId)
         assertEquals(2, fakeWordsRepository.cardsList.size)
-        assertEquals("Q1", fakeWordsRepository.cardsList[0].front)
-        assertEquals("Q2", fakeWordsRepository.cardsList[1].front)
+        assertEquals("Q1", fakeWordsRepository.cardsList[0].term)
+        assertEquals("Q2", fakeWordsRepository.cardsList[1].term)
 
         // 記事ステータスが GENERATED に更新されていること
         val updatedArticle = fakeArticleRepository.getArticleById("art1")
@@ -316,8 +317,8 @@ class BrowsingDigestViewModelTest {
     fun generateCards_notifiesProgressAndCompletionController() = runTest {
         geminiPreferences.setApiKey("valid_api_key")
         fakeGeminiApiClient.stubbedProposals = listOf(
-            GeneratedCardProposal(front = "問1", back = "答1"),
-            GeneratedCardProposal(front = "問2", back = "答2"),
+            GeneratedCardProposal(term = "問1", description = "答1"),
+            GeneratedCardProposal(term = "問2", description = "答2"),
         )
         val article = SourceArticle(id = "art_notify", url = "https://example.com", domain = "example.com", title = "北海道", extractedText = "本文", status = ArticleStatus.PENDING)
 
@@ -341,6 +342,43 @@ class BrowsingDigestViewModelTest {
         val created = fakeWordsRepository.subjectsList.single()
         assertEquals("社会・地理", created.name)
         assertEquals(created.id, viewModel.uiState.value.selectedSubjectId)
+    }
+
+    @Test
+    fun saveSelectedCards_defaultsToDescriptionToTerm_andRespectsSelection() = runTest {
+        val subject = Subject(id = "sub1", name = "既存教科")
+        fakeWordsRepository.saveSubject(subject)
+        geminiPreferences.setApiKey("valid_api_key")
+        fakeGeminiApiClient.stubbedProposals = listOf(
+            GeneratedCardProposal(term = "機会費用", description = "選ばなかった選択肢の最大利益"),
+        )
+        val article = SourceArticle(
+            id = "art-dir",
+            url = "https://example.com/econ",
+            domain = "example.com",
+            title = "経済学記事",
+            extractedText = "本文",
+            status = ArticleStatus.PENDING,
+        )
+        fakeArticleRepository.setArticles(listOf(article))
+
+        // デフォルトは「説明 → ことば」
+        assertEquals(StudyDirection.DESCRIPTION_TO_TERM, viewModel.uiState.value.selectedStudyDirection)
+
+        viewModel.generateCards(article)
+        advanceUntilIdle()
+        assertEquals(StudyDirection.DESCRIPTION_TO_TERM, viewModel.uiState.value.selectedStudyDirection)
+
+        // 保存前に「ことば → 説明」へ切り替え
+        viewModel.selectStudyDirection(StudyDirection.TERM_TO_DESCRIPTION)
+        assertEquals(StudyDirection.TERM_TO_DESCRIPTION, viewModel.uiState.value.selectedStudyDirection)
+
+        viewModel.selectSubject("sub1")
+        viewModel.updateNewDeckName("向きテスト")
+        viewModel.saveSelectedCards()
+        advanceUntilIdle()
+
+        assertEquals(StudyDirection.TERM_TO_DESCRIPTION, fakeWordsRepository.decksList.single().studyDirection)
     }
 }
 
@@ -476,7 +514,7 @@ private class FakeGeminiApiClient : GeminiApiClient {
         temperature: Float,
         mode: CardExtractionMode,
         otherThemes: List<String>,
-        alreadyExtractedFronts: List<String>,
+        alreadyExtractedTerms: List<String>,
     ): Result<List<GeneratedCardProposal>> = Result.success(stubbedProposals)
 
     override suspend fun generateCardsFromArticle(

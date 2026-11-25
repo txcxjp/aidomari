@@ -31,7 +31,7 @@ class WordsDataExporterTest {
         // Setup initial data
         val sub = Subject(id = "s1", name = "英語", ttsLanguage = "en-US")
         val deck = Deck(id = "d1", subjectId = "s1", name = "英単語", splitSize = 50)
-        val card = Card(id = "c1", deckId = "d1", front = "apple", back = "りんご", isBookmarked = true)
+        val card = Card(id = "c1", deckId = "d1", term = "apple", description = "りんご", isBookmarked = true)
 
         fakeRepository.subjects.add(sub)
         fakeRepository.decks.add(deck)
@@ -59,7 +59,7 @@ class WordsDataExporterTest {
 
         assertEquals("英語", fakeRepository.subjects.first().name)
         assertEquals("英単語", fakeRepository.decks.first().name)
-        assertEquals("apple", fakeRepository.cards.first().front)
+        assertEquals("apple", fakeRepository.cards.first().term)
     }
 
     private class FakeExportRepository : WordsRepository {

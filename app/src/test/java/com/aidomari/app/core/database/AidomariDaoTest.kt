@@ -60,8 +60,8 @@ class AidomariDaoTest {
         val deck = DeckEntity(id = "deck-1", subjectId = "sub-1", name = "単語帳A", splitSize = 50)
         dao.insertDeck(deck)
 
-        val card1 = CardEntity(id = "card-1", deckId = "deck-1", front = "apple", back = "りんご")
-        val card2 = CardEntity(id = "card-2", deckId = "deck-1", front = "book", back = "本")
+        val card1 = CardEntity(id = "card-1", deckId = "deck-1", term = "apple", description = "りんご")
+        val card2 = CardEntity(id = "card-2", deckId = "deck-1", term = "book", description = "本")
         dao.insertCards(listOf(card1, card2))
 
         val cards = dao.getCardsByDeckSync("deck-1")
@@ -84,8 +84,8 @@ class AidomariDaoTest {
         val deck = DeckEntity(id = "deck-1", subjectId = "sub-1", name = "単語帳A", splitSize = 50)
         dao.insertDeck(deck)
 
-        val card1 = CardEntity(id = "card-1", deckId = "deck-1", front = "apple", back = "りんご")
-        val card2 = CardEntity(id = "card-2", deckId = "deck-1", front = "book", back = "本")
+        val card1 = CardEntity(id = "card-1", deckId = "deck-1", term = "apple", description = "りんご")
+        val card2 = CardEntity(id = "card-2", deckId = "deck-1", term = "book", description = "本")
         dao.insertCards(listOf(card1, card2))
 
         // Update subject (e.g. archiving subject) using insertSubject (@Upsert)
@@ -110,8 +110,8 @@ class AidomariDaoTest {
         val deck = DeckEntity(id = "deck-1", subjectId = "sub-1", name = "単語帳A", splitSize = 50)
         dao.insertDeck(deck)
 
-        val card1 = CardEntity(id = "card-1", deckId = "deck-1", front = "apple", back = "りんご")
-        val card2 = CardEntity(id = "card-2", deckId = "deck-1", front = "book", back = "本")
+        val card1 = CardEntity(id = "card-1", deckId = "deck-1", term = "apple", description = "りんご")
+        val card2 = CardEntity(id = "card-2", deckId = "deck-1", term = "book", description = "本")
         dao.insertCards(listOf(card1, card2))
 
         // Update deck name using insertDeck (@Upsert)
@@ -168,13 +168,13 @@ class AidomariDaoTest {
         val deck = DeckEntity(id = "deck-1", subjectId = "sub-1", name = "単語帳A")
         dao.insertDeck(deck)
 
-        val card = CardEntity(id = "card-1", deckId = "deck-1", front = "difficult", back = "難しい", isBookmarked = false)
+        val card = CardEntity(id = "card-1", deckId = "deck-1", term = "difficult", description = "難しい", isBookmarked = false)
         dao.insertCard(card)
 
         dao.setBookmark("card-1", true)
         val bookmarked = dao.getBookmarkedCardsBySubject("sub-1").first()
         assertEquals(1, bookmarked.size)
-        assertEquals("difficult", bookmarked[0].front)
+        assertEquals("difficult", bookmarked[0].term)
     }
 
     @Test
@@ -202,44 +202,44 @@ class AidomariDaoTest {
     }
 
     @Test
-    fun searchCardsInSubject_matchesFrontBackAndNotes() = runBlocking {
+    fun searchCardsInSubject_matchesTermDescriptionAndNotes() = runBlocking {
         val subject = SubjectEntity(id = "sub-search", name = "英語")
         dao.insertSubject(subject)
         val deck = DeckEntity(id = "deck-search", subjectId = "sub-search", name = "単語帳S")
         dao.insertDeck(deck)
 
-        val c1 = CardEntity(id = "c1", deckId = "deck-search", front = "apple", back = "りんご")
+        val c1 = CardEntity(id = "c1", deckId = "deck-search", term = "apple", description = "りんご")
         val c2 = CardEntity(
             id = "c2",
             deckId = "deck-search",
-            front = "banana",
-            back = "バナナ",
+            term = "banana",
+            description = "バナナ",
             userSupplement = "tropical fruit",
         )
         val c3 = CardEntity(
             id = "c3",
             deckId = "deck-search",
-            front = "cat",
-            back = "ねこ",
+            term = "cat",
+            description = "ねこ",
             userQuestion = "kitten?",
         )
         dao.insertCards(listOf(c1, c2, c3))
 
         val frontMatches = dao.searchCardsInSubject("sub-search", "app")
         assertEquals(1, frontMatches.size)
-        assertEquals("apple", frontMatches[0].front)
+        assertEquals("apple", frontMatches[0].term)
 
         val backMatches = dao.searchCardsInSubject("sub-search", "バナナ")
         assertEquals(1, backMatches.size)
-        assertEquals("banana", backMatches[0].front)
+        assertEquals("banana", backMatches[0].term)
 
         val supplementMatches = dao.searchCardsInSubject("sub-search", "tropical")
         assertEquals(1, supplementMatches.size)
-        assertEquals("banana", supplementMatches[0].front)
+        assertEquals("banana", supplementMatches[0].term)
 
         val questionMatches = dao.searchCardsInSubject("sub-search", "kitten")
         assertEquals(1, questionMatches.size)
-        assertEquals("cat", questionMatches[0].front)
+        assertEquals("cat", questionMatches[0].term)
 
         val emptyMatches = dao.searchCardsInSubject("sub-search", "zebra")
         assertTrue(emptyMatches.isEmpty())
@@ -272,7 +272,7 @@ class AidomariDaoTest {
         // Active subject with card
         val activeSubject = SubjectEntity(id = "sub-active", name = "アクティブ教科", isArchived = false)
         val activeDeck = DeckEntity(id = "deck-active", subjectId = "sub-active", name = "アクティブデッキ")
-        val activeCard = CardEntity(id = "card-active", deckId = "deck-active", front = "active", back = "有効")
+        val activeCard = CardEntity(id = "card-active", deckId = "deck-active", term = "active", description = "有効")
         dao.insertSubject(activeSubject)
         dao.insertDeck(activeDeck)
         dao.insertCard(activeCard)
@@ -280,7 +280,7 @@ class AidomariDaoTest {
         // Archived subject with card
         val archivedSubject = SubjectEntity(id = "sub-archived", name = "アーカイブ教科", isArchived = true)
         val archivedDeck = DeckEntity(id = "deck-archived", subjectId = "sub-archived", name = "アーカイブデッキ")
-        val archivedCard = CardEntity(id = "card-archived", deckId = "deck-archived", front = "archived", back = "保存")
+        val archivedCard = CardEntity(id = "card-archived", deckId = "deck-archived", term = "archived", description = "保存")
         dao.insertSubject(archivedSubject)
         dao.insertDeck(archivedDeck)
         dao.insertCard(archivedCard)
@@ -300,14 +300,14 @@ class AidomariDaoTest {
     fun getRandomBookmarkedCard_excludesCardsFromArchivedSubjects() = runBlocking {
         val activeSubject = SubjectEntity(id = "sub-bm-active", name = "アクティブ教科", isArchived = false)
         val activeDeck = DeckEntity(id = "deck-bm-active", subjectId = "sub-bm-active", name = "デッキ")
-        val activeBmCard = CardEntity(id = "card-bm-active", deckId = "deck-bm-active", front = "active", back = "有効", isBookmarked = true)
+        val activeBmCard = CardEntity(id = "card-bm-active", deckId = "deck-bm-active", term = "active", description = "有効", isBookmarked = true)
         dao.insertSubject(activeSubject)
         dao.insertDeck(activeDeck)
         dao.insertCard(activeBmCard)
 
         val archivedSubject = SubjectEntity(id = "sub-bm-archived", name = "アーカイブ教科", isArchived = true)
         val archivedDeck = DeckEntity(id = "deck-bm-archived", subjectId = "sub-bm-archived", name = "デッキ")
-        val archivedBmCard = CardEntity(id = "card-bm-archived", deckId = "deck-bm-archived", front = "archived", back = "保存", isBookmarked = true)
+        val archivedBmCard = CardEntity(id = "card-bm-archived", deckId = "deck-bm-archived", term = "archived", description = "保存", isBookmarked = true)
         dao.insertSubject(archivedSubject)
         dao.insertDeck(archivedDeck)
         dao.insertCard(archivedBmCard)
@@ -321,7 +321,7 @@ class AidomariDaoTest {
     fun insertAndGetRecentLogsForCard() = runBlocking {
         val subject = SubjectEntity(id = "sub-log", name = "英語")
         val deck = DeckEntity(id = "deck-log", subjectId = "sub-log", name = "単語帳")
-        val card = CardEntity(id = "card-log-1", deckId = "deck-log", front = "apple", back = "りんご")
+        val card = CardEntity(id = "card-log-1", deckId = "deck-log", term = "apple", description = "りんご")
         dao.insertSubject(subject)
         dao.insertDeck(deck)
         dao.insertCard(card)
@@ -347,8 +347,8 @@ class AidomariDaoTest {
     fun getLatestLogsForDeckSync_returnsOnlyLatestLogPerCard() = runBlocking {
         val subject = SubjectEntity(id = "sub-latest", name = "英語")
         val deck = DeckEntity(id = "deck-latest", subjectId = "sub-latest", name = "単語帳")
-        val card1 = CardEntity(id = "card-1", deckId = "deck-latest", front = "apple", back = "りんご")
-        val card2 = CardEntity(id = "card-2", deckId = "deck-latest", front = "banana", back = "バナナ")
+        val card1 = CardEntity(id = "card-1", deckId = "deck-latest", term = "apple", description = "りんご")
+        val card2 = CardEntity(id = "card-2", deckId = "deck-latest", term = "banana", description = "バナナ")
         dao.insertSubject(subject)
         dao.insertDeck(deck)
         dao.insertCards(listOf(card1, card2))
@@ -377,7 +377,7 @@ class AidomariDaoTest {
     fun deleteCard_cascadeDeletesCardStudyLogs() = runBlocking {
         val subject = SubjectEntity(id = "sub-cas", name = "英語")
         val deck = DeckEntity(id = "deck-cas", subjectId = "sub-cas", name = "単語帳")
-        val card = CardEntity(id = "card-cas", deckId = "deck-cas", front = "apple", back = "りんご")
+        val card = CardEntity(id = "card-cas", deckId = "deck-cas", term = "apple", description = "りんご")
         dao.insertSubject(subject)
         dao.insertDeck(deck)
         dao.insertCard(card)
@@ -402,11 +402,11 @@ class AidomariDaoTest {
         dao.insertDeck(activeDeck)
 
         // card-unstudied: ログなし（未学習・新規）
-        val unstudiedCard = CardEntity(id = "c-unstudied", deckId = "deck-active", front = "new", back = "新しい")
+        val unstudiedCard = CardEntity(id = "c-unstudied", deckId = "deck-active", term = "new", description = "新しい")
         // card-old: 過去に学習済み（studiedAt = 50_000L <= cutoff）
-        val oldCard = CardEntity(id = "c-old", deckId = "deck-active", front = "old", back = "古い")
+        val oldCard = CardEntity(id = "c-old", deckId = "deck-active", term = "old", description = "古い")
         // card-recent: 最近学習済み（studiedAt = 90_000L > cutoff）
-        val recentCard = CardEntity(id = "c-recent", deckId = "deck-active", front = "recent", back = "最近")
+        val recentCard = CardEntity(id = "c-recent", deckId = "deck-active", term = "recent", description = "最近")
         dao.insertCards(listOf(unstudiedCard, oldCard, recentCard))
 
         dao.insertStudyLog(CardStudyLogEntity(id = "log-old", cardId = "c-old", isCorrect = true, studiedAt = 50_000L))
@@ -415,7 +415,7 @@ class AidomariDaoTest {
         // Archived Subject
         val archivedSubject = SubjectEntity(id = "sub-arch", name = "保存教科", isArchived = true)
         val archivedDeck = DeckEntity(id = "deck-arch", subjectId = "sub-arch", name = "保存デッキ")
-        val archivedCard = CardEntity(id = "c-arch", deckId = "deck-arch", front = "archived", back = "保存")
+        val archivedCard = CardEntity(id = "c-arch", deckId = "deck-arch", term = "archived", description = "保存")
         dao.insertSubject(archivedSubject)
         dao.insertDeck(archivedDeck)
         dao.insertCard(archivedCard)
@@ -434,9 +434,9 @@ class AidomariDaoTest {
         dao.insertSubject(activeSubject)
         dao.insertDeck(activeDeck)
 
-        val unstudied = CardEntity(id = "c-unstudied", deckId = "deck-oldest", front = "unstudied", back = "未学習")
-        val old1 = CardEntity(id = "c-old1", deckId = "deck-oldest", front = "older", back = "より古い")
-        val old2 = CardEntity(id = "c-old2", deckId = "deck-oldest", front = "newer", back = "より新しい")
+        val unstudied = CardEntity(id = "c-unstudied", deckId = "deck-oldest", term = "unstudied", description = "未学習")
+        val old1 = CardEntity(id = "c-old1", deckId = "deck-oldest", term = "older", description = "より古い")
+        val old2 = CardEntity(id = "c-old2", deckId = "deck-oldest", term = "newer", description = "より新しい")
         dao.insertCards(listOf(unstudied, old1, old2))
 
         // old1: last studied at 1000L
@@ -453,7 +453,7 @@ class AidomariDaoTest {
     fun getOldestStudiedCard_whenNoCardsStudied_returnsNull() = runBlocking {
         val subject = SubjectEntity(id = "sub-none", name = "英語", isArchived = false)
         val deck = DeckEntity(id = "deck-none", subjectId = "sub-none", name = "単語帳")
-        val unstudied = CardEntity(id = "c-none", deckId = "deck-none", front = "unstudied", back = "未学習")
+        val unstudied = CardEntity(id = "c-none", deckId = "deck-none", term = "unstudied", description = "未学習")
         dao.insertSubject(subject)
         dao.insertDeck(deck)
         dao.insertCard(unstudied)
@@ -491,10 +491,10 @@ class AidomariDaoTest {
         val deck2 = DeckEntity(id = "deck-p2", subjectId = "sub-p2", name = "数式")
         dao.insertDecks(listOf(deck1, deck2))
 
-        val card1 = CardEntity(id = "c1", deckId = "deck-p1", front = "apple", back = "りんご")
-        val card2 = CardEntity(id = "c2", deckId = "deck-p1", front = "book", back = "本")
-        val unstudiedCard = CardEntity(id = "c3", deckId = "deck-p1", front = "cat", back = "猫")
-        val otherSubjectCard = CardEntity(id = "c4", deckId = "deck-p2", front = "formula", back = "公式")
+        val card1 = CardEntity(id = "c1", deckId = "deck-p1", term = "apple", description = "りんご")
+        val card2 = CardEntity(id = "c2", deckId = "deck-p1", term = "book", description = "本")
+        val unstudiedCard = CardEntity(id = "c3", deckId = "deck-p1", term = "cat", description = "猫")
+        val otherSubjectCard = CardEntity(id = "c4", deckId = "deck-p2", term = "formula", description = "公式")
         dao.insertCards(listOf(card1, card2, unstudiedCard, otherSubjectCard))
 
         // card1 has two study logs: 1000L and 3000L -> latest is 3000L
@@ -532,7 +532,7 @@ class AidomariDaoTest {
     fun setCardSnooze_updatesSnoozedUntilAndLevel() = runBlocking {
         val subject = SubjectEntity(id = "sub-sn", name = "英語")
         val deck = DeckEntity(id = "deck-sn", subjectId = "sub-sn", name = "単語帳")
-        val card = CardEntity(id = "c-sn", deckId = "deck-sn", front = "sleep", back = "眠る")
+        val card = CardEntity(id = "c-sn", deckId = "deck-sn", term = "sleep", description = "眠る")
         dao.insertSubject(subject)
         dao.insertDeck(deck)
         dao.insertCard(card)
@@ -552,12 +552,12 @@ class AidomariDaoTest {
     fun getRandomCard_excludesSnoozedCards() = runBlocking {
         val subject = SubjectEntity(id = "sub-sn2", name = "英語")
         val deck = DeckEntity(id = "deck-sn2", subjectId = "sub-sn2", name = "単語帳")
-        val activeCard = CardEntity(id = "c-active", deckId = "deck-sn2", front = "awake", back = "起きる")
+        val activeCard = CardEntity(id = "c-active", deckId = "deck-sn2", term = "awake", description = "起きる")
         val snoozedCard = CardEntity(
             id = "c-snoozed",
             deckId = "deck-sn2",
-            front = "nap",
-            back = "昼寝",
+            term = "nap",
+            description = "昼寝",
             snoozedUntil = 20000L,
             snoozeLevel = 1,
         )

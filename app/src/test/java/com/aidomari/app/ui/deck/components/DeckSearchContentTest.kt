@@ -56,7 +56,7 @@ class DeckSearchContentTest {
     @Test
     fun deckSearchContent_displaysResults_andHandlesClicks() {
         val cards = listOf(
-            Card(id = "card-1", deckId = "deck-1", front = "apple", back = "りんご"),
+            Card(id = "card-1", deckId = "deck-1", term = "apple", description = "りんご"),
         )
         var clickedCard: Card? = null
         var bookmarkedCard: Card? = null

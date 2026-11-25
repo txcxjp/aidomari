@@ -478,8 +478,8 @@ class StudyViewModel(
             emptyList()
         } else {
             _uiState.value.subjectCards.filter { card ->
-                card.front.contains(trimmed, ignoreCase = true) ||
-                    card.back.contains(trimmed, ignoreCase = true) ||
+                card.term.contains(trimmed, ignoreCase = true) ||
+                    card.description.contains(trimmed, ignoreCase = true) ||
                     card.userQuestion.contains(trimmed, ignoreCase = true) ||
                     card.userSupplement.contains(trimmed, ignoreCase = true)
             }
