@@ -20,4 +20,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Aidomari"
-include(":app")
+include(":app", ":shared-core", ":shared-ui", ":desktopApp")

@@ -16,14 +16,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.aidomari.app.MainActivity
 
-interface CardGenerationNotificationController {
-    fun onGenerationStarted(articleTitle: String)
-    fun onGenerationProgress(articleTitle: String, message: String, fraction: Float)
-    fun onGenerationCompleted(articleTitle: String, cardCount: Int)
-    fun onGenerationFailed(articleTitle: String, errorMessage: String)
-    fun clearCompletionNotification()
-}
-
 class AndroidCardGenerationNotificationController(
     private val context: Context,
 ) : CardGenerationNotificationController {

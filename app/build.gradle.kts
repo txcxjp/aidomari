@@ -86,6 +86,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":shared-core"))
+    implementation(project(":shared-ui"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
