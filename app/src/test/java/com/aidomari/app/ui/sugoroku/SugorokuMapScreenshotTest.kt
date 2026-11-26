@@ -696,4 +696,41 @@ class SugorokuMapScreenshotTest {
         composeTestRule.waitForIdle()
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_sapporo_ramen_card.png")
     }
+
+    private fun captureBatch1aSpot(anchorId: String, fileName: String) {
+        val node = HokkaidoAct1Route.getNodeById(anchorId) ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = node.stepIndex),
+                    currentNode = node,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/$fileName")
+    }
+
+    @Test
+    fun captureSugorokuMap_batch1a_onakayama() =
+        captureBatch1aSpot("onakayama_station", "sugoroku_batch1a_01_onakayama.png")
+
+    @Test
+    fun captureSugorokuMap_batch1a_mochizuki() =
+        captureBatch1aSpot("anchor_24fb4a9f", "sugoroku_batch1a_02_mochizuki.png")
+
+    @Test
+    fun captureSugorokuMap_batch1a_mori() =
+        captureBatch1aSpot("you_yu_mori", "sugoroku_batch1a_05_mori.png")
+
+    @Test
+    fun captureSugorokuMap_batch1a_otoshibe() =
+        captureBatch1aSpot("otoshibe_station", "sugoroku_batch1a_03_otoshibe.png")
+
+    @Test
+    fun captureSugorokuMap_batch1a_yakumo() =
+        captureBatch1aSpot("yakumo_station", "sugoroku_batch1a_04_yakumo.png")
 }
