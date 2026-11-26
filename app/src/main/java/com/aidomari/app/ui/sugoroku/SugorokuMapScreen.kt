@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -906,25 +907,26 @@ fun SugorokuMapContent(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
-                        .padding(top = 86.dp, start = 16.dp, end = 16.dp)
+                        .padding(top = 86.dp, start = 10.dp, end = 10.dp)
                         .clickable { tappedLandmark = null },
                     colors = CardDefaults.cardColors(
                         containerColor = Color(0xFFFFFBF2).copy(alpha = 0.97f),
                     ),
+                    border = BorderStroke(1.5.dp, Color(0xFFFFB74D)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                     shape = RoundedCornerShape(18.dp),
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Image(
                             painter = painterResource(id = previewResId),
                             contentDescription = shop.name,
-                            modifier = Modifier.size(88.dp),
+                            modifier = Modifier.size(80.dp),
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -1746,13 +1748,33 @@ private fun DrawScope.drawSpeechBubble(
     val textBounds = renderCache.bubbleTextBounds
 
     textPaint.getTextBounds(text, 0, text.length, textBounds)
-    val textWidth = textBounds.width().toFloat()
-    val textHeight = textBounds.height().toFloat()
+    val fullWidth = textBounds.width().toFloat()
+    val lineHeight = (textBounds.height().toFloat()).coerceAtLeast(textPaint.textSize)
+    val maxLineWidth = 190.dp.toPx()
 
-    val padH = 8.dp.toPx()
-    val padV = 5.dp.toPx()
+    val breakIndex = if (fullWidth > maxLineWidth && text.length > 6) {
+        findSpeechBubbleBreakIndex(text)
+    } else {
+        -1
+    }
+
+    val textWidth: Float
+    val textBlockHeight: Float
+    val lineGap = 3.dp.toPx()
+    if (breakIndex in 1 until text.length) {
+        val line1W = textPaint.measureText(text, 0, breakIndex)
+        val line2W = textPaint.measureText(text, breakIndex, text.length)
+        textWidth = maxOf(line1W, line2W)
+        textBlockHeight = lineHeight * 2f + lineGap
+    } else {
+        textWidth = fullWidth
+        textBlockHeight = lineHeight
+    }
+
+    val padH = 10.dp.toPx()
+    val padV = 6.dp.toPx()
     val bubbleWidth = textWidth + padH * 2
-    val bubbleHeight = textHeight + padV * 2
+    val bubbleHeight = textBlockHeight + padV * 2
 
     val left = x - bubbleWidth / 2f
     val top = bubbleY - bubbleHeight
@@ -1761,18 +1783,49 @@ private fun DrawScope.drawSpeechBubble(
 
     val bubbleRect = renderCache.bubbleRectF
     bubbleRect.set(left, top, right, bottom)
-    drawContext.canvas.nativeCanvas.drawRoundRect(bubbleRect, 8.dp.toPx(), 8.dp.toPx(), bubblePaint)
-    drawContext.canvas.nativeCanvas.drawRoundRect(bubbleRect, 8.dp.toPx(), 8.dp.toPx(), borderPaint)
+    drawContext.canvas.nativeCanvas.drawRoundRect(bubbleRect, 9.dp.toPx(), 9.dp.toPx(), bubblePaint)
+    drawContext.canvas.nativeCanvas.drawRoundRect(bubbleRect, 9.dp.toPx(), 9.dp.toPx(), borderPaint)
 
     val tailPath = renderCache.bubbleTailPath
     tailPath.reset()
-    tailPath.moveTo(x - 3.dp.toPx(), bottom)
-    tailPath.lineTo(x, bottom + 4.dp.toPx())
-    tailPath.lineTo(x + 3.dp.toPx(), bottom)
+    tailPath.moveTo(x - 3.5.dp.toPx(), bottom)
+    tailPath.lineTo(x, bottom + 4.5.dp.toPx())
+    tailPath.lineTo(x + 3.5.dp.toPx(), bottom)
     tailPath.close()
     drawContext.canvas.nativeCanvas.drawPath(tailPath, bubblePaint)
     drawContext.canvas.nativeCanvas.drawPath(tailPath, borderPaint)
 
-    val textY = top + (bubbleHeight - textHeight) * 0.5f + textHeight
-    drawContext.canvas.nativeCanvas.drawText(text, x, textY, textPaint)
+    val firstBaselineY = top + padV + lineHeight * 0.88f
+    if (breakIndex in 1 until text.length) {
+        drawContext.canvas.nativeCanvas.drawText(text, 0, breakIndex, x, firstBaselineY, textPaint)
+        drawContext.canvas.nativeCanvas.drawText(
+            text,
+            breakIndex,
+            text.length,
+            x,
+            firstBaselineY + lineHeight + lineGap,
+            textPaint,
+        )
+    } else {
+        drawContext.canvas.nativeCanvas.drawText(text, 0, text.length, x, firstBaselineY, textPaint)
+    }
+}
+
+private fun findSpeechBubbleBreakIndex(text: String): Int {
+    val minBreak = (text.length * 0.3f).toInt().coerceAtLeast(3)
+    val maxBreak = (text.length * 0.72f).toInt().coerceAtMost(text.length - 3)
+    val mid = text.length / 2
+    var bestIdx = -1
+    var bestDist = Int.MAX_VALUE
+    for (i in minBreak..maxBreak) {
+        val ch = text[i - 1]
+        if (ch == '！' || ch == '。' || ch == '、' || ch == ' ') {
+            val dist = kotlin.math.abs(i - mid)
+            if (dist < bestDist) {
+                bestDist = dist
+                bestIdx = i
+            }
+        }
+    }
+    return if (bestIdx > 0) bestIdx else mid
 }
