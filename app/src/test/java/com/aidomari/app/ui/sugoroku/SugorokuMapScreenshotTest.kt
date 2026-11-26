@@ -733,4 +733,28 @@ class SugorokuMapScreenshotTest {
     @Test
     fun captureSugorokuMap_batch1a_yakumo() =
         captureBatch1aSpot("yakumo_station", "sugoroku_batch1a_04_yakumo.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b1_yawaragi() =
+        captureBatch1aSpot("anchor_8090bd6c", "sugoroku_batch1b1_01_yawaragi.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b1_kuroiwa() =
+        captureBatch1aSpot("kuroiwa_station", "sugoroku_batch1b1_02_kuroiwa.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b1_kunnui() =
+        captureBatch1aSpot("kunnui_station", "sugoroku_batch1b1_03_kunnui.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b1_oshamambe() =
+        captureBatch1aSpot("oshamambe_station", "sugoroku_batch1b1_04_oshamambe.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b1_shambedake() =
+        captureBatch1aSpot("shambedake", "sugoroku_batch1b1_05_shambedake.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b1_kuromatsunai() =
+        captureBatch1aSpot("kuromatsunai_michinoeki", "sugoroku_batch1b1_06_kuromatsunai.png")
 }
