@@ -127,9 +127,19 @@ class SugorokuMapAnimationsTest {
         )
         val primaryIds = landmarks.map { it.type.drawableResId }.toSet()
         val secondaryIds = landmarks.mapNotNull { it.type.animFrame2DrawableResId }.toSet()
+        val previewIds = landmarks.mapNotNull { it.type.tapPreviewDrawableResId }.toSet()
         assertTrue(
             "animFrame2DrawableResId must not collide with any primary drawableResId",
             primaryIds.intersect(secondaryIds).isEmpty(),
+        )
+        assertTrue(
+            "tapPreviewDrawableResId must not collide with any primary drawableResId",
+            primaryIds.intersect(previewIds).isEmpty(),
+        )
+        assertEquals(
+            "Duplicate tapPreviewDrawableResId found in ACT1_LANDMARKS",
+            landmarks.count { it.type.tapPreviewDrawableResId != null },
+            previewIds.size,
         )
     }
 
