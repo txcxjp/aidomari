@@ -459,11 +459,11 @@ enum class RoadsideLandmarkType(
         motionStyle = LandmarkMotionStyle.BOAT_BOB,
     ),
     OTONRUI_WIND_FARM(
-        defaultDialogue = "「オトンルイの一直線に並ぶ巨大風車群、圧巻だね！」",
+        defaultDialogue = "「28基もの巨大風車が3km一直線に並ぶオトンルイ風力発電所だ！」",
         drawableResId = R.drawable.landmark_otonrui_wind_farm,
-        baseDisplayWidthDp = 164f,
-        baseDisplayHeightDp = 115.3f,
-        motionStyle = LandmarkMotionStyle.WIND_TURBINE_SPIN,
+        baseDisplayWidthDp = 152.0f,
+        baseDisplayHeightDp = 133.7f,
+        motionStyle = LandmarkMotionStyle.NONE,
     ),
     MILK_CANS_FARMGATE(
         defaultDialogue = "「白い牧柵とミルク缶、北海道の牧場らしい風景だ！」",
@@ -698,8 +698,8 @@ enum class RoadsideLandmarkType(
     WAKKANAI_BREAKWATER_DOME(
         defaultDialogue = "「稚内港北防波堤ドームの美しいアーチ回廊だ！」",
         drawableResId = R.drawable.landmark_wakkanai_breakwater_dome,
-        baseDisplayWidthDp = 156.0f,
-        baseDisplayHeightDp = 89.0f,
+        baseDisplayWidthDp = 144.0f,
+        baseDisplayHeightDp = 113.9f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     SOYA_NORTHERNMOST_MONUMENT(
@@ -710,10 +710,10 @@ enum class RoadsideLandmarkType(
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     SOYA_WHITE_SHELL_PATH(
-        defaultDialogue = "「宗谷丘陵の白い貝殻の道が緑の丘に続いてる！」",
+        defaultDialogue = "「ホタテの貝殻が敷き詰められた宗谷丘陵の白い道と牧草地！」",
         drawableResId = R.drawable.landmark_soya_white_shell_path,
-        baseDisplayWidthDp = 144.0f,
-        baseDisplayHeightDp = 100.0f,
+        baseDisplayWidthDp = 148.0f,
+        baseDisplayHeightDp = 87.5f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     NORTH_45_LATITUDE_TOWER(
@@ -761,8 +761,8 @@ enum class RoadsideLandmarkType(
     ABASHIRI_RED_BRICK_GATE(
         defaultDialogue = "「博物館網走監獄の重厚な赤れんが正門だ！」",
         drawableResId = R.drawable.landmark_abashiri_red_brick_gate,
-        baseDisplayWidthDp = 148.0f,
-        baseDisplayHeightDp = 117.5f,
+        baseDisplayWidthDp = 144.0f,
+        baseDisplayHeightDp = 119.4f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     KOSHIMIZU_NOROKKO_TRAIN(
@@ -775,8 +775,8 @@ enum class RoadsideLandmarkType(
     OSHINKOSHIN_TWIN_FALLS(
         defaultDialogue = "「知床八景・オシンコシンの滝が二筋に分かれて豪快！」",
         drawableResId = R.drawable.landmark_oshinkoshin_twin_falls,
-        baseDisplayWidthDp = 136.0f,
-        baseDisplayHeightDp = 104.4f,
+        baseDisplayWidthDp = 108.0f,
+        baseDisplayHeightDp = 148.7f,
         motionStyle = LandmarkMotionStyle.RIVER_SHIMMER,
     ),
     UTORO_GODZILLA_ROCK_CRUISER(
@@ -945,13 +945,6 @@ enum class RoadsideLandmarkType(
         drawableResId = R.drawable.landmark_sankebetsu_forest_stream,
         baseDisplayWidthDp = 138.0f,
         baseDisplayHeightDp = 98.1f,
-        motionStyle = LandmarkMotionStyle.NONE,
-    ),
-    ESANUKA_ENDLESS_STRAIGHT_ROAD(
-        defaultDialogue = "「猿払エサヌカ線の果てしない一本道！地平線までまっすぐ続いてる！」",
-        drawableResId = R.drawable.landmark_esanuka_endless_straight_road,
-        baseDisplayWidthDp = 142.0f,
-        baseDisplayHeightDp = 71.6f,
         motionStyle = LandmarkMotionStyle.NONE,
     ),
     OKOPPE_HOLSTEIN_GRAZING(
@@ -1642,10 +1635,10 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "otonrui_wind_turbines_line",
                 name = "オトンルイ風力発電所の風車群",
-                x = 248.45f,
+                x = 248.44f,
                 y = 61.65f,
                 type = RoadsideLandmarkType.OTONRUI_WIND_FARM,
-                scale = 1.05f,
+                scale = 0.94f,
                 isMajorRegional = true,
             ),
             RoadsideLandmark(
@@ -1678,10 +1671,10 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "mombetsu_drift_ice",
                 name = "紋別オホーツク海の流氷",
-                x = 356.10f,
-                y = 118.80f,
+                x = 356.60f,
+                y = 118.25f,
                 type = RoadsideLandmarkType.DRIFT_ICE_FLOE,
-                scale = 1.02f,
+                scale = 0.92f,
                 isMajorRegional = true,
             ),
             RoadsideLandmark(
@@ -2021,10 +2014,10 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "wakkanai_breakwater_dome",
                 name = "稚内港北防波堤ドーム",
-                x = 246.50f,
-                y = 21.10f,
+                x = 245.95f,
+                y = 21.18f,
                 type = RoadsideLandmarkType.WAKKANAI_BREAKWATER_DOME,
-                scale = 0.88f,
+                scale = 0.82f,
                 isMajorRegional = true,
             ),
             RoadsideLandmark(
@@ -2038,11 +2031,11 @@ data class RoadsideLandmark(
             ),
             RoadsideLandmark(
                 id = "soya_white_shell_path",
-                name = "宗谷丘陵の白い道と羊",
-                x = 263.35f,
-                y = 15.35f,
+                name = "宗谷丘陵の白い道",
+                x = 260.20f,
+                y = 14.95f,
                 type = RoadsideLandmarkType.SOYA_WHITE_SHELL_PATH,
-                scale = 0.94f,
+                scale = 0.92f,
             ),
             RoadsideLandmark(
                 id = "log_cabin_cheese_dairy",
@@ -2088,19 +2081,19 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "mombetsu_garinko_icebreaker",
                 name = "流氷砕氷船ガリンコ号",
-                x = 355.58f,
-                y = 119.45f,
+                x = 356.08f,
+                y = 119.10f,
                 type = RoadsideLandmarkType.MOMBETSU_GARINKO_ICEBREAKER,
-                scale = 0.98f,
+                scale = 0.92f,
                 isMajorRegional = true,
             ),
             RoadsideLandmark(
                 id = "mombetsu_giant_crab_claw",
                 name = "紋別の巨大カニの爪オブジェ",
-                x = 353.96f,
-                y = 120.05f,
+                x = 355.28f,
+                y = 119.35f,
                 type = RoadsideLandmarkType.MOMBETSU_GIANT_CRAB_CLAW,
-                scale = 0.94f,
+                scale = 0.72f,
                 isMajorRegional = true,
             ),
             RoadsideLandmark(
@@ -2126,7 +2119,7 @@ data class RoadsideLandmark(
                 x = 409.62f,
                 y = 149.86f,
                 type = RoadsideLandmarkType.ABASHIRI_RED_BRICK_GATE,
-                scale = 0.96f,
+                scale = 0.92f,
                 isMajorRegional = true,
             ),
             RoadsideLandmark(
@@ -2150,9 +2143,9 @@ data class RoadsideLandmark(
                 id = "oshinkoshin_twin_falls",
                 name = "知床・オシンコシンの滝",
                 x = 454.90f,
-                y = 146.18f,
+                y = 146.25f,
                 type = RoadsideLandmarkType.OSHINKOSHIN_TWIN_FALLS,
-                scale = 0.96f,
+                scale = 0.92f,
                 isMajorRegional = true,
             ),
             RoadsideLandmark(
@@ -2289,14 +2282,6 @@ data class RoadsideLandmark(
                 y = 121.35f,
                 type = RoadsideLandmarkType.SANKEBETSU_FOREST_STREAM,
                 scale = 0.88f,
-            ),
-            RoadsideLandmark(
-                id = "esanuka_endless_straight_road",
-                name = "猿払エサヌカ線の果てしない一本道",
-                x = 284.10f,
-                y = 39.65f,
-                type = RoadsideLandmarkType.ESANUKA_ENDLESS_STRAIGHT_ROAD,
-                scale = 0.92f,
             ),
             RoadsideLandmark(
                 id = "okoppe_holstein_grazing",
@@ -2451,10 +2436,10 @@ data class RoadsideLandmark(
             RoadsideLandmark(
                 id = "otoppu_cape_coastal_cliff",
                 name = "雄武・音標岬の断崖とハマナス",
-                x = 319.80f,
-                y = 85.15f,
+                x = 319.58f,
+                y = 85.42f,
                 type = RoadsideLandmarkType.OTOPPU_CAPE_COASTAL_CLIFF,
-                scale = 0.88f,
+                scale = 0.78f,
             ),
             RoadsideLandmark(
                 id = "oumu_kegani_crab_pot",

@@ -93,7 +93,7 @@ class SugorokuMapAnimationsTest {
         assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.LUPINE_WILDFLOWERS })
         assertTrue(RoadsideLandmark.ACT1_LANDMARKS.any { it.type == RoadsideLandmarkType.POTATO_BLOSSOMS })
         assertEquals(LandmarkMotionStyle.WIND_TURBINE_SPIN, RoadsideLandmarkType.WIND_TURBINE_PAIR.motionStyle)
-        assertEquals(LandmarkMotionStyle.WIND_TURBINE_SPIN, RoadsideLandmarkType.OTONRUI_WIND_FARM.motionStyle)
+        assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.OTONRUI_WIND_FARM.motionStyle)
         assertEquals(LandmarkMotionStyle.WHALE_SPOUT, RoadsideLandmarkType.WHALE_ORCA_SEA.motionStyle)
         assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.EZO_SQUIRREL.motionStyle)
         assertEquals(LandmarkMotionStyle.NONE, RoadsideLandmarkType.EZO_SHIKA_GRAZING.motionStyle)
@@ -114,7 +114,7 @@ class SugorokuMapAnimationsTest {
     @Test
     fun `ACT1_LANDMARKS strictly never reuses identical landmark drawable assets`() {
         val landmarks = RoadsideLandmark.ACT1_LANDMARKS
-        assertEquals("Expected all 153 curated unique Hokkaido landmarks", 153, landmarks.size)
+        assertEquals("Expected all 152 curated unique Hokkaido landmarks", 152, landmarks.size)
         assertEquals(
             "Duplicate RoadsideLandmarkType found in ACT1_LANDMARKS",
             landmarks.size,

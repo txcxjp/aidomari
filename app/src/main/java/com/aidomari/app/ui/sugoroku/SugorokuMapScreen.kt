@@ -12,7 +12,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -83,6 +85,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -787,12 +790,13 @@ fun SugorokuMapContent(
                                     x = curX,
                                     bubbleY = curY - 26.dp.toPx() + playerFloatY * 1.5f,
                                     renderCache = renderCache,
-                                    previewBitmap = landmark.type.tapPreviewDrawableResId?.let(getLandmarkBitmap),
                                 )
                             }
 
                             tappedLandmark?.let { tapped ->
-                                if (tapped.id != uiState.nearbyLandmark?.id) {
+                                if (tapped.id != uiState.nearbyLandmark?.id &&
+                                    tapped.type.tapPreviewDrawableResId == null
+                                ) {
                                     val zoomComp = if (zoomScale < 1.0f) {
                                         zoomScale.coerceIn(0.10f, 1.0f).pow(-0.55f)
                                     } else {
@@ -807,7 +811,6 @@ fun SugorokuMapContent(
                                         x = tappedCx,
                                         bubbleY = tappedCy - halfH * 0.85f,
                                         renderCache = renderCache,
-                                        previewBitmap = tapped.type.tapPreviewDrawableResId?.let(getLandmarkBitmap),
                                     )
                                 }
                             }
@@ -889,6 +892,52 @@ fun SugorokuMapContent(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Readable shop specialty spotlight popup when tapping a shop/stall landmark
+            val activePreviewLandmark = tappedLandmark?.takeIf { it.type.tapPreviewDrawableResId != null }
+            activePreviewLandmark?.let { shop ->
+                val previewResId = shop.type.tapPreviewDrawableResId!!
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .padding(top = 86.dp, start = 16.dp, end = 16.dp)
+                        .clickable { tappedLandmark = null },
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFFBF2).copy(alpha = 0.97f),
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    shape = RoundedCornerShape(18.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        Image(
+                            painter = painterResource(id = previewResId),
+                            contentDescription = shop.name,
+                            modifier = Modifier.size(88.dp),
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = shop.name,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = Color(0xFF181A1F),
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = shop.reactionDialogue,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF3A3E48),
                             )
                         }
                     }
@@ -1690,7 +1739,6 @@ private fun DrawScope.drawSpeechBubble(
     x: Float,
     bubbleY: Float,
     renderCache: SugorokuRenderCache,
-    previewBitmap: ImageBitmap? = null,
 ) {
     val textPaint = renderCache.bubbleTextPaint
     val bubblePaint = renderCache.bubbleFillPaint
@@ -1701,20 +1749,10 @@ private fun DrawScope.drawSpeechBubble(
     val textWidth = textBounds.width().toFloat()
     val textHeight = textBounds.height().toFloat()
 
-    val maxPreviewH = 26.dp.toPx()
-    val maxPreviewW = 34.dp.toPx()
-    val (previewW, previewH) = if (previewBitmap != null && previewBitmap.width > 0 && previewBitmap.height > 0) {
-        val ratio = minOf(maxPreviewW / previewBitmap.width, maxPreviewH / previewBitmap.height)
-        (previewBitmap.width * ratio) to (previewBitmap.height * ratio)
-    } else {
-        0f to 0f
-    }
-    val previewGap = if (previewW > 0f) 6.dp.toPx() else 0f
-
     val padH = 8.dp.toPx()
     val padV = 5.dp.toPx()
-    val bubbleWidth = textWidth + padH * 2 + previewW + previewGap
-    val bubbleHeight = maxOf(textHeight, previewH) + padV * 2
+    val bubbleWidth = textWidth + padH * 2
+    val bubbleHeight = textHeight + padV * 2
 
     val left = x - bubbleWidth / 2f
     val top = bubbleY - bubbleHeight
@@ -1735,22 +1773,6 @@ private fun DrawScope.drawSpeechBubble(
     drawContext.canvas.nativeCanvas.drawPath(tailPath, bubblePaint)
     drawContext.canvas.nativeCanvas.drawPath(tailPath, borderPaint)
 
-    if (previewBitmap != null && previewW > 0f && previewH > 0f) {
-        drawImage(
-            image = previewBitmap,
-            dstOffset = IntOffset(
-                x = (left + padH).roundToInt(),
-                y = (top + (bubbleHeight - previewH) * 0.5f).roundToInt(),
-            ),
-            dstSize = IntSize(previewW.roundToInt().coerceAtLeast(1), previewH.roundToInt().coerceAtLeast(1)),
-        )
-    }
-
-    val textCenterX = if (previewW > 0f) {
-        left + padH + previewW + previewGap + textWidth * 0.5f
-    } else {
-        x
-    }
     val textY = top + (bubbleHeight - textHeight) * 0.5f + textHeight
-    drawContext.canvas.nativeCanvas.drawText(text, textCenterX, textY, textPaint)
+    drawContext.canvas.nativeCanvas.drawText(text, x, textY, textPaint)
 }

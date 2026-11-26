@@ -1,10 +1,14 @@
 package com.aidomari.app.ui.sugoroku
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.dp
 import com.aidomari.app.domain.model.Act1TravelRoute
 import com.aidomari.app.domain.model.Act1TravelRouteProgressCalculator
 import com.aidomari.app.domain.model.HokkaidoAct1Route
@@ -615,5 +619,81 @@ class SugorokuMapScreenshotTest {
         }
         composeTestRule.waitForIdle()
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_anchor_arrival_celebration.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_wakkanai_dome() {
+        val wakkanaiNode = HokkaidoAct1Route.getNodeById("anchor_98c6e368") ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = wakkanaiNode.stepIndex),
+                    currentNode = wakkanaiNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_wakkanai_dome.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_otoppu_cape() {
+        val otoppuNode = HokkaidoAct1Route.getNodeById("otoineppu_cape") ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = otoppuNode.stepIndex),
+                    currentNode = otoppuNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_otoppu_cape.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_oshinkoshin_falls() {
+        val oshinkoshinNode = HokkaidoAct1Route.getNodeById("oshinkoshinno_falls") ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = oshinkoshinNode.stepIndex),
+                    currentNode = oshinkoshinNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_oshinkoshin_falls.png")
+    }
+
+    @Test
+    fun captureSugorokuMap_sapporo_ramen_shop_card() {
+        val hassamuNode = HokkaidoAct1Route.getNodeById("hassamu_chuo_station") ?: HokkaidoAct1Route.startNode
+        composeTestRule.setContent {
+            SugorokuMapContent(
+                uiState = SugorokuMapUiState(
+                    progress = SugorokuProgress(currentStepIndex = hassamuNode.stepIndex),
+                    currentNode = hassamuNode,
+                ),
+                onBack = {},
+                onSelectNode = {},
+                onDismissDialog = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("SugorokuLandmarkAnimCanvas").performTouchInput {
+            click(Offset(centerX, centerY - 86.dp.toPx()))
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/sugoroku_map_sapporo_ramen_card.png")
     }
 }

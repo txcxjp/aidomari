@@ -769,34 +769,8 @@ private fun DrawScope.drawLandmarkAmbientOverlay(
         }
 
         LandmarkMotionStyle.WIND_TURBINE_SPIN -> {
-            val bladeStrokeW = (wPx * 0.0085f).coerceAtLeast(1.35f)
+            val bladeStrokeW = (wPx * 0.0055f).coerceAtLeast(0.95f)
             when (landmarkType) {
-                RoadsideLandmarkType.OTONRUI_WIND_FARM -> {
-                    drawSpinningWindRotor(
-                        hub = Offset(cx + (0.252f - 0.5f) * wPx, cy + (0.378f - 0.5f) * hPx),
-                        bladeLen = wPx * 0.155f,
-                        angleDeg = phase * 1080f + seedPhase * 360f,
-                        strokeWidth = bladeStrokeW,
-                        alphaScale = alphaScale,
-                        scratchPath = scratchPath,
-                    )
-                    drawSpinningWindRotor(
-                        hub = Offset(cx + (0.533f - 0.5f) * wPx, cy + (0.462f - 0.5f) * hPx),
-                        bladeLen = wPx * 0.122f,
-                        angleDeg = phase * 1080f + seedPhase * 360f + 42f,
-                        strokeWidth = bladeStrokeW,
-                        alphaScale = alphaScale,
-                        scratchPath = scratchPath,
-                    )
-                    drawSpinningWindRotor(
-                        hub = Offset(cx + (0.778f - 0.5f) * wPx, cy + (0.541f - 0.5f) * hPx),
-                        bladeLen = wPx * 0.095f,
-                        angleDeg = phase * 1080f + seedPhase * 360f + 84f,
-                        strokeWidth = bladeStrokeW,
-                        alphaScale = alphaScale,
-                        scratchPath = scratchPath,
-                    )
-                }
                 RoadsideLandmarkType.TOBETSU_NORDIC_WINDMILL_HOUSE -> {
                     drawSpinningNordicWindmill(
                         hub = Offset(cx + 0.184f * wPx, cy - 0.145f * hPx),
