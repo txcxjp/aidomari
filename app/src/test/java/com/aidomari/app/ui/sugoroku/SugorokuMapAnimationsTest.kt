@@ -114,7 +114,7 @@ class SugorokuMapAnimationsTest {
     @Test
     fun `ACT1_LANDMARKS strictly never reuses identical landmark drawable assets`() {
         val landmarks = RoadsideLandmark.ACT1_LANDMARKS
-        assertEquals("Expected all 261 curated unique Hokkaido landmarks", 261, landmarks.size)
+        assertEquals("Expected all 277 curated unique Hokkaido landmarks", 277, landmarks.size)
         assertEquals(
             "Duplicate RoadsideLandmarkType found in ACT1_LANDMARKS",
             landmarks.size,
