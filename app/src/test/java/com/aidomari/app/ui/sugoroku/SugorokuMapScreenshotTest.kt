@@ -757,4 +757,20 @@ class SugorokuMapScreenshotTest {
     @Test
     fun captureSugorokuMap_batch1b1_kuromatsunai() =
         captureBatch1aSpot("kuromatsunai_michinoeki", "sugoroku_batch1b1_06_kuromatsunai.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b1_neppu() =
+        captureBatch1aSpot("neppu_station", "sugoroku_batch1b1_07_neppu.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b2_yubetsu() =
+        captureBatch1aSpot("yubetsu_no_yu_onsen", "sugoroku_batch1b2_01_yubetsu.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b2_suttsu() =
+        captureBatch1aSpot("minatomare_suttsu_michinoeki", "sugoroku_batch1b2_02_suttsu.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b2_rankoshi() =
+        captureBatch1aSpot("anchor_1c34fc36", "sugoroku_batch1b2_03_rankoshi.png")
 }
