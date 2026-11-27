@@ -781,4 +781,12 @@ class SugorokuMapScreenshotTest {
     @Test
     fun captureSugorokuMap_batch1b2_benkei() =
         captureBatch1aSpot("benkei_cape", "sugoroku_batch1b2_05_benkei.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b2_kumanoyama() =
+        captureBatch1aSpot("kumanoyama", "sugoroku_batch1b2_06_kumanoyama.png")
+
+    @Test
+    fun captureSugorokuMap_batch1b2_iwanai() =
+        captureBatch1aSpot("anchor_5b0b7417", "sugoroku_batch1b2_07_iwanai.png")
 }
